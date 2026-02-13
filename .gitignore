@@ -1,0 +1,11 @@
+# OS
+.DS_Store
+
+# IDE / editor
+.cursor/
+
+# Local backups
+backups/
+
+# Dependencies (subprojects may have their own)
+node_modules/
