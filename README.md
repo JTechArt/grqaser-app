@@ -47,84 +47,42 @@ Grqaser (meaning "book lover" in Armenian) is a mobile application that brings t
    cd grqaser
    ```
 
-2. **Install dependencies**
+2. **Crawler (optional, for local data)**
    ```bash
+   cd crawler && npm install && npm start && cd ..
+   ```
+
+3. **Database viewer (optional)**
+   ```bash
+   cd database-viewer && npm install && npm run dev && cd ..
+   ```
+
+4. **Start the React Native app**
+   ```bash
+   cd GrqaserApp
    npm install
+   npm start          # Metro bundler
+   npm run android    # or npm run ios
    ```
 
-3. **Install crawler dependencies**
-   ```bash
-   cd crawler
-   npm install
-   cd ..
-   ```
-
-4. **Run the crawler (optional)**
-   ```bash
-   cd crawler
-   npm start
-   ```
-
-5. **Start the React Native app**
-   ```bash
-   # Start Metro bundler
-   npm start
-   
-   # Run on Android
-   npm run android
-   
-   # Run on iOS (macOS only)
-   npm run ios
-   ```
-
-## 📁 Project Structure
+## 📁 Project structure
 
 ```
 grqaser/
-├── src/
-│   ├── components/          # Reusable UI components
-│   │   ├── common/         # Common components (Button, Input, etc.)
-│   │   ├── audio/          # Audio player components
-│   │   └── book/           # Book-related components
-│   ├── screens/            # Screen components
-│   ├── navigation/         # Navigation configuration
-│   ├── services/           # API and external services
-│   ├── store/              # Redux store and slices
-│   ├── types/              # TypeScript type definitions
-│   ├── utils/              # Utility functions
-│   └── constants/          # App constants
-├── crawler/                # Data crawling scripts
-│   ├── grqaser-crawler.js  # Main crawler
-│   ├── data/               # Crawled data storage
-│   └── package.json        # Crawler dependencies
-├── assets/                 # Images, fonts, etc.
-├── android/                # Android-specific files
-├── ios/                    # iOS-specific files
-└── docs/                   # Documentation
+├── crawler/           # Node.js crawler → SQLite (see crawler/README.md)
+├── database-viewer/   # Express API + web UI for the DB (see database-viewer/README.md)
+├── GrqaserApp/       # React Native mobile app (see GrqaserApp/README.md)
+└── docs/
+    └── tasks/        # Task and planning docs
 ```
 
 ## 🔧 Development
 
-### Available Scripts
+Each app has its own scripts; run them from that directory:
 
-```bash
-# Development
-npm start              # Start Metro bundler
-npm run android        # Run on Android
-npm run ios           # Run on iOS
-npm run test          # Run tests
-npm run lint          # Run ESLint
-npm run type-check    # Run TypeScript check
-
-# Building
-npm run build:android # Build Android APK
-npm run build:ios     # Build iOS app
-
-# Crawler
-cd crawler
-npm start             # Run crawler
-npm run analyze       # Analyze crawled data
-```
+- **GrqaserApp**: `npm start`, `npm run android`, `npm run ios`, `npm test`, `npm run lint`
+- **crawler**: `npm start`, `npm test` (see crawler/README.md)
+- **database-viewer**: `npm run dev`, `npm start`, `npm test` (see database-viewer/README.md)
 
 ### Code Style
 

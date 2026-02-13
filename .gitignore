@@ -9,3 +9,7 @@ backups/
 
 # Dependencies (subprojects may have their own)
 node_modules/
+
+# Logs (crawler, database-viewer, GrqaserApp)
+logs/
+**/logs/

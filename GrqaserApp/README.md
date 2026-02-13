@@ -136,14 +136,11 @@ A modern React Native audiobook application for Armenian literature, featuring a
    npm run ios
    ```
 
-### Device Testing & Development
+### Device testing
 
-For comprehensive device testing and development guidance, see:
-- **[📱 Device Testing Guide](docs/APP_DEVELOPMENT_GUIDE.md)** - Complete development and testing documentation
-- **[⚡ Quick Reference](docs/DEVICE_TESTING_QUICK_REFERENCE.md)** - Fast commands and troubleshooting
-- **[🔧 Build Scripts](build-and-test.sh)** - Automated build and testing scripts
+Use the build script for device builds and tests:
 
-#### Quick Device Testing Commands
+#### Quick device commands
 ```bash
 # Build and run on Android device
 ./build-and-test.sh dev-android
