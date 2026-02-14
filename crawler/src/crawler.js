@@ -4,6 +4,7 @@ const path = require('path');
 const fs = require('fs');
 const config = require('./config/crawler-config');
 const { CREATE_BOOKS_TABLE_SQL } = require('./schema/books-table');
+const { CREATE_CRAWL_LOGS_TABLE_SQL } = require('./schema/crawl-logs-table');
 const { normalizeDurationForStorage } = require('./utils/duration-parser');
 const { validateAudioUrl, filterValidUrls } = require('./utils/url-validator');
 const { cleanText } = require('./utils/text-cleaner');
@@ -21,15 +22,18 @@ class GrqaserCrawler {
     const crawling = config.crawling || {};
     this.settings = {
       maxScrolls: crawling.maxScrolls ?? 100,
-      targetBooks: crawling.targetBooks ?? 500,
+      targetBooks: crawling.targetBooks ?? 950,
+      maxListingPages: crawling.maxListingPages ?? 200,
       delayBetweenScrolls: crawling.delayBetweenScrolls ?? 2000,
-      delayBetweenPages: crawling.delayBetweenRequests ?? 1000,
+      delayBetweenPages: crawling.delayBetweenPages ?? crawling.delayBetweenRequests ?? 1000,
       timeout: crawling.timeout ?? 30000,
       retryAttempts: crawling.retryAttempts ?? 3,
       maxConcurrentUrls: crawling.maxConcurrentUrls ?? 5
     };
-    
-    // Statistics
+
+    this.loggingConfig = config.logging || {};
+    this.logStream = null;
+
     this.stats = {
       pagesVisited: 0,
       booksFound: 0,
@@ -39,10 +43,10 @@ class GrqaserCrawler {
       urlsProcessed: 0,
       urlsCompleted: 0,
       urlsFailed: 0,
+      listingPagesProcessed: 0,
       startTime: Date.now()
     };
-    
-    // Track seen books to avoid duplicates
+
     this.seenBooks = new Set();
   }
 
@@ -63,10 +67,18 @@ class GrqaserCrawler {
 
       // Create URL queue table
       await this.createUrlQueueTable();
-      
+
+      // Create crawl_logs table for progress/error logging
+      await this.createCrawlLogsTableIfNeeded();
+
+      // Optional file logging
+      if (this.loggingConfig.file) {
+        await this.initFileLogging();
+      }
+
       // Initialize URL queue with starting URLs
       await this.initializeUrlQueue();
-      
+
       // Launch browser
       await this.launchBrowser();
       
@@ -100,6 +112,52 @@ class GrqaserCrawler {
         if (err) reject(err);
         else resolve();
       });
+    });
+  }
+
+  async createCrawlLogsTableIfNeeded() {
+    return new Promise((resolve, reject) => {
+      this.db.run(CREATE_CRAWL_LOGS_TABLE_SQL, (err) => {
+        if (err) reject(err);
+        else resolve();
+      });
+    });
+  }
+
+  async initFileLogging() {
+    const logPath = this.loggingConfig.file;
+    if (!logPath) return;
+    const logDir = path.dirname(logPath);
+    if (!fs.existsSync(logDir)) {
+      fs.mkdirSync(logDir, { recursive: true });
+    }
+    this.logStream = fs.createWriteStream(logPath, { flags: 'a' });
+  }
+
+  /**
+   * Log progress or error to crawl_logs (and optionally to file). Structured for database-viewer.
+   */
+  async logCrawl(level, message, bookId = null, url = null, errorDetails = null) {
+    return new Promise((resolve) => {
+      this.db.run(
+        'INSERT INTO crawl_logs (level, message, book_id, url, error_details) VALUES (?, ?, ?, ?, ?)',
+        [level, message, bookId, url, errorDetails],
+        (err) => {
+          if (err) console.error('Failed to write crawl_log:', err);
+          if (this.logStream && this.logStream.writable) {
+            const line = JSON.stringify({
+              ts: new Date().toISOString(),
+              level,
+              message,
+              book_id: bookId,
+              url,
+              error_details: errorDetails
+            }) + '\n';
+            this.logStream.write(line);
+          }
+          resolve();
+        }
+      );
     });
   }
 
@@ -253,20 +311,16 @@ class GrqaserCrawler {
   async crawl() {
     console.log('🎯 Starting crawling process with URL queue...');
     console.log(`📊 Target: ${this.settings.targetBooks} quality audiobooks`);
-    
+    await this.logCrawl('info', `Crawl started; target=${this.settings.targetBooks}`);
+
     try {
-      // Load existing books to avoid duplicates
       await this.loadExistingBooks();
-      
-      // Clean up existing e-books from database
       await this.cleanupEbooks();
-      
-      // Process URLs from queue
       await this.processUrlQueue();
-      
     } catch (error) {
       console.error('❌ Crawling failed:', error);
       this.stats.errors++;
+      await this.logCrawl('error', 'Crawl failed', null, null, error.message);
     } finally {
       await this.cleanup();
       this.generateReport();
@@ -305,47 +359,48 @@ class GrqaserCrawler {
         
         this.stats.urlsCompleted++;
         console.log(`✅ Completed URL: ${urlData.url} (Found: ${result.booksFound}, Saved: ${result.booksSaved})`);
-        
-        // Add next page URL if this was a page URL
-        if (urlData.url_type === 'page' && result.booksFound > 0) {
-          const nextPageUrl = this.getNextPageUrl(urlData.url);
-          if (nextPageUrl) {
-            await this.addUrlToQueue(nextPageUrl, 'page', urlData.priority - 1);
+        await this.logCrawl('info', `URL completed: ${urlData.url}`, null, urlData.url, `found=${result.booksFound} saved=${result.booksSaved}`);
+
+        if (urlData.url_type === 'page') {
+          this.stats.listingPagesProcessed++;
+          if (this.stats.listingPagesProcessed < this.settings.maxListingPages) {
+            const nextPageUrl = this.getNextPageUrl(urlData.url);
+            if (nextPageUrl) {
+              await this.addUrlToQueue(nextPageUrl, 'page', urlData.priority - 1);
+            }
           }
         }
-        
-        // Add book detail URLs if found
+
         if (result.bookUrls && result.bookUrls.length > 0) {
           for (const bookUrl of result.bookUrls) {
             await this.addUrlToQueue(bookUrl, 'book_detail', 5);
           }
         }
-        
       } catch (error) {
         console.error(`❌ Error processing URL ${urlData.url}:`, error);
-        
+        await this.logCrawl('error', `URL failed: ${urlData.url}`, null, urlData.url, error.message);
+
         const shouldRetry = urlData.retry_count < urlData.max_retries;
         const newStatus = shouldRetry ? 'retry' : 'failed';
-        
+
         await this.updateUrlStatus(
-          urlData.id, 
-          newStatus, 
+          urlData.id,
+          newStatus,
           error.message,
           0,
           0
         );
-        
+
         if (shouldRetry) {
           console.log(`🔄 Will retry URL: ${urlData.url} (attempt ${urlData.retry_count + 1}/${urlData.max_retries})`);
         } else {
           this.stats.urlsFailed++;
           console.log(`❌ Failed URL permanently: ${urlData.url}`);
         }
-        
+
         this.stats.errors++;
       }
-      
-      // Wait between URLs
+
       await this.page.waitForTimeout(this.settings.delayBetweenPages);
     }
   }
@@ -928,11 +983,13 @@ class GrqaserCrawler {
 
   async cleanup() {
     console.log('🔧 [PRODUCTION] Cleaning up...');
-    
+    if (this.logStream && this.logStream.writable) {
+      this.logStream.end();
+      this.logStream = null;
+    }
     if (this.browser) {
       await this.browser.close();
     }
-    
     if (this.db) {
       this.db.close();
     }

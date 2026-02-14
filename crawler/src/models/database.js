@@ -7,6 +7,7 @@ const sqlite3 = require('sqlite3').verbose();
 const path = require('path');
 const config = require('../config/crawler-config');
 const { CREATE_BOOKS_TABLE_SQL } = require('../schema/books-table');
+const { CREATE_CRAWL_LOGS_TABLE_SQL } = require('../schema/crawl-logs-table');
 
 class Database {
   constructor() {
@@ -121,22 +122,10 @@ class Database {
   }
 
   /**
-   * Create crawl logs table
+   * Create crawl logs table (DDL from schema/crawl-logs-table.js)
    */
   async createCrawlLogsTable() {
-    const createTableSQL = `
-      CREATE TABLE IF NOT EXISTS crawl_logs (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        level VARCHAR(10) NOT NULL,
-        message TEXT NOT NULL,
-        book_id INTEGER,
-        url TEXT,
-        error_details TEXT,
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-      )
-    `;
-
-    return this.run(createTableSQL);
+    return this.run(CREATE_CRAWL_LOGS_TABLE_SQL);
   }
 
   /**

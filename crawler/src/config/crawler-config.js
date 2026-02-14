@@ -11,16 +11,19 @@ module.exports = {
   dbPath: path.join(__dirname, '../../data/grqaser.db'),
   dataDir: path.join(__dirname, '../../data'),
   
-  // Crawling settings
+  // Crawling settings (rate limiting and pagination)
   crawling: {
-    maxScrolls: 100, // Maximum scroll attempts for infinite scroll
-    targetBooks: 500,
-    delayBetweenScrolls: 2000, // Wait longer for content to load
+    maxScrolls: 100,
+    targetBooks: 950, // PRD target: full catalog 950+ books
+    maxListingPages: 200, // Cap listing pages to avoid runaway
+    delayBetweenScrolls: 2000,
     timeout: 30000,
     retryAttempts: 3,
-    maxConcurrentUrls: 5, // Process multiple URLs concurrently
-    delayBetweenRequests: 1000, // 1 second between requests
-    save404s: true // Save 404 responses for analysis
+    // Rate limiting: delays and concurrency
+    delayBetweenRequests: 1000, // ms between each URL (listing or detail)
+    delayBetweenPages: 1000, // alias for delayBetweenRequests
+    maxConcurrentUrls: 1, // sequential by default; increase for parallel (not used in current loop)
+    save404s: true
   },
   
   // Browser settings
