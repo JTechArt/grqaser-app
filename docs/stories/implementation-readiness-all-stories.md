@@ -1,0 +1,190 @@
+# Implementation Readiness: All Stories
+
+**Checked by:** Architect (Winston)  
+**Date:** 2025-02-14
+
+This document assesses implementation readiness for every story in the Grqaser backlog. Each story is checked for architecture reference integrity, file/path alignment, phase dependencies, and any blocking gaps.
+
+**Per-story documents:** [1.1](1.1-implementation-readiness.md) · [1.2](1.2-implementation-readiness.md) · [1.3](1.3-implementation-readiness.md) · [1.4](1.4-implementation-readiness.md) · [2.1](2.1-implementation-readiness.md) · [2.2](2.2-implementation-readiness.md) · [2.3](2.3-implementation-readiness.md) · [3.1](3.1-implementation-readiness.md) · [3.2](3.2-implementation-readiness.md) · [3.3](3.3-implementation-readiness.md) · [3.4](3.4-implementation-readiness.md) · [4.1](4.1-implementation-readiness.md) · [4.2](4.2-implementation-readiness.md) · [4.3](4.3-implementation-readiness.md) · [5.1](5.1-implementation-readiness.md) · [5.2](5.2-implementation-readiness.md) · [5.3](5.3-implementation-readiness.md)
+
+---
+
+## Executive summary
+
+| Phase | Epic | Stories | Overall verdict |
+|-------|------|---------|------------------|
+| 1 | Crawler | 1.1–1.4 | **Ready** (1.1 has noted schema gap; see below) |
+| 2 | Database-viewer | 2.1–2.3 | **Ready** (paths and refs verified) |
+| 3 | GrqaserApp foundation | 3.1–3.4 | **Ready** (GrqaserApp exists; state → store in codebase) |
+| 4 | GrqaserApp audio | 4.1–4.3 | **Ready** (depends on Epic 3) |
+| 5 | Testing & deployment | 5.1–5.3 | **Ready** (5.3 references existing troubleshooting doc) |
+
+**Delivery order:** Stories must be implemented in phase order. Epic 2 starts only after Epic 1 is complete; Epic 3 only after Epic 2; Epics 4–5 follow accordingly.
+
+**Cross-cutting:** All cited architecture docs exist. Crawler and database-viewer file paths match the repo. GrqaserApp uses `store/` (Redux) rather than `state/` in the tree—acceptable; stories say "state" and architecture allows equivalent.
+
+---
+
+## Epic 1: Crawler (Phase 1)
+
+### 1.1 — Complete and normalize book metadata and audio URLs  
+**Verdict: READY (with schema gap)**  
+- **Refs:** All architecture refs exist and match.  
+- **Paths:** `crawler/src/crawler.js`, `config/crawler-config.js`, `models/database.js`, `utils/url-queue-manager.js` verified.  
+- **Gap:** Current `books.duration` is INTEGER; story and data contract require structured (hours/minutes) and/or formatted string. Dev must extend schema and document. Chapter URLs: current table has no column; either add in 1.1 or document as deferred.  
+- **Detail:** See `1.1-implementation-readiness.md`.
+
+### 1.2 — Full catalog and pagination  
+**Verdict: READY**  
+- **Refs:** data-models, crawler-pipeline, tech-stack, source-tree, coding-standards, testing-and-deployment — all exist.  
+- **Paths:** Same crawler paths as 1.1; all present.  
+- **Dependency:** Builds on 1.1 schema and extraction; story states this.  
+- **Note:** No new schema; rate limiting and pagination in config and crawler flow.
+
+### 1.3 — Search and categories/authors  
+**Verdict: READY**  
+- **Refs:** data-models, crawler-pipeline, coding-standards, testing-and-deployment — all exist.  
+- **Paths:** Crawler entry, config, DB, url-queue — verified.  
+- **Dependency:** Builds on 1.1 and 1.2.  
+- **Note:** Categories/authors may be columns or related tables; data-models allow both. Dev chooses and documents.
+
+### 1.4 — Data cleaning, validation, and schema  
+**Verdict: READY**  
+- **Refs:** crawler-pipeline, data-models, coding-standards, source-tree, testing-and-deployment — all exist.  
+- **Paths:** Config, DB layer, DB file, schema doc path — verified.  
+- **Dependency:** Builds on 1.1–1.3.  
+- **Note:** Schema versioning (e.g. version field or migration doc) is in scope; formalizes what 1.1 may start.
+
+---
+
+## Epic 2: Database-viewer (Phase 2)
+
+### 2.1 — Books API and stats API  
+**Verdict: READY**  
+- **Refs:** database-viewer-api-and-deployment, data-models, source-tree, tech-stack, coding-standards, testing-and-deployment — all exist.  
+- **Paths:** `database-viewer/src/server.js`, `config/config.js`, `routes/books.js`, `stats.js`, `models/database.js` — all present.  
+- **Dependency:** Epic 1 complete; story states this.  
+- **API:** GET /api/v1/books, /books/:id, /books/search; stats (overview, authors, categories) — matches architecture.
+
+### 2.2 — Crawler status API and health  
+**Verdict: READY**  
+- **Refs:** database-viewer-api-and-deployment, data-models, coding-standards, testing-and-deployment — all exist.  
+- **Paths:** server.js, config, routes/crawler.js, models/database.js — verified.  
+- **Dependency:** Builds on 2.1.  
+- **API:** /api/v1/crawler/status, /urls, /logs; GET /api/v1/health — matches architecture.
+
+### 2.3 — Web UI for books and crawler monitoring  
+**Verdict: READY**  
+- **Refs:** database-viewer-api-and-deployment, source-tree, tech-stack, coding-standards, testing-and-deployment — all exist.  
+- **Paths:** `database-viewer/public/` (e.g. index.html), server.js — verified; public/ exists.  
+- **Dependency:** Builds on 2.1 and 2.2.  
+- **Note:** Vanilla JS/HTML/CSS; dashboard, book list, crawler view — per architecture.
+
+---
+
+## Epic 3: GrqaserApp foundation (Phase 3)
+
+### 3.1 — Project setup and structure  
+**Verdict: READY**  
+- **Refs:** tech-stack, source-tree, grqaserapp-data-integration-and-audio, delivery-order, coding-standards, testing-and-deployment — all exist.  
+- **Paths:** GrqaserApp/ exists; entry (e.g. App.tsx), src/ with screens, navigation, store, services, types — present (store used instead of "state" in tree; equivalent).  
+- **Dependency:** Epic 2 complete; story states this.  
+- **Note:** If implementing from scratch, story defines the structure; current repo already has src/ layout.
+
+### 3.2 — Navigation and core screens  
+**Verdict: READY**  
+- **Refs:** grqaserapp-data-integration-and-audio, tech-stack, source-tree, testing-and-deployment — all exist.  
+- **Paths:** GrqaserApp/src/screens/, src/navigation/ — present (e.g. HomeScreen.tsx, RootNavigator.tsx).  
+- **Dependency:** Builds on 3.1.
+
+### 3.3 — State management and data integration  
+**Verdict: READY**  
+- **Refs:** grqaserapp-data-integration-and-audio, tech-stack, data-models, database-viewer-api, source-tree, coding-standards, testing-and-deployment — all exist.  
+- **Paths:** State/store in src/store/ (slices: books, user, player); services in src/services/; types in src/types/ — present.  
+- **Dependency:** Builds on 3.1, 3.2.  
+- **Note:** Story says "state"; repo uses `store/` and slices — align naming in tasks if desired; no blocking gap.
+
+### 3.4 — Home and book detail UI  
+**Verdict: READY**  
+- **Refs:** grqaserapp-data-integration-and-audio, data-models, source-tree, coding-standards, testing-and-deployment — all exist.  
+- **Paths:** GrqaserApp/src/screens/ (Home, BookDetail or equivalent) — present.  
+- **Dependency:** Builds on 3.3.
+
+---
+
+## Epic 4: GrqaserApp audio (Phase 3 continued)
+
+### 4.1 — Core audio player  
+**Verdict: READY**  
+- **Refs:** grqaserapp-data-integration-and-audio, data-models, tech-stack, source-tree, coding-standards, testing-and-deployment — all exist.  
+- **Paths:** Screens/components, audio slice in store — present (e.g. playerSlice.ts).  
+- **Dependency:** Builds on Epic 3; uses crawler-backed main_audio_url.
+
+### 4.2 — Background playback and controls  
+**Verdict: READY**  
+- **Refs:** grqaserapp-data-integration-and-audio, tech-stack, source-tree, testing-and-deployment — all exist.  
+- **Paths:** Player config and audio slice — no new paths; config in app entry or services.  
+- **Dependency:** Builds on 4.1.
+
+### 4.3 — Progress and preferences  
+**Verdict: READY**  
+- **Refs:** grqaserapp-data-integration-and-audio, tech-stack, source-tree, testing-and-deployment — all exist.  
+- **Paths:** State (user slice), AsyncStorage — user slice present.  
+- **Dependency:** Builds on 4.1, 4.2.
+
+---
+
+## Epic 5: Testing and deployment
+
+### 5.1 — Crawler and database-viewer testing  
+**Verdict: READY**  
+- **Refs:** testing-and-deployment-strategy, tech-stack, source-tree — all exist.  
+- **Paths:** Crawler tests (e.g. src/tests/), database-viewer tests; root or per-app npm scripts — crawler has tests; viewer test layout can be added per story.  
+- **Dependency:** Phase order; story covers crawler and viewer only.  
+- **Note:** Single-command run (e.g. root npm test) and CI are in scope.
+
+### 5.2 — GrqaserApp testing and build  
+**Verdict: READY**  
+- **Refs:** testing-and-deployment-strategy, tech-stack, source-tree — all exist.  
+- **Paths:** GrqaserApp/ (tests, android/, ios/) — present.  
+- **Dependency:** Builds on Epics 3–4 for app under test.
+
+### 5.3 — Deployment and runbooks  
+**Verdict: READY**  
+- **Refs:** testing-and-deployment-strategy, crawler-pipeline, database-viewer-api, delivery-order, coding-standards — all exist.  
+- **Paths:** docs/ or per-app README; troubleshooting: `docs/tasks/06-TROUBLESHOOTING.md` — file exists.  
+- **Dependency:** Builds on 5.1, 5.2.  
+- **Note:** Story says "e.g. docs/tasks/06-TROUBLESHOOTING.md"; that file is present; reference is valid.
+
+---
+
+## Summary table
+
+| Story | Title (short) | Verdict | Notes |
+|-------|----------------|--------|--------|
+| 1.1 | Book metadata and audio URLs | Ready (gap) | Duration schema + chapter URLs; see 1.1-implementation-readiness.md |
+| 1.2 | Full catalog and pagination | Ready | — |
+| 1.3 | Search and categories/authors | Ready | — |
+| 1.4 | Data cleaning and schema | Ready | — |
+| 2.1 | Books API and stats API | Ready | — |
+| 2.2 | Crawler status API and health | Ready | — |
+| 2.3 | Web UI for books and crawler | Ready | — |
+| 3.1 | Project setup and structure | Ready | state → store in repo |
+| 3.2 | Navigation and core screens | Ready | — |
+| 3.3 | State and data integration | Ready | — |
+| 3.4 | Home and book detail UI | Ready | — |
+| 4.1 | Core audio player | Ready | — |
+| 4.2 | Background playback and controls | Ready | — |
+| 4.3 | Progress and preferences | Ready | — |
+| 5.1 | Crawler and viewer testing | Ready | — |
+| 5.2 | GrqaserApp testing and build | Ready | — |
+| 5.3 | Deployment and runbooks | Ready | 06-TROUBLESHOOTING.md exists |
+
+---
+
+## Recommendations
+
+1. **Implement in order:** Respect phase gates (Epic 1 → 2 → 3 → 4 → 5). Do not start 2.x until Phase 1 is complete, or 3.x until Phase 2 is complete.
+2. **Story 1.1:** Resolve duration schema (structured/formatted) and chapter URLs (in scope or deferred) during implementation; document in data-models-and-schema (or linked doc).
+3. **GrqaserApp:** Stories refer to "state"; codebase uses `store/` and slices. Either keep current naming (store) or add a one-line Dev Note in 3.1/3.3 that "state" is implemented as Redux store under `src/store/`.
+4. **Single readiness reference:** For per-story detail on 1.1, continue to use `1.1-implementation-readiness.md`. This document is the single place for all-stories readiness.
