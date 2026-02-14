@@ -59,6 +59,8 @@ Current canonical schema:
 
 **Required for insert:** id, title, author. All text fields must be free of HTML; URLs must pass scheme validation (http/https). Invalid rows are validated before write and skipped with logging.
 
+**Filtering and stats (Story 1.3):** Category and author columns support filtering (e.g. `WHERE category = ?`, `WHERE author = ?`) and aggregates (e.g. `GROUP BY category`, `GROUP BY author`). The Database model exposes `getBooksByCategory`, `getBooksByAuthor`, `getCategoryCounts`, `getAuthorCounts` for database-viewer and GrqaserApp.
+
 ## Schema documentation and versioning
 
 - Schema (tables, columns, constraints) must be **documented and versioned** (Epic 1, Story 1.4).

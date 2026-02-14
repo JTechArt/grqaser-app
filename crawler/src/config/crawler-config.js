@@ -22,8 +22,12 @@ module.exports = {
     // Rate limiting: delays and concurrency
     delayBetweenRequests: 1000, // ms between each URL (listing or detail)
     delayBetweenPages: 1000, // alias for delayBetweenRequests
-    maxConcurrentUrls: 1, // sequential by default; increase for parallel (not used in current loop)
-    save404s: true
+    maxConcurrentUrls: 1,
+    save404s: true,
+    // Optional: search/category/author discovery (Story 1.3). Add URLs to queue at init.
+    searchQueries: [], // e.g. ['/search?q=audiobook'] — site-dependent
+    categoryUrls: [], // e.g. ['/category/1', '/category/2']
+    authorUrls: [] // e.g. ['/author/123']
   },
   
   // Browser settings

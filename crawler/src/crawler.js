@@ -7,7 +7,7 @@ const { CREATE_BOOKS_TABLE_SQL } = require('./schema/books-table');
 const { CREATE_CRAWL_LOGS_TABLE_SQL } = require('./schema/crawl-logs-table');
 const { normalizeDurationForStorage } = require('./utils/duration-parser');
 const { validateAudioUrl, filterValidUrls } = require('./utils/url-validator');
-const { cleanText } = require('./utils/text-cleaner');
+const { cleanText, normalizeCategory, normalizeAuthor } = require('./utils/text-cleaner');
 const { validateBookRow } = require('./utils/book-validator');
 
 class GrqaserCrawler {
@@ -199,7 +199,7 @@ class GrqaserCrawler {
 
   async initializeUrlQueue() {
     console.log('🔧 Initializing URL queue with starting URLs...');
-    
+    const crawling = config.crawling || {};
     const startingUrls = [
       { url: '/books', type: 'page', priority: 10 },
       { url: '/books?page=1', type: 'page', priority: 9 },
@@ -208,12 +208,27 @@ class GrqaserCrawler {
       { url: '/books?page=4', type: 'page', priority: 6 },
       { url: '/books?page=5', type: 'page', priority: 5 }
     ];
-    
     for (const urlData of startingUrls) {
       await this.addUrlToQueue(urlData.url, urlData.type, urlData.priority);
     }
-    
-    console.log(`✅ Added ${startingUrls.length} starting URLs to queue`);
+    const searchQueries = crawling.searchQueries || [];
+    for (const q of searchQueries) {
+      const url = typeof q === 'string' ? q : (q.url || q);
+      const type = (q.type || 'search');
+      const priority = (q.priority != null ? q.priority : 8);
+      await this.addUrlToQueue(url, type, priority);
+    }
+    const categoryUrls = crawling.categoryUrls || [];
+    for (const u of categoryUrls) {
+      const url = typeof u === 'string' ? u : (u.url || u);
+      await this.addUrlToQueue(url, 'category', 7);
+    }
+    const authorUrls = crawling.authorUrls || [];
+    for (const u of authorUrls) {
+      const url = typeof u === 'string' ? u : (u.url || u);
+      await this.addUrlToQueue(url, 'author', 6);
+    }
+    console.log(`✅ Queue initialized (pages + ${searchQueries.length} search + ${categoryUrls.length} category + ${authorUrls.length} author)`);
   }
 
   async addUrlToQueue(url, urlType, priority = 1) {
@@ -422,13 +437,10 @@ class GrqaserCrawler {
       let books = [];
       let bookUrls = [];
       
-      if (urlData.url_type === 'page') {
-        // Extract books from listing page
+      const listingTypes = ['page', 'search', 'category', 'author'];
+      if (listingTypes.includes(urlData.url_type)) {
         books = await this.extractBooksFromPage('audiobook');
-        
-        // Extract book detail URLs
         bookUrls = await this.extractBookUrls();
-        
       } else if (urlData.url_type === 'book_detail') {
         // Extract detailed book information
         const bookDetail = await this.extractBookDetail();
@@ -581,13 +593,13 @@ class GrqaserCrawler {
       return {
         id: numericId,
         title: cleanText(bookData.title),
-        author: cleanText(bookData.author) || 'Unknown Author',
+        author: normalizeAuthor(bookData.author),
         description: cleanText(bookData.description || ''),
         duration: totalMinutes,
         duration_formatted: durationFormatted || null,
         type: 'audiobook',
         language: (bookData.language || 'hy').substring(0, 10),
-        category: cleanText(bookData.category) || 'Unknown',
+        category: normalizeCategory(bookData.category),
         rating: bookData.rating != null ? parseFloat(bookData.rating) : null,
         cover_image_url: mainValid ? (bookData.coverImage || '') : '',
         main_audio_url: mainAudioUrl,
@@ -907,9 +919,9 @@ class GrqaserCrawler {
       b.duration_formatted = norm.formatted || null;
     }
     if (b.title != null) b.title = cleanText(String(b.title));
-    if (b.author != null) b.author = cleanText(String(b.author)) || 'Unknown Author';
+    if (b.author != null) b.author = normalizeAuthor(String(b.author));
     if (b.description != null) b.description = cleanText(String(b.description));
-    if (b.category != null) b.category = cleanText(String(b.category)) || 'Unknown';
+    if (b.category != null) b.category = normalizeCategory(String(b.category));
     return b;
   }
 
