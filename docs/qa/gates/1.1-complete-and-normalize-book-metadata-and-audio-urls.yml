@@ -1,0 +1,43 @@
+# Quality Gate: 1.1
+schema: 1
+story: "1.1"
+story_title: "Complete and normalize book metadata and audio URLs"
+gate: PASS
+status_reason: "All ACs met; schema documented; DDL consolidated in crawler/src/schema/books-table.js (re-review)."
+reviewer: "Quinn (Test Architect)"
+updated: "2025-02-14T12:00:00Z"
+
+waiver: { active: false }
+
+top_issues: []
+
+risk_summary:
+  totals: { critical: 0, high: 0, medium: 0, low: 0 }
+  recommendations:
+    must_fix: []
+    monitor: []
+
+evidence:
+  tests_reviewed: 36
+  risks_identified: 0
+  trace:
+    ac_covered: [1, 2, 3, 4]
+    ac_gaps: []
+
+nfr_validation:
+  security:
+    status: PASS
+    notes: "URL scheme validation (http/https) only; no auth in scope."
+  performance:
+    status: PASS
+    notes: "Config-driven timeouts and retries; validation is lightweight."
+  reliability:
+    status: PASS
+    notes: "Invalid rows skipped with logging; DB migration for duration_formatted."
+  maintainability:
+    status: PASS
+    notes: "Focused utils, good test coverage, schema documented."
+
+recommendations:
+  immediate: []
+  future: []  # DDL consolidation completed (crawler/src/schema/books-table.js)
