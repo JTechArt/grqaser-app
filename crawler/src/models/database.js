@@ -234,6 +234,44 @@ class Database {
   }
 
   /**
+   * Get books by category (filtering for database-viewer / GrqaserApp)
+   */
+  async getBooksByCategory(category, limit = 50, offset = 0) {
+    return this.all(
+      'SELECT * FROM books WHERE category = ? ORDER BY title LIMIT ? OFFSET ?',
+      [category, limit, offset]
+    );
+  }
+
+  /**
+   * Get books by author (filtering for database-viewer / GrqaserApp)
+   */
+  async getBooksByAuthor(author, limit = 50, offset = 0) {
+    return this.all(
+      'SELECT * FROM books WHERE author = ? ORDER BY title LIMIT ? OFFSET ?',
+      [author, limit, offset]
+    );
+  }
+
+  /**
+   * Get category counts for stats (aggregates)
+   */
+  async getCategoryCounts() {
+    return this.all(
+      'SELECT category, COUNT(*) as count FROM books GROUP BY category ORDER BY count DESC'
+    );
+  }
+
+  /**
+   * Get author counts for stats (aggregates)
+   */
+  async getAuthorCounts() {
+    return this.all(
+      'SELECT author, COUNT(*) as count FROM books GROUP BY author ORDER BY count DESC'
+    );
+  }
+
+  /**
    * Log crawl activity
    */
   async logCrawl(level, message, bookId = null, url = null, errorDetails = null) {

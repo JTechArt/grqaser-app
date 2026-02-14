@@ -39,7 +39,29 @@ function normalizeForStorage(raw) {
   return cleanText(raw);
 }
 
+/**
+ * Normalize category for referential consistency (filtering/stats).
+ * @param {string} raw
+ * @returns {string} Cleaned category or 'Unknown'
+ */
+function normalizeCategory(raw) {
+  const s = cleanText(raw);
+  return s === '' ? 'Unknown' : s;
+}
+
+/**
+ * Normalize author for referential consistency (filtering/stats).
+ * @param {string} raw
+ * @returns {string} Cleaned author or 'Unknown Author'
+ */
+function normalizeAuthor(raw) {
+  const s = cleanText(raw);
+  return s === '' ? 'Unknown Author' : s;
+}
+
 module.exports = {
   cleanText,
-  normalizeForStorage
+  normalizeForStorage,
+  normalizeCategory,
+  normalizeAuthor
 };
