@@ -6,6 +6,7 @@
 const sqlite3 = require('sqlite3').verbose();
 const path = require('path');
 const config = require('../config/crawler-config');
+const { CREATE_BOOKS_TABLE_SQL } = require('../schema/books-table');
 
 class Database {
   constructor() {
@@ -67,36 +68,34 @@ class Database {
   }
 
   /**
-   * Create books table
+   * Create books table (DDL from schema/books-table.js)
    */
   async createBooksTable() {
-    const createTableSQL = `
-      CREATE TABLE IF NOT EXISTS books (
-        id INTEGER PRIMARY KEY,
-        title VARCHAR(500) NOT NULL,
-        author VARCHAR(200) DEFAULT 'Unknown Author',
-        description TEXT,
-        duration INTEGER,
-        type VARCHAR(50) DEFAULT 'audiobook',
-        language VARCHAR(10) DEFAULT 'hy',
-        category VARCHAR(100) DEFAULT 'Unknown',
-        rating DECIMAL(3,2),
-        rating_count INTEGER,
-        cover_image_url TEXT,
-        main_audio_url TEXT,
-        download_url TEXT,
-        file_size INTEGER,
-        published_at DATE,
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        is_active BOOLEAN DEFAULT 1,
-        crawl_status VARCHAR(50) DEFAULT 'discovered',
-        has_chapters BOOLEAN DEFAULT 0,
-        chapter_count INTEGER DEFAULT 0
-      )
-    `;
+    await this.run(CREATE_BOOKS_TABLE_SQL);
+    await this.migrateBooksTableAddDurationFormatted();
+  }
 
-    return this.run(createTableSQL);
+  /**
+   * Migration: add duration_formatted column if missing (existing DBs)
+   */
+  async migrateBooksTableAddDurationFormatted() {
+    return new Promise((resolve) => {
+      this.db.all('PRAGMA table_info(books)', (err, rows) => {
+        if (err) {
+          resolve();
+          return;
+        }
+        const hasColumn = rows && rows.some(r => r.name === 'duration_formatted');
+        if (!hasColumn) {
+          this.db.run('ALTER TABLE books ADD COLUMN duration_formatted TEXT', (alterErr) => {
+            if (!alterErr) console.log('✅ Added duration_formatted to books');
+            resolve();
+          });
+        } else {
+          resolve();
+        }
+      });
+    });
   }
 
   /**
@@ -191,11 +190,11 @@ class Database {
   async saveBook(bookData) {
     const sql = `
       INSERT OR REPLACE INTO books (
-        id, title, author, description, duration, type, language, category,
+        id, title, author, description, duration, duration_formatted, type, language, category,
         rating, rating_count, cover_image_url, main_audio_url, download_url,
         file_size, published_at, crawl_status, has_chapters, chapter_count,
         updated_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
     `;
 
     const params = [
@@ -204,6 +203,7 @@ class Database {
       bookData.author,
       bookData.description,
       bookData.duration,
+      bookData.duration_formatted ?? null,
       bookData.type || 'audiobook',
       bookData.language || 'hy',
       bookData.category || 'Unknown',

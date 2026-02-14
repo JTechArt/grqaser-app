@@ -26,6 +26,39 @@ Shared data contract for the crawler (writer), database-viewer (reader), and Grq
 - **Purpose:** Crawl run logs for debugging and monitoring.
 - **Key attributes:** level, message, book_id, url, error_details. Exposed via database-viewer crawler logs API if required.
 
+## Books table (DDL)
+
+**Single source of truth:** `crawler/src/schema/books-table.js` — both `crawler/src/models/database.js` and `crawler/src/crawler.js` use this module to create the books table and avoid schema drift.
+
+Current canonical schema:
+
+| Column | Type | Constraints | Notes |
+|--------|------|--------------|--------|
+| id | INTEGER | PRIMARY KEY | Unique book ID from source (numeric or string coerced). |
+| title | VARCHAR(500) | NOT NULL | No HTML; cleaned before write. |
+| author | VARCHAR(200) | DEFAULT 'Unknown Author' | No HTML. |
+| description | TEXT | | No HTML; cleaned. |
+| duration | INTEGER | | Total minutes (from duration parser). |
+| duration_formatted | TEXT | | Display string (e.g. "0ժ 51ր"). |
+| type | VARCHAR(50) | DEFAULT 'audiobook' | |
+| language | VARCHAR(10) | DEFAULT 'hy' | |
+| category | VARCHAR(100) | DEFAULT 'Unknown' | Genre/category; no HTML. |
+| rating | DECIMAL(3,2) | | |
+| rating_count | INTEGER | | |
+| cover_image_url | TEXT | | |
+| main_audio_url | TEXT | | Validated (http/https) before write; invalid logged/skipped. |
+| download_url | TEXT | | Optional; validated if present. |
+| file_size | INTEGER | | |
+| published_at | DATE | | |
+| created_at | TIMESTAMP | DEFAULT CURRENT_TIMESTAMP | |
+| updated_at | TIMESTAMP | DEFAULT CURRENT_TIMESTAMP | |
+| is_active | BOOLEAN | DEFAULT 1 | |
+| crawl_status | VARCHAR(50) | DEFAULT 'discovered' | e.g. 'completed', 'discovered'. |
+| has_chapters | BOOLEAN | DEFAULT 0 | |
+| chapter_count | INTEGER | DEFAULT 0 | |
+
+**Required for insert:** id, title, author. All text fields must be free of HTML; URLs must pass scheme validation (http/https). Invalid rows are validated before write and skipped with logging.
+
 ## Schema documentation and versioning
 
 - Schema (tables, columns, constraints) must be **documented and versioned** (Epic 1, Story 1.4).

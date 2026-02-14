@@ -2,24 +2,31 @@ const puppeteer = require('puppeteer');
 const sqlite3 = require('sqlite3').verbose();
 const path = require('path');
 const fs = require('fs');
+const config = require('./config/crawler-config');
+const { CREATE_BOOKS_TABLE_SQL } = require('./schema/books-table');
+const { normalizeDurationForStorage } = require('./utils/duration-parser');
+const { validateAudioUrl, filterValidUrls } = require('./utils/url-validator');
+const { cleanText } = require('./utils/text-cleaner');
+const { validateBookRow } = require('./utils/book-validator');
 
 class GrqaserCrawler {
   constructor() {
-    this.baseUrl = 'https://grqaser.org';
-    this.dbPath = path.join(__dirname, '../data/grqaser.db');
-    this.dataDir = path.join(__dirname, '../data');
+    this.baseUrl = config.baseUrl || 'https://grqaser.org';
+    this.dbPath = config.dbPath || path.join(__dirname, '../data/grqaser.db');
+    this.dataDir = config.dataDir || path.join(__dirname, '../data');
     this.browser = null;
     this.page = null;
     this.db = null;
-    
-    // Production settings
+
+    const crawling = config.crawling || {};
     this.settings = {
-      maxScrolls: 100, // Maximum scroll attempts for infinite scroll
-      targetBooks: 500,
-      delayBetweenScrolls: 2000, // Wait longer for content to load
-      timeout: 30000,
-      retryAttempts: 3,
-      maxConcurrentUrls: 5 // Process multiple URLs concurrently
+      maxScrolls: crawling.maxScrolls ?? 100,
+      targetBooks: crawling.targetBooks ?? 500,
+      delayBetweenScrolls: crawling.delayBetweenScrolls ?? 2000,
+      delayBetweenPages: crawling.delayBetweenRequests ?? 1000,
+      timeout: crawling.timeout ?? 30000,
+      retryAttempts: crawling.retryAttempts ?? 3,
+      maxConcurrentUrls: crawling.maxConcurrentUrls ?? 5
     };
     
     // Statistics
@@ -50,7 +57,10 @@ class GrqaserCrawler {
 
       // Initialize database
       await this.initializeDatabase();
-      
+
+      // Create books table if not exists (schema aligned with models/database.js)
+      await this.createBooksTableIfNeeded();
+
       // Create URL queue table
       await this.createUrlQueueTable();
       
@@ -70,7 +80,7 @@ class GrqaserCrawler {
 
   async initializeDatabase() {
     console.log('🔧 Initializing database...');
-    
+
     return new Promise((resolve, reject) => {
       this.db = new sqlite3.Database(this.dbPath, (err) => {
         if (err) {
@@ -78,9 +88,17 @@ class GrqaserCrawler {
           reject(err);
           return;
         }
-        
         console.log('✅ Database connected');
         resolve();
+      });
+    });
+  }
+
+  async createBooksTableIfNeeded() {
+    return new Promise((resolve, reject) => {
+      this.db.run(CREATE_BOOKS_TABLE_SQL, (err) => {
+        if (err) reject(err);
+        else resolve();
       });
     });
   }
@@ -418,62 +436,111 @@ class GrqaserCrawler {
 
   async extractBookDetail() {
     try {
-      // Extract detailed book information from book detail page
       const bookData = await this.page.evaluate(() => {
-        const title = document.querySelector('h1, .book-title, .title')?.textContent?.trim();
-        const author = document.querySelector('.author, .book-author')?.textContent?.trim();
-        const description = document.querySelector('.description, .book-description, .summary')?.textContent?.trim();
-        const duration = document.querySelector('.duration, .book-duration')?.textContent?.trim();
-        const rating = document.querySelector('.rating, .book-rating')?.textContent?.trim();
-        
-        // Look for cover image in the top-left div with PNG file and alt="Book Cover"
-        let coverImage = null;
-        const coverImageElement = document.querySelector('img[alt="Book Cover"], img[alt*="Cover"], .book-cover img, .cover img');
-        if (coverImageElement) {
-          coverImage = coverImageElement.src;
-        } else {
-          // Fallback: look for any PNG image in the page
-          const pngImages = Array.from(document.querySelectorAll('img[src*=".png"]'));
-          if (pngImages.length > 0) {
-            coverImage = pngImages[0].src;
+        const titleEl = document.querySelector('h1, .book-title, .title');
+        const title = titleEl ? titleEl.textContent.trim() : '';
+        let author = document.querySelector('.author, .book-author')?.textContent?.trim() || '';
+        if (!author) {
+          const allText = document.body.textContent;
+          const authorMatch = allText.match(/Հեղինակ:\s*([^()\n]+?)(?:\s*\(|$)/);
+          if (authorMatch) author = authorMatch[1].trim();
+        }
+        let description = document.querySelector('.description, .book-description, .summary')?.textContent?.trim() || '';
+        if (!description) {
+          const paragraphs = document.querySelectorAll('p');
+          for (const p of paragraphs) {
+            const text = p.textContent.trim();
+            if (text && text.length > 50 && !text.includes('Հեղինակ:') && !text.includes('Կատեգորիա:')) {
+              description = text;
+              break;
+            }
           }
         }
-        
-        const audioUrl = document.querySelector('audio source, .audio-player source')?.src;
-        
+        let duration = document.querySelector('.duration, .book-duration')?.textContent?.trim() || '';
+        if (!duration) {
+          const durationMatch = document.body.textContent.match(/(\d+ժ\s*\d+ր)/);
+          if (durationMatch) duration = durationMatch[1];
+        }
+        const rating = document.querySelector('.rating, .book-rating')?.textContent?.trim() || null;
+        let category = document.querySelector('.category, .book-category')?.textContent?.trim() || '';
+        if (!category) {
+          const catMatch = document.body.textContent.match(/Կատեգորիա:\s*([^\n]+)/);
+          if (catMatch) category = catMatch[1].trim();
+        }
+        const langEl = document.querySelector('[lang], .language');
+        const language = (langEl && langEl.getAttribute('lang')) ? langEl.getAttribute('lang').substring(0, 10) : 'hy';
+
+        let coverImage = null;
+        const coverEl = document.querySelector('img[alt="Book Cover"], img[alt*="Cover"], .book-cover img');
+        if (coverEl) coverImage = coverEl.src;
+        else {
+          const pngs = document.querySelectorAll('img[src*=".png"]');
+          if (pngs.length > 0) coverImage = pngs[0].src;
+        }
+
+        const audioUrls = [];
+        document.querySelectorAll('audio source').forEach(s => { if (s.src) audioUrls.push(s.src); });
+        document.querySelectorAll('a[href*=".mp3"]').forEach(a => {
+          const href = a.href;
+          if (href && !href.includes('download-all') && !href.includes('.zip') && !audioUrls.includes(href)) audioUrls.push(href);
+        });
+        const mainAudio = audioUrls.length > 0 ? audioUrls[0] : null;
+        const downloadUrl = document.querySelector('a[href*="download-all"], a[href*=".zip"]')?.href || (audioUrls.length > 1 ? audioUrls[0] : null);
+
         return {
           title,
           author,
           description,
           duration,
           rating,
+          category,
+          language,
           coverImage,
-          audioUrl
+          mainAudio,
+          downloadUrl,
+          audioUrls
         };
       });
-      
-      if (bookData.title) {
-        // Only return audiobooks (books with audio URLs)
-        if (!bookData.audioUrl) {
-          console.log(`⏭️ Skipping e-book (no audio URL): ${bookData.title}`);
-          return null;
-        }
-        
-        return {
-          id: this.extractBookIdFromUrl(this.page.url()),
-          title: bookData.title,
-          author: bookData.author || 'Unknown Author',
-          description: bookData.description || '',
-          duration: bookData.duration || '',
-          rating: bookData.rating || null,
-          cover_image_url: bookData.coverImage || '',
-          main_audio_url: bookData.audioUrl || '',
-          type: 'audiobook'
-        };
+
+      if (!bookData.title) return null;
+
+      const { valid: mainValid } = validateAudioUrl(bookData.mainAudio);
+      if (!mainValid || !bookData.mainAudio) {
+        console.log(`⏭️ Skipping e-book (no valid audio URL): ${bookData.title}`);
+        return null;
       }
-      
-      return null;
-      
+
+      const mainAudioUrl = bookData.mainAudio.trim();
+      let downloadUrl = null;
+      if (bookData.downloadUrl) {
+        const dResult = validateAudioUrl(bookData.downloadUrl);
+        if (dResult.valid) downloadUrl = bookData.downloadUrl.trim();
+        else console.log(`⚠️ Invalid download_url skipped for ${bookData.title}: ${dResult.error}`);
+      }
+
+      const { totalMinutes, formatted: durationFormatted } = normalizeDurationForStorage(bookData.duration || '');
+
+      const id = this.extractBookIdFromUrl(this.page.url());
+      const numericId = typeof id === 'string' && /^\d+$/.test(id) ? parseInt(id, 10) : id;
+
+      return {
+        id: numericId,
+        title: cleanText(bookData.title),
+        author: cleanText(bookData.author) || 'Unknown Author',
+        description: cleanText(bookData.description || ''),
+        duration: totalMinutes,
+        duration_formatted: durationFormatted || null,
+        type: 'audiobook',
+        language: (bookData.language || 'hy').substring(0, 10),
+        category: cleanText(bookData.category) || 'Unknown',
+        rating: bookData.rating != null ? parseFloat(bookData.rating) : null,
+        cover_image_url: mainValid ? (bookData.coverImage || '') : '',
+        main_audio_url: mainAudioUrl,
+        download_url: downloadUrl,
+        crawl_status: 'completed',
+        has_chapters: Array.isArray(bookData.audioUrls) && bookData.audioUrls.length > 1,
+        chapter_count: Array.isArray(bookData.audioUrls) ? bookData.audioUrls.length : 0
+      };
     } catch (error) {
       console.error('❌ Error extracting book detail:', error);
       return null;
@@ -777,14 +844,34 @@ class GrqaserCrawler {
     }
   }
 
+  normalizeBookForSave(book) {
+    const b = { ...book };
+    if (typeof b.duration === 'string' && b.duration_formatted == null) {
+      const norm = normalizeDurationForStorage(b.duration);
+      b.duration = norm.totalMinutes;
+      b.duration_formatted = norm.formatted || null;
+    }
+    if (b.title != null) b.title = cleanText(String(b.title));
+    if (b.author != null) b.author = cleanText(String(b.author)) || 'Unknown Author';
+    if (b.description != null) b.description = cleanText(String(b.description));
+    if (b.category != null) b.category = cleanText(String(b.category)) || 'Unknown';
+    return b;
+  }
+
   async saveBooks(books) {
     console.log(`🔧 [PRODUCTION] Saving ${books.length} books...`);
-    
+
     let savedCount = 0;
-    
+
     for (const book of books) {
       try {
-        const saved = await this.saveBookToDatabase(book);
+        const normalized = this.normalizeBookForSave(book);
+        const validation = validateBookRow(normalized);
+        if (!validation.valid) {
+          console.warn(`⚠️ Skipping invalid book "${normalized.title}":`, validation.errors);
+          continue;
+        }
+        const saved = await this.saveBookToDatabase(normalized);
         if (saved) {
           savedCount++;
           this.stats.booksSaved++;
@@ -795,37 +882,46 @@ class GrqaserCrawler {
         this.stats.errors++;
       }
     }
-    
+
     console.log(`📊 [PRODUCTION] Saved ${savedCount}/${books.length} books`);
     console.log(`📊 [PRODUCTION] Total books saved: ${this.stats.booksSaved}`);
-    
+
     return savedCount;
   }
 
   async saveBookToDatabase(book) {
     return new Promise((resolve, reject) => {
       const sql = `
-        INSERT OR REPLACE INTO books 
-        (id, title, author, description, duration, cover_image_url, type, crawl_status, crawl_attempts, last_crawl_attempt) 
-        VALUES (?, ?, ?, ?, ?, ?, ?, 'completed', 1, CURRENT_TIMESTAMP)
+        INSERT OR REPLACE INTO books (
+          id, title, author, description, duration, duration_formatted, type, language, category,
+          rating, rating_count, cover_image_url, main_audio_url, download_url,
+          file_size, published_at, crawl_status, has_chapters, chapter_count, updated_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
       `;
-      
       const params = [
         book.id,
         book.title,
         book.author,
-        book.description || '',
-        book.duration || '',
-        book.cover_image_url || '',
-        book.type || 'audiobook'
+        book.description ?? '',
+        book.duration ?? null,
+        book.duration_formatted ?? null,
+        book.type || 'audiobook',
+        book.language || 'hy',
+        book.category || 'Unknown',
+        book.rating ?? null,
+        book.rating_count ?? null,
+        book.cover_image_url ?? null,
+        book.main_audio_url ?? null,
+        book.download_url ?? null,
+        book.file_size ?? null,
+        book.published_at ?? null,
+        book.crawl_status || 'completed',
+        book.has_chapters ? 1 : 0,
+        book.chapter_count ?? 0
       ];
-      
-      this.db.run(sql, params, function(err) {
-        if (err) {
-          reject(err);
-        } else {
-          resolve(true);
-        }
+      this.db.run(sql, params, function (err) {
+        if (err) reject(err);
+        else resolve(true);
       });
     });
   }
