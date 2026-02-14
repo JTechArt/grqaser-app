@@ -1,0 +1,58 @@
+# Source tree (unified project structure)
+
+Monorepo layout for the three applications. Each app is self-contained; shared data contract is documented in [Data models and schema](./data-models-and-schema.md). Follow [delivery order](./delivery-order-and-application-boundaries.md) when adding or changing code.
+
+## Root layout
+
+```
+grqaser/
+├── crawler/                 # Phase 1 — Data crawler (single source of truth for DB)
+├── database-viewer/         # Phase 2 — Admin panel (API + web UI)
+├── GrqaserApp/              # Phase 3 — Mobile app (consumes crawler data)
+├── docs/
+│   ├── prd.md
+│   ├── architecture/        # This architecture (sharded)
+│   │   ├── index.md
+│   │   ├── delivery-order-and-application-boundaries.md
+│   │   ├── tech-stack.md
+│   │   ├── source-tree.md
+│   │   ├── crawler-pipeline-and-data-contract.md
+│   │   ├── database-viewer-api-and-deployment.md
+│   │   ├── grqaserapp-data-integration-and-audio.md
+│   │   ├── data-models-and-schema.md
+│   │   ├── testing-and-deployment-strategy.md
+│   │   └── coding-standards.md
+│   ├── stories/             # User stories (devStoryLocation)
+│   └── tasks/
+├── package.json             # Root (if used for workspace scripts)
+└── README.md
+```
+
+## Crawler (`crawler/`)
+
+- **Role:** Phase 1. Writes to SQLite only. No dependency on database-viewer or GrqaserApp.
+- **Key dirs:** `src/` (config, models, utils, crawler entry), `data/` (grqaser.db), `logs/` (optional).
+- **Entry:** `src/crawler.js` (or equivalent main script). Config in `src/config/crawler-config.js`.
+
+## Database-viewer (`database-viewer/`)
+
+- **Role:** Phase 2. Reads from same SQLite DB; provides REST API and web UI. Used to verify crawler data before Phase 3.
+- **Key dirs:** `src/` (config, models, routes, server), `public/` (web UI), `data/` (optional local DB copy), `logs/` (optional).
+- **Entry:** `src/server.js`. Config: port, DB path, CORS, rate limit, logging (env or config).
+
+## GrqaserApp (`GrqaserApp/`)
+
+- **Role:** Phase 3. Consumes data via database-viewer API or agreed export. Do not start catalog/playback work until Phase 2 has validated data.
+- **Key dirs:** `src/` (screens, navigation, state, services, types), `android/`, `ios/`.
+- **Entry:** App entry per React Native (e.g. `index.js` / `App.tsx`).
+
+## File placement rules
+
+- **New crawler code:** Under `crawler/src/`; respect existing config and models.
+- **New database-viewer code:** Under `database-viewer/src/` (routes, models, config); static assets in `public/`.
+- **New GrqaserApp code:** Under `GrqaserApp/src/` (screens, services, state, types). Use path aliases if configured.
+- **Shared types/schema:** Document in `docs/architecture/data-models-and-schema.md`; duplicate minimal types in each app or use a shared package only if introduced explicitly.
+
+## Dev agent reference
+
+When implementing stories, use this source tree and the phase order in [delivery order and application boundaries](./delivery-order-and-application-boundaries.md). Do not create features in Phase 2 or 3 that assume Phase 1 or 2 is incomplete.
