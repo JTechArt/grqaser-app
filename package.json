@@ -12,7 +12,10 @@
     "lint:fix": "eslint . --ext .js,.jsx,.ts,.tsx --fix",
     "type-check": "tsc --noEmit",
     "build:android": "cd android && ./gradlew assembleRelease",
-    "build:ios": "cd ios && xcodebuild -workspace Grqaser.xcworkspace -scheme Grqaser -configuration Release -destination generic/platform=iOS -archivePath Grqaser.xcarchive archive"
+    "build:ios": "cd ios && xcodebuild -workspace Grqaser.xcworkspace -scheme Grqaser -configuration Release -destination generic/platform=iOS -archivePath Grqaser.xcarchive archive",
+    "bmad:refresh": "bmad-method install -f -i codex",
+    "bmad:list": "bmad-method list:agents",
+    "bmad:validate": "bmad-method validate"
   },
   "dependencies": {
     "react": "18.2.0",
@@ -41,7 +44,7 @@
     "react-native-ratings": "^8.1.0",
     "react-native-search-bar": "^3.4.2",
     "react-native-pull-to-refresh": "^2.1.0",
-    "react-native-super-grid": "^4.8.1",
+    "react-native-super-grid": "^5.1.0",
     "react-native-splash-screen": "^3.3.0",
     "react-native-permissions": "^3.10.1",
     "react-native-background-timer": "^2.4.1",
@@ -90,6 +93,9 @@
   ],
   "author": "Grqaser Team",
   "license": "MIT",
+  "engines": {
+    "node": ">=22.0.0"
+  },
   "repository": {
     "type": "git",
     "url": "https://github.com/your-username/grqaser.git"
