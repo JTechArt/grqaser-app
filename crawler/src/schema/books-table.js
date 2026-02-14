@@ -31,6 +31,15 @@ const CREATE_BOOKS_TABLE_SQL = `
   )
 `.trim();
 
+/** Column names for schema compliance checks (Story 1.4). */
+const BOOKS_TABLE_COLUMNS = [
+  'id', 'title', 'author', 'description', 'duration', 'duration_formatted',
+  'type', 'language', 'category', 'rating', 'rating_count', 'cover_image_url',
+  'main_audio_url', 'download_url', 'file_size', 'published_at', 'created_at',
+  'updated_at', 'is_active', 'crawl_status', 'has_chapters', 'chapter_count'
+];
+
 module.exports = {
-  CREATE_BOOKS_TABLE_SQL
+  CREATE_BOOKS_TABLE_SQL,
+  BOOKS_TABLE_COLUMNS
 };

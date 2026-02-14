@@ -61,11 +61,25 @@ class Database {
     const tables = [
       this.createBooksTable(),
       this.createUrlQueueTable(),
-      this.createCrawlLogsTable()
+      this.createCrawlLogsTable(),
+      this.createSchemaVersionTable()
     ];
 
     await Promise.all(tables);
     console.log('✅ All tables created successfully');
+  }
+
+  /**
+   * Schema version table (Story 1.4): viewer and app can align via SELECT version FROM schema_version
+   */
+  async createSchemaVersionTable() {
+    await this.run(`
+      CREATE TABLE IF NOT EXISTS schema_version (version INTEGER NOT NULL)
+    `);
+    const row = await this.get('SELECT version FROM schema_version LIMIT 1');
+    if (!row) {
+      await this.run('INSERT INTO schema_version (version) VALUES (1)');
+    }
   }
 
   /**
