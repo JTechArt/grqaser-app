@@ -64,6 +64,7 @@ Current canonical schema:
 ## Schema documentation and versioning
 
 - Schema (tables, columns, constraints) must be **documented and versioned** (Epic 1, Story 1.4).
+- **Current schema version: 1.** The crawler creates a `schema_version` table with a single row `(version INTEGER)` so database-viewer and GrqaserApp can align (e.g. `SELECT version FROM schema_version`).
 - All three applications must use the same schema; any change is made in the crawler first, then reflected in viewer and app consumption.
 - Required fields and types must be validated before write in the crawler; invalid rows logged/skipped.
 

@@ -1,0 +1,43 @@
+# Quality Gate: 1.4
+schema: 1
+story: "1.4"
+story_title: "Data cleaning, validation, and schema"
+gate: PASS
+status_reason: "Cleaning/encoding test, validation skip/log, schema version table and doc, DB path and schema match tests in place."
+reviewer: "Quinn (Test Architect)"
+updated: "2025-02-14T00:00:00Z"
+
+waiver: { active: false }
+
+top_issues: []
+
+risk_summary:
+  totals: { critical: 0, high: 0, medium: 0, low: 0 }
+  recommendations:
+    must_fix: []
+    monitor: []
+
+evidence:
+  tests_reviewed: 56
+  risks_identified: 0
+  trace:
+    ac_covered: [1, 2, 3, 4]
+    ac_gaps: []
+
+nfr_validation:
+  security:
+    status: PASS
+    notes: "DB path config-driven; schema_version read-only for consumers."
+  performance:
+    status: PASS
+    notes: "Schema version single row; no impact on write path."
+  reliability:
+    status: PASS
+    notes: "Invalid rows skipped and logged; schema version for viewer/app alignment."
+  maintainability:
+    status: PASS
+    notes: "BOOKS_TABLE_COLUMNS for compliance checks; doc and version explicit."
+
+recommendations:
+  immediate: []
+  future: []
