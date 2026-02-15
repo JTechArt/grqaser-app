@@ -3,11 +3,26 @@
  * Centralized configuration for the Grqaser crawler application.
  * Mode: full | update | fix-download-all | full-database | test.
  * Override via env CRAWLER_MODE or CLI --mode=value.
+ * Base config is merged with environments[NODE_ENV] (Story 1.6).
  */
 
 const path = require('path');
 
-module.exports = {
+function deepMerge(target, source) {
+  if (source == null) return target;
+  const out = { ...target };
+  for (const key of Object.keys(source)) {
+    const s = source[key];
+    if (s != null && typeof s === 'object' && !Array.isArray(s)) {
+      out[key] = deepMerge(out[key] || {}, s);
+    } else {
+      out[key] = s;
+    }
+  }
+  return out;
+}
+
+const baseConfig = {
   // Base settings
   baseUrl: 'https://grqaser.org',
   dbPath: path.join(__dirname, '../../data/grqaser.db'),
@@ -102,3 +117,15 @@ module.exports = {
     }
   }
 };
+
+const envName = process.env.NODE_ENV || 'production';
+const envOverrides = baseConfig.environments && baseConfig.environments[envName];
+const merged = envOverrides ? deepMerge({ ...baseConfig }, { ...envOverrides }) : { ...baseConfig };
+delete merged.environments;
+
+module.exports = merged;
+module.exports.getMergedConfig = function getMergedConfig() {
+  return merged;
+};
+module.exports.deepMerge = deepMerge;
+module.exports.baseConfig = baseConfig;

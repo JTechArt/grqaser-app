@@ -52,6 +52,8 @@ class GrqaserCrawler {
     this.updateLimit = cli.updateLimit != null ? cli.updateLimit : (config.updateLimit ?? null);
     this.maxConcurrentPages = cli.maxConcurrentPages != null ? cli.maxConcurrentPages : (config.maxConcurrentPages ?? 1);
 
+    this.config = config;
+
     if (this.mode === 'test') {
       const testPath = this.testDbPath || path.join(__dirname, '../data/test_grqaser.db');
       this.dbPath = path.isAbsolute(testPath) ? testPath : path.join(__dirname, '..', testPath.replace(/^\.\//, ''));
@@ -88,6 +90,20 @@ class GrqaserCrawler {
     };
 
     this.seenBooks = new Set();
+    this.seenIds = new Set();
+  }
+
+  /** Shared sleep for delays and backoff (Story 1.6). */
+  sleep(ms) {
+    return new Promise(resolve => setTimeout(resolve, ms));
+  }
+
+  /** Exponential backoff with jitter for retries. attempt is 1-based. */
+  backoffWithJitter(attempt, baseMs = 1000) {
+    const cap = Math.min(attempt, 10);
+    const delay = baseMs * Math.pow(2, cap);
+    const jitter = Math.floor(Math.random() * 0.3 * delay);
+    return delay + jitter;
   }
 
   async initialize() {
@@ -342,25 +358,20 @@ class GrqaserCrawler {
   async updateUrlStatus(urlId, status, errorMessage = null, booksFound = 0, booksSaved = 0) {
     const sql = `
       UPDATE url_queue 
-      SET status = ?, 
-          error_message = ?, 
-          books_found = ?, 
+      SET status = ?,
+          error_message = ?,
+          books_found = ?,
           books_saved = ?,
           updated_at = CURRENT_TIMESTAMP,
           ${status === 'processing' ? 'processing_started_at = CURRENT_TIMESTAMP,' : ''}
           ${status === 'completed' || status === 'failed' ? 'completed_at = CURRENT_TIMESTAMP,' : ''}
           ${status === 'retry' ? 'retry_count = retry_count + 1,' : ''}
-          retry_count = CASE WHEN ? = 'retry' THEN retry_count + 1 ELSE retry_count END
       WHERE id = ?
     `;
-    
     return new Promise((resolve, reject) => {
-      this.db.run(sql, [status, errorMessage, booksFound, booksSaved, status, urlId], function(err) {
-        if (err) {
-          reject(err);
-        } else {
-          resolve(this.changes > 0);
-        }
+      this.db.run(sql, [status, errorMessage, booksFound, booksSaved, urlId], function(err) {
+        if (err) reject(err);
+        else resolve(this.changes > 0);
       });
     });
   }
@@ -474,6 +485,7 @@ class GrqaserCrawler {
 
         const shouldRetry = urlData.retry_count < urlData.max_retries;
         const newStatus = shouldRetry ? 'retry' : 'failed';
+        const nextAttempt = urlData.retry_count + 1;
 
         await this.updateUrlStatus(
           urlData.id,
@@ -484,7 +496,10 @@ class GrqaserCrawler {
         );
 
         if (shouldRetry) {
-          console.log(`🔄 Will retry URL: ${urlData.url} (attempt ${urlData.retry_count + 1}/${urlData.max_retries})`);
+          const backoffMs = this.backoffWithJitter(nextAttempt, 1000);
+          console.log(`🔄 Will retry URL: ${urlData.url} (attempt ${nextAttempt}/${urlData.max_retries}, backoff ${backoffMs}ms)`);
+          await this.logCrawl('info', `URL retry scheduled`, null, urlData.url, `attempt=${nextAttempt} backoff_ms=${backoffMs}`);
+          await this.sleep(backoffMs);
         } else {
           this.stats.urlsFailed++;
           console.log(`❌ Failed URL permanently: ${urlData.url}`);
@@ -493,7 +508,7 @@ class GrqaserCrawler {
         this.stats.errors++;
       }
 
-      await this.page.waitForTimeout(this.settings.delayBetweenPages);
+      await this.sleep(this.settings.delayBetweenPages);
     }
   }
 
@@ -509,7 +524,7 @@ class GrqaserCrawler {
       this.stats.pagesVisited++;
       
       // Wait for content to load
-      await this.page.waitForTimeout(1000);
+      await this.sleep(1000);
       
       let books = [];
       let bookUrls = [];
@@ -714,20 +729,17 @@ class GrqaserCrawler {
 
   async loadExistingBooks() {
     console.log('🔧 Loading existing books to avoid duplicates...');
-    
     return new Promise((resolve, reject) => {
-      this.db.all('SELECT title, author FROM books', (err, rows) => {
+      this.db.all('SELECT id, title, author FROM books', (err, rows) => {
         if (err) {
           reject(err);
           return;
         }
-        
         rows.forEach(row => {
-          const key = `${row.title}|${row.author}`;
-          this.seenBooks.add(key);
+          this.seenBooks.add(`${row.title}|${row.author}`);
+          if (row.id != null) this.seenIds.add(String(row.id));
         });
-        
-        console.log(`📊 Loaded ${this.seenBooks.size} existing books`);
+        console.log(`📊 Loaded ${this.seenBooks.size} existing books (by title|author and id)`);
         resolve();
       });
     });
@@ -867,7 +879,7 @@ class GrqaserCrawler {
         previousBookCount = currentBookCount;
         
         // Wait between scrolls
-        await this.page.waitForTimeout(this.settings.delayBetweenScrolls);
+        await this.sleep(this.settings.delayBetweenScrolls);
       }
       
     } catch (error) {
@@ -976,27 +988,23 @@ class GrqaserCrawler {
   }
 
   isValidBook(book) {
-    // Check if book has valid title
-    if (!book.title || book.title.length < 3) {
-      return false;
-    }
-    
-    // Skip e-books (books without audio/duration) - only keep audiobooks
+    if (!book.title || book.title.length < 3) return false;
     if (!book.duration || book.duration === '' || book.duration === '0' || book.duration === 0) {
       console.log(`⏭️ Skipping e-book (no audio): ${book.title}`);
       return false;
     }
-    
-    // Check if book is already seen
+    const idKey = book.id != null ? String(book.id) : null;
+    if (idKey != null && this.seenIds.has(idKey)) {
+      this.stats.duplicatesSkipped++;
+      return false;
+    }
     const key = `${book.title}|${book.author}`;
     if (this.seenBooks.has(key)) {
       this.stats.duplicatesSkipped++;
       return false;
     }
-    
-    // Mark as seen
     this.seenBooks.add(key);
-    
+    if (idKey != null) this.seenIds.add(idKey);
     return true;
   }
 
@@ -1025,12 +1033,20 @@ class GrqaserCrawler {
 
   async saveBooks(books) {
     console.log(`🔧 [PRODUCTION] Saving ${books.length} books...`);
-
     let savedCount = 0;
-
     for (const book of books) {
       try {
         const normalized = this.normalizeBookForSave(book);
+        const idKey = normalized.id != null ? String(normalized.id) : null;
+        const titleAuthorKey = `${normalized.title}|${normalized.author}`;
+        if (idKey != null && this.seenIds.has(idKey)) {
+          this.stats.duplicatesSkipped++;
+          continue;
+        }
+        if (this.seenBooks.has(titleAuthorKey)) {
+          this.stats.duplicatesSkipped++;
+          continue;
+        }
         const validation = validateBookRow(normalized);
         if (!validation.valid) {
           console.warn(`⚠️ Skipping invalid book "${normalized.title}":`, validation.errors);
@@ -1041,6 +1057,8 @@ class GrqaserCrawler {
           savedCount++;
           this.stats.booksSaved++;
           this.stats.booksFound++;
+          this.seenBooks.add(titleAuthorKey);
+          if (idKey != null) this.seenIds.add(idKey);
         }
       } catch (error) {
         console.error(`❌ [PRODUCTION] Error saving book "${book.title}":`, error);
@@ -1210,14 +1228,14 @@ class GrqaserCrawler {
     const processOne = async (book, page) => {
       const bookUrl = `${this.baseUrl}/books/${book.id}`;
       await page.goto(bookUrl, { waitUntil: 'networkidle2', timeout: this.settings.timeout });
-      await page.waitForTimeout(1000);
+      await this.sleep(1000);
       const detail = await this.extractBookDetail(page);
       if (detail) {
         detail.id = book.id;
         await this.updateBookById(detail);
         this.stats.booksSaved++;
       }
-      await page.waitForTimeout(delayMs);
+      await this.sleep(delayMs);
     };
 
     if (concurrency > 1) {
