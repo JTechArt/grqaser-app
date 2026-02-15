@@ -10,14 +10,54 @@ const { validateAudioUrl, filterValidUrls } = require('./utils/url-validator');
 const { cleanText, normalizeCategory, normalizeAuthor } = require('./utils/text-cleaner');
 const { validateBookRow } = require('./utils/book-validator');
 
+const VALID_MODES = ['full', 'update', 'fix-download-all', 'full-database', 'test'];
+
+function parseCli() {
+  const args = process.argv.slice(2);
+  const out = { mode: null, testLimit: null, testDbPath: null, updateLimit: null, maxConcurrentPages: null };
+  for (const arg of args) {
+    if (arg.startsWith('--mode=')) {
+      out.mode = arg.slice(7).trim();
+    } else if (arg.startsWith('--limit=')) {
+      const n = parseInt(arg.slice(8), 10);
+      if (!Number.isNaN(n)) out.testLimit = n;
+    } else if (arg.startsWith('--output-db=')) {
+      out.testDbPath = arg.slice(12).trim();
+    } else if (arg.startsWith('--update-limit=')) {
+      const n = parseInt(arg.slice(15), 10);
+      if (!Number.isNaN(n)) out.updateLimit = n;
+    } else if (arg.startsWith('--max-concurrent-pages=')) {
+      const n = parseInt(arg.slice(23), 10);
+      if (!Number.isNaN(n)) out.maxConcurrentPages = n;
+    }
+  }
+  return out;
+}
+
 class GrqaserCrawler {
-  constructor() {
+  constructor(cliOverrides = null) {
+    const cli = cliOverrides || parseCli();
     this.baseUrl = config.baseUrl || 'https://grqaser.org';
-    this.dbPath = config.dbPath || path.join(__dirname, '../data/grqaser.db');
     this.dataDir = config.dataDir || path.join(__dirname, '../data');
     this.browser = null;
     this.page = null;
     this.db = null;
+
+    this.mode = cli.mode || process.env.CRAWLER_MODE || config.mode || 'full';
+    if (!VALID_MODES.includes(this.mode)) {
+      this.mode = 'full';
+    }
+    this.testLimit = cli.testLimit != null ? cli.testLimit : (config.testLimit ?? 10);
+    this.testDbPath = cli.testDbPath || process.env.CRAWLER_TEST_DB_PATH || config.testDbPath || null;
+    this.updateLimit = cli.updateLimit != null ? cli.updateLimit : (config.updateLimit ?? null);
+    this.maxConcurrentPages = cli.maxConcurrentPages != null ? cli.maxConcurrentPages : (config.maxConcurrentPages ?? 1);
+
+    if (this.mode === 'test') {
+      const testPath = this.testDbPath || path.join(__dirname, '../data/test_grqaser.db');
+      this.dbPath = path.isAbsolute(testPath) ? testPath : path.join(__dirname, '..', testPath.replace(/^\.\//, ''));
+    } else {
+      this.dbPath = config.dbPath || path.join(__dirname, '../data/grqaser.db');
+    }
 
     const crawling = config.crawling || {};
     this.settings = {
@@ -65,6 +105,9 @@ class GrqaserCrawler {
       // Create books table if not exists (schema aligned with models/database.js)
       await this.createBooksTableIfNeeded();
 
+      // Ensure chapter_urls column exists for update modes (existing DBs may lack it)
+      await this.ensureChapterUrlsColumn();
+
       // Create URL queue table
       await this.createUrlQueueTable();
 
@@ -76,13 +119,15 @@ class GrqaserCrawler {
         await this.initFileLogging();
       }
 
-      // Initialize URL queue with starting URLs
-      await this.initializeUrlQueue();
+      // URL queue only for full (discovery) mode
+      if (this.mode === 'full') {
+        await this.initializeUrlQueue();
+      }
 
       // Launch browser
       await this.launchBrowser();
       
-      console.log('✅ [PRODUCTION] Initialization complete');
+      console.log(`✅ [PRODUCTION] Initialization complete (mode=${this.mode})`);
       return true;
     } catch (error) {
       console.error('❌ [PRODUCTION] Initialization failed:', error);
@@ -111,6 +156,28 @@ class GrqaserCrawler {
       this.db.run(CREATE_BOOKS_TABLE_SQL, (err) => {
         if (err) reject(err);
         else resolve();
+      });
+    });
+  }
+
+  async ensureChapterUrlsColumn() {
+    return new Promise((resolve, reject) => {
+      this.db.all('PRAGMA table_info(books)', (err, rows) => {
+        if (err) {
+          reject(err);
+          return;
+        }
+        const hasChapterUrls = rows && rows.some(r => r.name === 'chapter_urls');
+        if (hasChapterUrls) {
+          resolve();
+          return;
+        }
+        this.db.run('ALTER TABLE books ADD COLUMN chapter_urls TEXT', (alterErr) => {
+          if (alterErr) {
+            if (alterErr.message.includes('duplicate column')) resolve();
+            else reject(alterErr);
+          } else resolve();
+        });
       });
     });
   }
@@ -300,10 +367,10 @@ class GrqaserCrawler {
 
   async launchBrowser() {
     console.log('🔧 Launching browser...');
-    
+    const browserConfig = config.browser || {};
     this.browser = await puppeteer.launch({
-      headless: true,
-      args: [
+      headless: browserConfig.headless !== false,
+      args: browserConfig.args || [
         '--no-sandbox',
         '--disable-setuid-sandbox',
         '--disable-dev-shm-usage',
@@ -315,12 +382,22 @@ class GrqaserCrawler {
     });
 
     this.page = await this.browser.newPage();
-    
-    // Set viewport and user agent
     await this.page.setViewport({ width: 1920, height: 1080 });
     await this.page.setUserAgent('Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36');
-    
-    console.log('✅ Browser launched');
+
+    this.pages = [this.page];
+    const useConcurrency = ['update', 'fix-download-all', 'full-database'].includes(this.mode) && this.maxConcurrentPages > 1;
+    if (useConcurrency) {
+      for (let i = 1; i < this.maxConcurrentPages; i++) {
+        const p = await this.browser.newPage();
+        await p.setViewport({ width: 1920, height: 1080 });
+        await p.setUserAgent('Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36');
+        this.pages.push(p);
+      }
+      console.log(`✅ Browser launched with ${this.pages.length} pages`);
+    } else {
+      console.log('✅ Browser launched');
+    }
   }
 
   async crawl() {
@@ -501,9 +578,10 @@ class GrqaserCrawler {
     }
   }
 
-  async extractBookDetail() {
+  async extractBookDetail(optionPage = null) {
+    const page = optionPage || this.page;
     try {
-      const bookData = await this.page.evaluate(() => {
+      const bookData = await page.evaluate(() => {
         const titleEl = document.querySelector('h1, .book-title, .title');
         const title = titleEl ? titleEl.textContent.trim() : '';
         let author = document.querySelector('.author, .book-author')?.textContent?.trim() || '';
@@ -551,6 +629,21 @@ class GrqaserCrawler {
           const href = a.href;
           if (href && !href.includes('download-all') && !href.includes('.zip') && !audioUrls.includes(href)) audioUrls.push(href);
         });
+        document.querySelectorAll('a[href*="media.grqaser.org"]').forEach(link => {
+          const href = link.href;
+          if (href && href.includes('.mp3') && !href.includes('download-all') && !href.includes('.zip') && !audioUrls.includes(href)) audioUrls.push(href);
+        });
+        const pageSource = document.documentElement.outerHTML;
+        const mp3Matches = pageSource.match(/https:\/\/media\.grqaser\.org\/[^"'\s]+\.mp3/g);
+        if (mp3Matches) {
+          mp3Matches.forEach(url => {
+            if (!url.includes('download-all') && !url.includes('.zip') && !audioUrls.includes(url)) audioUrls.push(url);
+          });
+        }
+        const numberedMp3 = pageSource.match(/https:\/\/media\.grqaser\.org\/[^"'\s]+\/\d{3}_[^"'\s]+\.mp3/g);
+        if (numberedMp3) {
+          numberedMp3.forEach(url => { if (!audioUrls.includes(url)) audioUrls.push(url); });
+        }
         const mainAudio = audioUrls.length > 0 ? audioUrls[0] : null;
         const downloadUrl = document.querySelector('a[href*="download-all"], a[href*=".zip"]')?.href || (audioUrls.length > 1 ? audioUrls[0] : null);
 
@@ -587,8 +680,12 @@ class GrqaserCrawler {
 
       const { totalMinutes, formatted: durationFormatted } = normalizeDurationForStorage(bookData.duration || '');
 
-      const id = this.extractBookIdFromUrl(this.page.url());
+      const id = this.extractBookIdFromUrl(page.url());
       const numericId = typeof id === 'string' && /^\d+$/.test(id) ? parseInt(id, 10) : id;
+
+      const { valid: chapterUrlList } = filterValidUrls(bookData.audioUrls || []);
+      const hasChapters = chapterUrlList.length > 1;
+      const chapterCount = chapterUrlList.length;
 
       return {
         id: numericId,
@@ -605,8 +702,9 @@ class GrqaserCrawler {
         main_audio_url: mainAudioUrl,
         download_url: downloadUrl,
         crawl_status: 'completed',
-        has_chapters: Array.isArray(bookData.audioUrls) && bookData.audioUrls.length > 1,
-        chapter_count: Array.isArray(bookData.audioUrls) ? bookData.audioUrls.length : 0
+        has_chapters: hasChapters,
+        chapter_count: chapterCount,
+        chapter_urls: chapterUrlList.length > 0 ? chapterUrlList : null
       };
     } catch (error) {
       console.error('❌ Error extracting book detail:', error);
@@ -957,13 +1055,16 @@ class GrqaserCrawler {
   }
 
   async saveBookToDatabase(book) {
+    const chapterUrlsJson = book.chapter_urls != null
+      ? (typeof book.chapter_urls === 'string' ? book.chapter_urls : JSON.stringify(book.chapter_urls))
+      : null;
     return new Promise((resolve, reject) => {
       const sql = `
         INSERT OR REPLACE INTO books (
           id, title, author, description, duration, duration_formatted, type, language, category,
           rating, rating_count, cover_image_url, main_audio_url, download_url,
-          file_size, published_at, crawl_status, has_chapters, chapter_count, updated_at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+          file_size, published_at, crawl_status, has_chapters, chapter_count, chapter_urls, updated_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
       `;
       const params = [
         book.id,
@@ -984,7 +1085,8 @@ class GrqaserCrawler {
         book.published_at ?? null,
         book.crawl_status || 'completed',
         book.has_chapters ? 1 : 0,
-        book.chapter_count ?? 0
+        book.chapter_count ?? 0,
+        chapterUrlsJson
       ];
       this.db.run(sql, params, function (err) {
         if (err) reject(err);
@@ -1077,6 +1179,158 @@ class GrqaserCrawler {
       console.error('❌ Error generating URL queue summary:', error);
     }
   }
+
+  /**
+   * Run update/fix-download-all/full-database/test mode: select books from DB, re-crawl detail, persist.
+   * Task 2 implements selection and UPDATE path; here we branch and delegate.
+   */
+  async runUpdateMode() {
+    if (this.mode === 'full') {
+      return this.crawl();
+    }
+    if (this.mode === 'update' || this.mode === 'fix-download-all' || this.mode === 'full-database' || this.mode === 'test') {
+      return this.runUpdateModeInternal();
+    }
+    console.error(`❌ Unknown mode: ${this.mode}`);
+  }
+
+  async runUpdateModeInternal() {
+    const books = await this.getBooksForMode(this.mode);
+    await this.logCrawl('info', `${this.mode} mode started; books to process=${books.length}`);
+    if (books.length === 0) {
+      console.log(`📚 No books to process for mode ${this.mode}`);
+      return;
+    }
+    console.log(`📚 Processing ${books.length} books in mode ${this.mode}`);
+    const limit = this.mode === 'test' ? this.testLimit : (this.updateLimit ?? books.length);
+    const toProcess = books.slice(0, limit);
+    const concurrency = this.pages && this.pages.length > 1 ? this.pages.length : 1;
+    const delayMs = this.settings.delayBetweenPages || 1000;
+
+    const processOne = async (book, page) => {
+      const bookUrl = `${this.baseUrl}/books/${book.id}`;
+      await page.goto(bookUrl, { waitUntil: 'networkidle2', timeout: this.settings.timeout });
+      await page.waitForTimeout(1000);
+      const detail = await this.extractBookDetail(page);
+      if (detail) {
+        detail.id = book.id;
+        await this.updateBookById(detail);
+        this.stats.booksSaved++;
+      }
+      await page.waitForTimeout(delayMs);
+    };
+
+    if (concurrency > 1) {
+      for (let i = 0; i < toProcess.length; i += concurrency) {
+        const chunk = toProcess.slice(i, i + concurrency);
+        await Promise.all(chunk.map((book, j) => {
+          const page = this.pages[j % this.pages.length];
+          return processOne(book, page).catch(err => {
+            console.error(`❌ Error processing book ${book.id}:`, err.message);
+            this.logCrawl('error', `Book ${book.id} failed`, book.id, `${this.baseUrl}/books/${book.id}`, err.message);
+            this.stats.errors++;
+          });
+        }));
+      }
+    } else {
+      for (const book of toProcess) {
+        try {
+          await processOne(book, this.page);
+        } catch (err) {
+          console.error(`❌ Error processing book ${book.id}:`, err.message);
+          await this.logCrawl('error', `Book ${book.id} failed`, book.id, `${this.baseUrl}/books/${book.id}`, err.message);
+          this.stats.errors++;
+        }
+      }
+    }
+    await this.logCrawl('info', `${this.mode} mode finished; saved=${this.stats.booksSaved} errors=${this.stats.errors}`);
+  }
+
+  async getBooksForMode(mode) {
+    return new Promise((resolve, reject) => {
+      let sql;
+      const params = [];
+      if (mode === 'update') {
+        sql = `
+          SELECT id, title, author FROM books
+          WHERE (main_audio_url IS NULL OR main_audio_url = '')
+             OR author = 'Unknown Author'
+             OR (cover_image_url IS NULL OR cover_image_url = '')
+          ORDER BY id
+        `;
+        if (this.updateLimit != null) {
+          sql += ' LIMIT ?';
+          params.push(this.updateLimit);
+        }
+      } else if (mode === 'fix-download-all') {
+        sql = `
+          SELECT id, title, main_audio_url FROM books
+          WHERE main_audio_url LIKE '%download-all%'
+             OR (main_audio_url IS NOT NULL AND main_audio_url != '' AND (chapter_urls IS NULL OR chapter_urls = ''))
+          ORDER BY id
+        `;
+        if (this.updateLimit != null) {
+          sql += ' LIMIT ?';
+          params.push(this.updateLimit);
+        }
+      } else if (mode === 'full-database') {
+        sql = `
+          SELECT id, title FROM books
+          WHERE main_audio_url LIKE '%download-all%'
+             OR chapter_urls IS NULL OR chapter_urls = ''
+             OR crawl_status != 'completed' OR crawl_status IS NULL
+          ORDER BY id
+        `;
+        if (this.updateLimit != null) {
+          sql += ' LIMIT ?';
+          params.push(this.updateLimit);
+        }
+      } else if (mode === 'test') {
+        sql = `SELECT id, title FROM books ORDER BY id LIMIT ?`;
+        params.push(this.testLimit);
+      } else {
+        return resolve([]);
+      }
+      this.db.all(sql, params, (err, rows) => {
+        if (err) reject(err);
+        else resolve(rows || []);
+      });
+    });
+  }
+
+  async updateBookById(book) {
+    const chapterUrlsJson = book.chapter_urls != null
+      ? (typeof book.chapter_urls === 'string' ? book.chapter_urls : JSON.stringify(book.chapter_urls))
+      : null;
+    return new Promise((resolve, reject) => {
+      const sql = `
+        UPDATE books SET
+          title = ?, author = ?, description = ?, duration = ?, duration_formatted = ?,
+          cover_image_url = ?, main_audio_url = ?, download_url = ?,
+          chapter_urls = ?, has_chapters = ?, chapter_count = ?, crawl_status = ?, updated_at = CURRENT_TIMESTAMP
+        WHERE id = ?
+      `;
+      const params = [
+        book.title,
+        book.author,
+        book.description ?? '',
+        book.duration ?? null,
+        book.duration_formatted ?? null,
+        book.cover_image_url ?? null,
+        book.main_audio_url ?? null,
+        book.download_url ?? null,
+        chapterUrlsJson,
+        book.has_chapters ? 1 : 0,
+        book.chapter_count ?? 0,
+        book.crawl_status || 'completed',
+        book.id
+      ];
+      this.db.run(sql, params, function (err) {
+        if (err) reject(err);
+        else resolve(this.changes > 0);
+      });
+    });
+  }
 }
 
 // Main execution
@@ -1086,7 +1340,11 @@ async function main() {
   try {
     const initialized = await crawler.initialize();
     if (initialized) {
-      await crawler.crawl();
+      if (crawler.mode === 'full') {
+        await crawler.crawl();
+      } else {
+        await crawler.runUpdateMode();
+      }
     } else {
       console.error('❌ Failed to initialize crawler');
     }
@@ -1097,7 +1355,9 @@ async function main() {
 
 // Export for use in other files
 module.exports = {
-  GrqaserCrawler
+  GrqaserCrawler,
+  parseCli,
+  VALID_MODES
 };
 
 // Run if called directly

@@ -1,6 +1,8 @@
 /**
  * Crawler Configuration
- * Centralized configuration for the Grqaser crawler application
+ * Centralized configuration for the Grqaser crawler application.
+ * Mode: full | update | fix-download-all | full-database | test.
+ * Override via env CRAWLER_MODE or CLI --mode=value.
  */
 
 const path = require('path');
@@ -10,7 +12,20 @@ module.exports = {
   baseUrl: 'https://grqaser.org',
   dbPath: path.join(__dirname, '../../data/grqaser.db'),
   dataDir: path.join(__dirname, '../../data'),
-  
+
+  // Crawler mode: full (default) | update | fix-download-all | full-database | test
+  // Env: CRAWLER_MODE. CLI: --mode=update
+  mode: process.env.CRAWLER_MODE || 'full',
+
+  // Test mode: limit N books, optional separate DB (no writes to main books)
+  // Env: CRAWLER_TEST_LIMIT, CRAWLER_TEST_DB_PATH. CLI: --limit=N, --output-db=path
+  testLimit: process.env.CRAWLER_TEST_LIMIT ? parseInt(process.env.CRAWLER_TEST_LIMIT, 10) : 10,
+  testDbPath: process.env.CRAWLER_TEST_DB_PATH || null,
+
+  // Update modes: optional limit (default no limit); full-database may use multiple pages
+  updateLimit: process.env.CRAWLER_UPDATE_LIMIT ? parseInt(process.env.CRAWLER_UPDATE_LIMIT, 10) : null,
+  maxConcurrentPages: process.env.CRAWLER_MAX_CONCURRENT_PAGES ? parseInt(process.env.CRAWLER_MAX_CONCURRENT_PAGES, 10) : 1,
+
   // Crawling settings (rate limiting and pagination)
   crawling: {
     maxScrolls: 100,
