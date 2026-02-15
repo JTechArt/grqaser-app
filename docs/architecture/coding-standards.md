@@ -8,7 +8,7 @@ Minimal but critical rules for AI agents and developers. Project-specific; preve
 - **Single source of truth:** Only the crawler writes to the canonical SQLite database. Database-viewer and GrqaserApp are read-only consumers of that data.
 - **Data contract:** All apps use the same schema and types. Changes to schema or required fields must be documented in [data-models-and-schema.md](./data-models-and-schema.md) and reflected in crawler first, then viewer, then app.
 - **Config over hardcoding:** Crawler and database-viewer use config files (e.g. `crawler-config.js`, `config.js`) and env vars for DB path, port, CORS, rate limit, logging. Do not hardcode paths or secrets.
-- **Error handling:** Crawler uses timeouts and retries (e.g. 30s timeout, 3 retries) and logs errors. API routes in database-viewer must return consistent error formats and appropriate HTTP status codes.
+- **Error handling:** Crawler uses timeouts and retries with exponential backoff and jitter; retries are logged (attempt and backoff). API routes in database-viewer must return consistent error formats and appropriate HTTP status codes.
 - **Naming:** Use descriptive variable and method names; follow existing project naming (camelCase for methods, PascalCase for classes, ALL_CAPS for constants where applicable). Standardize Java naming only if/when Java is introduced; for JS/TS use camelCase/PascalCase.
 
 ## Per-application notes

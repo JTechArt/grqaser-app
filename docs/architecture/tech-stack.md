@@ -11,8 +11,9 @@ Definitive technology selection per application. All development must use these 
 | Runtime        | Node.js    | LTS (e.g. 18+)  | CLI crawler execution |
 | Browser automation | Puppeteer | Latest stable    | Page load, listing/detail extraction |
 | Database        | SQLite     | 3.x             | Canonical store (`grqaser.db`) |
-| Config          | JS/JSON    | —               | `src/config/crawler-config.js` |
-| Logging         | Custom / file | —             | Optional file logging under `logs/` |
+| Config          | JS/JSON    | —               | `src/config/crawler-config.js`; merged with `environments[NODE_ENV]` |
+| Logging         | Custom / file | —             | Optional file logging under `logs/`; all modes use crawl_logs |
+| Lint            | ESLint     | —               | Project-aligned or minimal executable config (Story 1.6) |
 | Testing         | Jest       | —               | Unit (parsing/normalization), integration (DB writes) |
 
 ### Phase 2: Database-viewer
