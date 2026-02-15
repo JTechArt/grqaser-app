@@ -31,8 +31,9 @@ grqaser/
 ## Crawler (`crawler/`)
 
 - **Role:** Phase 1. Writes to SQLite only. No dependency on database-viewer or GrqaserApp.
-- **Key dirs:** `src/` (config, models, utils, crawler entry), `data/` (grqaser.db), `logs/` (optional).
-- **Entry:** `src/crawler.js` (or equivalent main script). Config in `src/config/crawler-config.js`.
+- **Key dirs:** `src/` (config, models, schema, utils, crawler entry), `data/` (grqaser.db), `logs/` (optional).
+- **Entry:** `src/crawler.js` — single entrypoint; mode (full, update, fix-download-all, full-database, test) via config or CLI (Story 1.5). Config in `src/config/crawler-config.js`. Schema: `src/schema/books-table.js`.
+- **Deprecated/removed:** `improved-crawler.js`, `full-database-crawler.js`, `fix-download-all-crawler.js` are superseded by the main crawler with modes; `test-crawler.js` may remain as a thin wrapper for `--mode=test`.
 
 ## Database-viewer (`database-viewer/`)
 

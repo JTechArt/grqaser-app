@@ -25,3 +25,4 @@ This document is the single source of truth for the Grqaser ecosystem: **data cr
 | Date       | Version | Description                    | Author     |
 |-----------|---------|--------------------------------|------------|
 | 2025-02-14 | 1.0     | Initial architecture from PRD  | Architect  |
+| 2025-02-15 | 1.1     | Crawler modes, config merge, retry/validation/dedup (Stories 1.5, 1.6) | Architect  |

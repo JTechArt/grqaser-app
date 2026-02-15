@@ -13,7 +13,7 @@ Shared data contract for the crawler (writer), database-viewer (reader), and Grq
 ### Books
 
 - **Purpose:** Audiobook catalog entry from grqaser.org.
-- **Key attributes (align with crawler implementation):** id, title, author, description, duration (structured or formatted), type, language, category, rating, cover_image_url, main_audio_url, download_url, crawl_status, has_chapters, chapter URLs where applicable. Normalized: no HTML in text fields, consistent encoding, unique IDs.
+- **Key attributes (align with crawler implementation):** id, title, author, description, duration (structured or formatted), type, language, category, rating, cover_image_url, main_audio_url, download_url, crawl_status, has_chapters, chapter_count, chapter_urls (Story 1.5). Normalized: no HTML in text fields, consistent encoding, unique IDs.
 - **Relationships:** Categories and authors may be normalized into separate tables or stored as columns per PRD/Epic 1; relationships must support filtering and stats in database-viewer and GrqaserApp.
 
 ### URL queue (crawler-internal)
@@ -56,8 +56,11 @@ Current canonical schema:
 | crawl_status | VARCHAR(50) | DEFAULT 'discovered' | e.g. 'completed', 'discovered'. |
 | has_chapters | BOOLEAN | DEFAULT 0 | |
 | chapter_count | INTEGER | DEFAULT 0 | |
+| chapter_urls | TEXT | | JSON array of per-chapter audio URLs (Story 1.5); used by update/fix-download-all/full-database modes. |
 
-**Required for insert:** id, title, author. All text fields must be free of HTML; URLs must pass scheme validation (http/https). Invalid rows are validated before write and skipped with logging.
+**Required for insert:** id, title, author. All text fields must be free of HTML; URLs must pass scheme validation (http/https).
+
+**Validation before write (Story 1.6):** The crawler enforces: non-empty `main_audio_url`, duration ≥ 0, rating in 0–5, `rating_count` non-negative integer, language length ≤ 10, non-empty title. Invalid rows are skipped with reasons logged. Deduplication is by book id and by (title|author); duplicates are skipped and counted.
 
 **Filtering and stats (Story 1.3):** Category and author columns support filtering (e.g. `WHERE category = ?`, `WHERE author = ?`) and aggregates (e.g. `GROUP BY category`, `GROUP BY author`). The Database model exposes `getBooksByCategory`, `getBooksByAuthor`, `getCategoryCounts`, `getAuthorCounts` for database-viewer and GrqaserApp.
 
