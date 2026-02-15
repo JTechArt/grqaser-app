@@ -37,10 +37,15 @@ function validateBookRow(book) {
     }
   }
 
-  if (book.main_audio_url != null && String(book.main_audio_url).trim() !== '') {
-    const urlResult = validateAudioUrl(book.main_audio_url);
-    if (!urlResult.valid) {
-      errors.push(`main_audio_url: ${urlResult.error}`);
+  if (book.main_audio_url != null) {
+    const trimmed = String(book.main_audio_url).trim();
+    if (trimmed === '') {
+      errors.push('main_audio_url cannot be empty or whitespace');
+    } else {
+      const urlResult = validateAudioUrl(book.main_audio_url);
+      if (!urlResult.valid) {
+        errors.push(`main_audio_url: ${urlResult.error}`);
+      }
     }
   }
 
@@ -53,6 +58,31 @@ function validateBookRow(book) {
 
   if (typeof book.title !== 'string' && book.title != null) {
     errors.push('title must be a string');
+  }
+
+  if (book.duration != null) {
+    const d = book.duration;
+    if (typeof d !== 'number' || !Number.isFinite(d) || d < 0) {
+      errors.push('duration must be a non-negative number');
+    }
+  }
+
+  if (book.rating != null) {
+    const r = book.rating;
+    if (typeof r !== 'number' || !Number.isFinite(r) || r < 0 || r > 5) {
+      errors.push('rating must be a number between 0 and 5');
+    }
+  }
+
+  if (book.rating_count != null) {
+    const rc = book.rating_count;
+    if (!Number.isInteger(rc) || rc < 0) {
+      errors.push('rating_count must be a non-negative integer');
+    }
+  }
+
+  if (book.language != null && String(book.language).length > 10) {
+    errors.push('language must be at most 10 characters');
   }
 
   return {

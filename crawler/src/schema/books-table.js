@@ -27,7 +27,8 @@ const CREATE_BOOKS_TABLE_SQL = `
     is_active BOOLEAN DEFAULT 1,
     crawl_status VARCHAR(50) DEFAULT 'discovered',
     has_chapters BOOLEAN DEFAULT 0,
-    chapter_count INTEGER DEFAULT 0
+    chapter_count INTEGER DEFAULT 0,
+    chapter_urls TEXT
   )
 `.trim();
 
@@ -36,7 +37,7 @@ const BOOKS_TABLE_COLUMNS = [
   'id', 'title', 'author', 'description', 'duration', 'duration_formatted',
   'type', 'language', 'category', 'rating', 'rating_count', 'cover_image_url',
   'main_audio_url', 'download_url', 'file_size', 'published_at', 'created_at',
-  'updated_at', 'is_active', 'crawl_status', 'has_chapters', 'chapter_count'
+  'updated_at', 'is_active', 'crawl_status', 'has_chapters', 'chapter_count', 'chapter_urls'
 ];
 
 module.exports = {
