@@ -1,0 +1,43 @@
+# Quality Gate: 2.2
+schema: 1
+story: "2.2"
+story_title: "Crawler status API and health"
+gate: PASS
+status_reason: "Crawler status/urls/logs and health implemented; config externalized; shared db injected into crawler routes; tests pass."
+reviewer: "Quinn (Test Architect)"
+updated: "2026-02-16T20:50:00Z"
+
+waiver: { active: false }
+
+top_issues: []
+
+risk_summary:
+  totals: { critical: 0, high: 0, medium: 0, low: 0 }
+  recommendations:
+    must_fix: []
+    monitor: []
+
+evidence:
+  tests_reviewed: 8
+  risks_identified: 0
+  trace:
+    ac_covered: [1, 2, 3]
+    ac_gaps: []
+
+nfr_validation:
+  security:
+    status: PASS
+    notes: "Read-only API; rate limit and CORS from config; no secrets in code."
+  performance:
+    status: PASS
+    notes: "Pagination on logs; read-only DB access."
+  reliability:
+    status: PASS
+    notes: "Health reflects DB connectivity (200/503); crawler routes handle errors with 500 + message."
+  maintainability:
+    status: PASS
+    notes: "Dedicated health and crawler tests; config and .env.example documented; crawler routes use single shared db from server."
+
+recommendations:
+  immediate: []
+  future: []

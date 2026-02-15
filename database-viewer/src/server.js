@@ -46,23 +46,32 @@ app.use('/api/', limiter);
 // Static files
 app.use(express.static(path.join(__dirname, '../public')));
 
-// API Routes
+// API Routes (crawler uses shared db instance)
 app.use(`${config.api.basePath}/books`, booksRoutes);
 app.use(`${config.api.basePath}/stats`, statsRoutes);
-app.use(`${config.api.basePath}/crawler`, crawlerRoutes);
+app.use(`${config.api.basePath}/crawler`, crawlerRoutes(db));
 
-// Health check endpoint
-app.get(`${config.api.basePath}/health`, (req, res) => {
-  res.json({
+// Health check endpoint (reflects DB connectivity per AC2)
+app.get(`${config.api.basePath}/health`, async (req, res) => {
+  const payload = {
     success: true,
     data: {
       status: 'healthy',
       timestamp: new Date().toISOString(),
       version: '1.0.0',
-      database: 'connected',
       uptime: process.uptime()
     }
-  });
+  };
+  try {
+    await db.get('SELECT 1');
+    payload.data.database = 'connected';
+    res.status(200).json(payload);
+  } catch (err) {
+    payload.success = false;
+    payload.data.status = 'degraded';
+    payload.data.database = 'disconnected';
+    res.status(503).json(payload);
+  }
 });
 
 // Root endpoint
@@ -118,32 +127,33 @@ process.on('SIGINT', async () => {
   process.exit(0);
 });
 
-// Start server
+// Start server (in test mode only connects DB, does not listen)
 async function startServer() {
   try {
-    // Connect to database
     await db.connect();
-    
-    // Start server
+    if (process.env.NODE_ENV === 'test') {
+      return;
+    }
     const server = app.listen(config.server.port, config.server.host, () => {
       console.log(`🚀 Database Viewer Server running on http://${config.server.host}:${config.server.port}`);
       console.log(`📊 API available at http://${config.server.host}:${config.server.port}${config.api.basePath}`);
       console.log(`🔍 Health check at http://${config.server.host}:${config.server.port}${config.api.basePath}/health`);
     });
-
-    // Handle server errors
     server.on('error', (error) => {
       console.error('Server error:', error);
       process.exit(1);
     });
-
   } catch (error) {
     console.error('Failed to start server:', error);
     process.exit(1);
   }
 }
 
-// Start the server
-startServer();
+// Start the server (skip in test so supertest can use app without listening)
+if (process.env.NODE_ENV !== 'test') {
+  startServer();
+}
 
 module.exports = app;
+module.exports.db = db;
+module.exports.startServer = startServer;

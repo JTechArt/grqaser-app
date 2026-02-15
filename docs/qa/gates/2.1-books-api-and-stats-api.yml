@@ -1,0 +1,45 @@
+# Quality Gate: 2.1
+schema: 1
+story: "2.1"
+story_title: "Books API and stats API"
+gate: PASS
+status_reason: "SEC-001 and TEST-001 addressed: sort params whitelisted in getBooks(); books and stats APIs covered by books.test.js and stats.test.js; 31 tests pass."
+reviewer: "Quinn (Test Architect)"
+updated: "2025-02-16T00:00:00Z"
+
+waiver: { active: false }
+
+top_issues: []
+
+risk_summary:
+  totals: { critical: 0, high: 0, medium: 0, low: 0 }
+  recommendations:
+    must_fix: []
+    monitor: []
+
+evidence:
+  tests_reviewed: 31
+  risks_identified: 0
+  trace:
+    ac_covered: [1, 2, 3, 4]
+    ac_gaps: []
+
+nfr_validation:
+  security:
+    status: PASS
+    notes: "sort_by/sort_order whitelisted (ALLOWED_SORT_COLUMNS + ASC/DESC); rate limit and CORS in place."
+  performance:
+    status: PASS
+    notes: "Pagination and limits in place; read-only DB."
+  reliability:
+    status: PASS
+    notes: "Consistent error format and status codes; DB errors handled."
+  maintainability:
+    status: PASS
+    notes: "books.test.js and stats.test.js cover AC1–AC4; sort whitelist explicitly tested."
+
+recommendations:
+  immediate: []
+  future:
+    - action: "Consider validating page/limit bounds and type (integer) in books route"
+      refs: ["database-viewer/src/routes/books.js"]
