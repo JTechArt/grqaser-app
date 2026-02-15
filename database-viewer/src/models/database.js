@@ -94,6 +94,11 @@ class Database {
     });
   }
 
+  /** Allowed sort columns for getBooks (whitelist to prevent SQL injection) */
+  static get ALLOWED_SORT_COLUMNS() {
+    return ['id', 'title', 'author', 'created_at', 'updated_at', 'category', 'crawl_status', 'duration'];
+  }
+
   /**
    * Get books with pagination and filtering
    */
@@ -110,6 +115,11 @@ class Database {
       sortBy = 'created_at',
       sortOrder = 'DESC'
     } = options;
+
+    // Whitelist sort column and direction to prevent SQL injection (SEC-001)
+    const allowedColumns = Database.ALLOWED_SORT_COLUMNS;
+    const safeSortBy = typeof sortBy === 'string' && allowedColumns.includes(sortBy) ? sortBy : 'created_at';
+    const safeSortOrder = (typeof sortOrder === 'string' && /^(ASC|DESC)$/i.test(sortOrder)) ? sortOrder.toUpperCase() : 'DESC';
 
     // Build WHERE clause
     const whereConditions = [];
@@ -164,7 +174,7 @@ class Database {
     const booksSql = `
       SELECT * FROM books 
       ${whereClause}
-      ORDER BY ${sortBy} ${sortOrder}
+      ORDER BY ${safeSortBy} ${safeSortOrder}
       LIMIT ? OFFSET ?
     `;
     const books = await this.all(booksSql, [...params, limit, offset]);
