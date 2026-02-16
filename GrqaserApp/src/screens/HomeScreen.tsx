@@ -2,7 +2,7 @@ import React, {useEffect, useState} from 'react';
 import {View, ScrollView, StyleSheet, RefreshControl} from 'react-native';
 import {useNavigation} from '@react-navigation/native';
 import {useDispatch, useSelector} from 'react-redux';
-import {Text, Searchbar, ActivityIndicator} from 'react-native-paper';
+import {Text, Searchbar, ActivityIndicator, Banner} from 'react-native-paper';
 import {StackNavigationProp} from '@react-navigation/stack';
 import LinearGradient from 'react-native-linear-gradient';
 
@@ -12,6 +12,7 @@ import {
   fetchBooks,
   fetchCategories,
   setSearchQuery,
+  clearError,
 } from '../state/slices/booksSlice';
 import {Book, BookCategory} from '../types/book';
 import BookCard from '../components/BookCard';
@@ -31,9 +32,8 @@ const HomeScreen: React.FC = () => {
   const [refreshing, setRefreshing] = useState(false);
   const [_searchVisible, _setSearchVisible] = useState(false);
 
-  const {books, filteredBooks, categories, loading, searchQuery} = useSelector(
-    (state: RootState) => state.books,
-  );
+  const {books, filteredBooks, categories, loading, error, searchQuery} =
+    useSelector((state: RootState) => state.books);
 
   const {currentBook} = useSelector((state: RootState) => state.player);
 
@@ -188,6 +188,19 @@ const HomeScreen: React.FC = () => {
 
   return (
     <View style={styles.container}>
+      {error ? (
+        <Banner
+          visible={!!error}
+          actions={[
+            {
+              label: 'Dismiss',
+              onPress: () => dispatch(clearError()),
+            },
+          ]}
+          icon="alert">
+          {error}
+        </Banner>
+      ) : null}
       <ScrollView
         style={styles.scrollView}
         refreshControl={

@@ -1,6 +1,6 @@
 import {createSlice, createAsyncThunk, PayloadAction} from '@reduxjs/toolkit';
 import {Book, BookCategory, BookFilter} from '../../types/book';
-import {booksApi} from '../../services/booksApi';
+import {booksApi, getErrorMessage} from '../../services/booksApi';
 
 interface BooksState {
   books: Book[];
@@ -10,6 +10,8 @@ interface BooksState {
   recentlyPlayed: string[];
   loading: boolean;
   error: string | null;
+  searchLoading: boolean;
+  searchError: string | null;
   filters: BookFilter;
   searchQuery: string;
 }
@@ -22,6 +24,8 @@ const initialState: BooksState = {
   recentlyPlayed: [],
   loading: false,
   error: null,
+  searchLoading: false,
+  searchError: null,
   filters: {
     category: 'all',
     type: 'all',
@@ -35,10 +39,9 @@ export const fetchBooks = createAsyncThunk(
   'books/fetchBooks',
   async (_, {rejectWithValue}) => {
     try {
-      const response = await booksApi.getBooks();
-      return response;
+      return await booksApi.getBooks();
     } catch (error) {
-      return rejectWithValue('Failed to fetch books');
+      return rejectWithValue(getErrorMessage(error));
     }
   },
 );
@@ -47,10 +50,9 @@ export const fetchCategories = createAsyncThunk(
   'books/fetchCategories',
   async (_, {rejectWithValue}) => {
     try {
-      const response = await booksApi.getCategories();
-      return response;
+      return await booksApi.getCategories();
     } catch (error) {
-      return rejectWithValue('Failed to fetch categories');
+      return rejectWithValue(getErrorMessage(error));
     }
   },
 );
@@ -59,10 +61,9 @@ export const searchBooks = createAsyncThunk(
   'books/searchBooks',
   async (query: string, {rejectWithValue}) => {
     try {
-      const response = await booksApi.searchBooks(query);
-      return response;
+      return await booksApi.searchBooks(query);
     } catch (error) {
-      return rejectWithValue('Failed to search books');
+      return rejectWithValue(getErrorMessage(error));
     }
   },
 );
@@ -110,6 +111,9 @@ const booksSlice = createSlice({
     clearError: state => {
       state.error = null;
     },
+    clearSearchError: state => {
+      state.searchError = null;
+    },
   },
   extraReducers: builder => {
     builder
@@ -128,13 +132,24 @@ const booksSlice = createSlice({
       })
       .addCase(fetchBooks.rejected, (state, action) => {
         state.loading = false;
-        state.error = action.payload as string;
+        state.error = (action.payload as string) ?? 'Failed to load books';
       })
       .addCase(fetchCategories.fulfilled, (state, action) => {
         state.categories = action.payload;
       })
+      .addCase(searchBooks.pending, state => {
+        state.searchLoading = true;
+        state.searchError = null;
+      })
       .addCase(searchBooks.fulfilled, (state, action) => {
+        state.searchLoading = false;
+        state.searchError = null;
         state.filteredBooks = action.payload.books;
+      })
+      .addCase(searchBooks.rejected, (state, action) => {
+        state.searchLoading = false;
+        state.searchError =
+          (action.payload as string) ?? 'Search failed. Please try again.';
       });
   },
 });
@@ -193,6 +208,7 @@ export const {
   toggleFavorite,
   addToRecentlyPlayed,
   clearError,
+  clearSearchError,
 } = booksSlice.actions;
 
 export default booksSlice.reducer;
