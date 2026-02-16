@@ -1,5 +1,5 @@
 import React, {ReactNode, useEffect, useState} from 'react';
-import TrackPlayer from 'react-native-track-player';
+import TrackPlayer, {Capability} from 'react-native-track-player';
 
 type Props = {children: ReactNode};
 
@@ -9,6 +9,19 @@ const TrackPlayerProvider: React.FC<Props> = ({children}) => {
   useEffect(() => {
     let cancelled = false;
     TrackPlayer.setupPlayer()
+      .then(() =>
+        TrackPlayer.updateOptions({
+          capabilities: [
+            Capability.Play,
+            Capability.Pause,
+            Capability.SeekTo,
+            Capability.Stop,
+          ],
+          android: {
+            alwaysPauseOnInterruption: true,
+          },
+        }),
+      )
       .then(() => {
         if (!cancelled) {
           setReady(true);
