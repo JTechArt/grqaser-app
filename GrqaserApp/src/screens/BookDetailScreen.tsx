@@ -8,12 +8,15 @@ import {
   useWindowDimensions,
   TextStyle,
 } from 'react-native';
-import {RouteProp} from '@react-navigation/native';
+import {RouteProp, useNavigation} from '@react-navigation/native';
+import {useSelector} from 'react-redux';
 import {Button} from 'react-native-paper';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import {RootStackParamList} from '../navigation/types';
 import {theme} from '../theme';
 import {formatDuration} from '../utils/formatters';
+import {playBook} from '../services/playerService';
+import type {RootState} from '../state';
 
 type BookDetailScreenRouteProp = RouteProp<RootStackParamList, 'BookDetail'>;
 
@@ -24,6 +27,8 @@ const COVER_MAX_HEIGHT = 280;
 
 const BookDetailScreen: React.FC<Props> = ({route}) => {
   const {width} = useWindowDimensions();
+  const navigation = useNavigation();
+  const playerError = useSelector((s: RootState) => s.player.error);
   const book = route.params?.book;
 
   if (!book) {
@@ -38,9 +43,19 @@ const BookDetailScreen: React.FC<Props> = ({route}) => {
 
   const coverWidth = width;
   const coverHeight = Math.min(width / COVER_ASPECT, COVER_MAX_HEIGHT);
+  const canPlay = book.type === 'audiobook' && book.audioUrl?.trim();
 
   const onPlayPress = () => {
-    // Placeholder for Epic 4: wire to audio playback
+    if (!canPlay) {
+      return;
+    }
+    playBook(book).then(() => {
+      (
+        navigation as unknown as {
+          navigate: (a: string, b?: {screen: string}) => void;
+        }
+      ).navigate('MainTabs', {screen: 'Player'});
+    });
   };
 
   const ratingChip =
@@ -106,15 +121,23 @@ const BookDetailScreen: React.FC<Props> = ({route}) => {
         {book.description ? (
           <Text style={styles.description}>{book.description}</Text>
         ) : null}
+        {playerError ? (
+          <Text style={styles.errorText}>{playerError}</Text>
+        ) : null}
         <Button
           mode="contained"
           onPress={onPlayPress}
           icon="play"
+          disabled={!canPlay}
           style={styles.playButton}
           contentStyle={styles.playButtonContent}>
           Play
         </Button>
-        <Text style={styles.playHint}>Playback will be wired in Epic 4.</Text>
+        {!canPlay && book.type === 'audiobook' ? (
+          <Text style={styles.playHint}>
+            No audio URL available for this book.
+          </Text>
+        ) : null}
       </View>
     </ScrollView>
   );
@@ -178,6 +201,11 @@ const styles = StyleSheet.create({
   playHint: {
     ...theme.typography.caption,
     color: theme.colors.onSurface,
+  } as TextStyle,
+  errorText: {
+    ...theme.typography.body2,
+    color: theme.colors.error,
+    marginBottom: 12,
   } as TextStyle,
 });
 
