@@ -28,6 +28,19 @@ Definitive technology selection per application. All development must use these 
 | Config         | Env + JS   | —               | Port, DB path, CORS, rate limit, logging |
 | Testing        | Jest / Supertest or similar | — | API and optional UI tests |
 
+### Epic 6: Books-admin-app (merged crawler + database-viewer)
+
+| Category       | Technology | Version / notes | Purpose |
+|----------------|------------|-----------------|---------|
+| Runtime        | Node.js    | LTS             | Single process: Express + crawler (library or subprocess) |
+| Backend        | Express    | 4.x             | REST API, static web UI, crawler control, DB versioning, data edit |
+| Browser automation | Puppeteer | Latest stable    | Crawler (same as Phase 1) |
+| Database       | SQLite     | 3.x             | Active/backup DB versioning; read + write (crawler + manual edits) |
+| API style      | REST       | —               | Same as database-viewer + extensions for DBs, crawler start/stop/config, PATCH books |
+| Frontend       | Vanilla JS / HTML/CSS | —  | Admin UI: dashboard, books, crawler, DB versioning, edit forms |
+| Config         | Env + JS   | —               | Port, active DB path, crawler config (mode, rate limits, etc.) |
+| Testing        | Jest / Supertest or similar | — | API and integration tests for merged app |
+
 ### Phase 3: GrqaserApp (mobile)
 
 | Category       | Technology | Version / notes | Purpose |
@@ -45,7 +58,7 @@ Definitive technology selection per application. All development must use these 
 ## Shared
 
 - **Data contract:** Single SQLite schema and documented types; crawler writes, database-viewer and GrqaserApp read.
-- **Monorepo:** Single repo with `crawler/`, `database-viewer/`, `GrqaserApp/`; shared types/schema can live in a shared folder or be documented in one place (e.g. [Data models and schema](./data-models-and-schema.md)).
+- **Monorepo:** Single repo with `crawler/`, `database-viewer/`, `books-admin-app/` (Epic 6), `GrqaserApp/`; shared types/schema can live in a shared folder or be documented in one place (e.g. [Data models and schema](./data-models-and-schema.md)).
 
 ## Constraints
 

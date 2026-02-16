@@ -62,3 +62,12 @@ Phase 3: GrqaserApp (consumes crawler data via viewer API or export)
 ```
 
 All three applications share one data contract (schema and types). The crawler is the only writer to the canonical store; the database-viewer and GrqaserApp are consumers.
+
+## Epic 6: books-admin-app (optional consolidation)
+
+**Epic 6** introduces a single local admin application **books-admin-app** that merges the crawler and database-viewer into one process. This is a brownfield enhancement:
+
+- **books-admin-app** consolidates Phase 1 (crawler) and Phase 2 (database-viewer) into one runnable app: one entrypoint for crawler, DB versioning (active/backup), crawler start/stop and config, and data view + edit.
+- **GrqaserApp** (Phase 3) can point at the books-admin-app API instead of the standalone database-viewer; the data contract and schema remain the same.
+- **Existing `crawler/` and `database-viewer/`** directories may remain in the repo for rollback or reference; books-admin-app may reuse their code (in-process or subprocess) or absorb it. Phase gates for “crawler done” and “viewer used to validate data” still apply to the work that books-admin-app delivers.
+- See [Books-admin-app architecture](./books-admin-app-architecture.md) for run model, DB versioning, crawler control, and data management.

@@ -8,6 +8,7 @@ Monorepo layout for the three applications. Each app is self-contained; shared d
 grqaser/
 ├── crawler/                 # Phase 1 — Data crawler (single source of truth for DB)
 ├── database-viewer/         # Phase 2 — Admin panel (API + web UI)
+├── books-admin-app/         # Epic 6 — Merged crawler + viewer; DB versioning; crawler control; data edit
 ├── GrqaserApp/              # Phase 3 — Mobile app (consumes crawler data)
 ├── docs/
 │   ├── prd.md
@@ -18,6 +19,7 @@ grqaser/
 │   │   ├── source-tree.md
 │   │   ├── crawler-pipeline-and-data-contract.md
 │   │   ├── database-viewer-api-and-deployment.md
+│   │   ├── books-admin-app-architecture.md
 │   │   ├── grqaserapp-data-integration-and-audio.md
 │   │   ├── data-models-and-schema.md
 │   │   ├── testing-and-deployment-strategy.md
@@ -41,6 +43,13 @@ grqaser/
 - **Key dirs:** `src/` (config, models, routes, server), `public/` (web UI), `data/` (optional local DB copy), `logs/` (optional).
 - **Entry:** `src/server.js`. Config: port, DB path, CORS, rate limit, logging (env or config).
 
+## Books-admin-app (`books-admin-app/`) — Epic 6
+
+- **Role:** Brownfield consolidation of crawler + database-viewer. Single local admin app: run crawler, manage DB versioning (active/backup), crawler start/stop and config, view and edit data. No auth; local-only.
+- **Key dirs:** `src/` (server, config, routes, models/db, crawler as library or subprocess), `public/` (web UI). Reuses same schema and data contract as crawler/viewer.
+- **Entry:** `src/server.js`. See [Books-admin-app architecture](./books-admin-app-architecture.md) for run model, DB versioning, API extensions, and project structure.
+- **Relationship:** Code and behavior from `crawler/` and `database-viewer/` are merged or invoked from books-admin-app; those directories may remain in repo for rollback.
+
 ## GrqaserApp (`GrqaserApp/`)
 
 - **Role:** Phase 3. Consumes data via database-viewer API or agreed export. Do not start catalog/playback work until Phase 2 has validated data.
@@ -51,6 +60,7 @@ grqaser/
 
 - **New crawler code:** Under `crawler/src/`; respect existing config and models.
 - **New database-viewer code:** Under `database-viewer/src/` (routes, models, config); static assets in `public/`.
+- **New books-admin-app code:** Under `books-admin-app/src/` (server, routes, config, models/db, crawler); static assets in `books-admin-app/public/`. Follow [books-admin-app architecture](./books-admin-app-architecture.md).
 - **New GrqaserApp code:** Under `GrqaserApp/src/` (screens, services, state, types). Use path aliases if configured.
 - **Shared types/schema:** Document in `docs/architecture/data-models-and-schema.md`; duplicate minimal types in each app or use a shared package only if introduced explicitly.
 

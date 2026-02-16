@@ -15,6 +15,7 @@ This document is the single source of truth for the Grqaser ecosystem: **data cr
 - [Source tree (unified project structure)](./source-tree.md) — Monorepo layout and boundaries
 - [Crawler pipeline and data contract](./crawler-pipeline-and-data-contract.md) — Phase 1: crawler, SQLite schema, data flow
 - [Database-viewer API and deployment](./database-viewer-api-and-deployment.md) — Phase 2: admin panel API and web UI
+- [Books-admin-app architecture](./books-admin-app-architecture.md) — Epic 6: merged crawler + viewer, DB versioning, crawler control, data edit
 - [GrqaserApp data integration and audio](./grqaserapp-data-integration-and-audio.md) — Phase 3: mobile app, API consumption, playback
 - [Data models and schema](./data-models-and-schema.md) — Shared data contract and SQLite schema
 - [Testing and deployment strategy](./testing-and-deployment-strategy.md) — Tests and runbooks per application
@@ -26,3 +27,4 @@ This document is the single source of truth for the Grqaser ecosystem: **data cr
 |-----------|---------|--------------------------------|------------|
 | 2025-02-14 | 1.0     | Initial architecture from PRD  | Architect  |
 | 2025-02-15 | 1.1     | Crawler modes, config merge, retry/validation/dedup (Stories 1.5, 1.6) | Architect  |
+| 2025-02-16 | 1.2     | Epic 6: books-admin-app architecture (merge crawler+viewer, DB versioning, crawler control, data edit) | Architect  |
