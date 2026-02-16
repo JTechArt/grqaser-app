@@ -97,6 +97,9 @@ const booksSlice = createSlice({
         state.favorites.push(bookId);
       }
     },
+    setFavorites: (state, action: PayloadAction<string[]>) => {
+      state.favorites = action.payload;
+    },
     addToRecentlyPlayed: (state, action: PayloadAction<string>) => {
       const bookId = action.payload;
       const index = state.recentlyPlayed.indexOf(bookId);
@@ -206,6 +209,7 @@ export const {
   setFilters,
   setSearchQuery,
   toggleFavorite,
+  setFavorites,
   addToRecentlyPlayed,
   clearError,
   clearSearchError,
