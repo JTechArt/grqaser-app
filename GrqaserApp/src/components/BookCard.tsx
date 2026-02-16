@@ -1,19 +1,14 @@
 import React from 'react';
-import {
-  View,
-  TouchableOpacity,
-  StyleSheet,
-  Dimensions,
-} from 'react-native';
-import { Text, Card, useTheme } from 'react-native-paper';
+import {View, TouchableOpacity, StyleSheet, Dimensions} from 'react-native';
+import {Text, Card} from 'react-native-paper';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import FastImage from 'react-native-fast-image';
 
-import { Book } from '../types/book';
-import { theme } from '../theme';
-import { formatDuration } from '../utils/formatters';
+import {Book} from '../types/book';
+import {theme} from '../theme';
+import {formatDuration} from '../utils/formatters';
 
-const { width } = Dimensions.get('window');
+const {width} = Dimensions.get('window');
 const cardWidth = (width - 60) / 2; // 2 columns with margins
 
 interface BookCardProps {
@@ -29,7 +24,7 @@ const BookCard: React.FC<BookCardProps> = ({
   compact = false,
   showProgress = false,
 }) => {
-  const theme = useTheme();
+  // Use app theme from theme module (avoids shadowing imported theme)
 
   const handlePress = () => {
     onPress(book);
@@ -39,7 +34,7 @@ const BookCard: React.FC<BookCardProps> = ({
     if (book.coverImage) {
       return (
         <FastImage
-          source={{ uri: book.coverImage }}
+          source={{uri: book.coverImage}}
           style={[styles.cover, compact && styles.coverCompact]}
           resizeMode={FastImage.resizeMode.cover}
         />
@@ -47,7 +42,12 @@ const BookCard: React.FC<BookCardProps> = ({
     }
 
     return (
-      <View style={[styles.cover, compact && styles.coverCompact, styles.placeholderCover]}>
+      <View
+        style={[
+          styles.cover,
+          compact && styles.coverCompact,
+          styles.placeholderCover,
+        ]}>
         <Text style={styles.placeholderText}>
           {book.title.substring(0, 2).toUpperCase()}
         </Text>
@@ -56,14 +56,16 @@ const BookCard: React.FC<BookCardProps> = ({
   };
 
   const renderProgress = () => {
-    if (!showProgress || !book.playProgress || !book.duration) return null;
+    if (!showProgress || !book.playProgress || !book.duration) {
+      return null;
+    }
 
     const progress = (book.playProgress / book.duration) * 100;
-    
+
     return (
       <View style={styles.progressContainer}>
         <View style={styles.progressBar}>
-          <View style={[styles.progressFill, { width: `${progress}%` }]} />
+          <View style={[styles.progressFill, {width: `${progress}%`}]} />
         </View>
         <Text style={styles.progressText}>{Math.round(progress)}%</Text>
       </View>
@@ -71,11 +73,13 @@ const BookCard: React.FC<BookCardProps> = ({
   };
 
   const renderTypeIcon = () => {
-    const iconName = book.type === 'audiobook' ? 'headphones' : 'book-open-variant';
-    const iconColor = book.type === 'audiobook' ? theme.colors.primary : theme.colors.secondary;
-    
+    const iconName =
+      book.type === 'audiobook' ? 'headphones' : 'book-open-variant';
+    const iconColor =
+      book.type === 'audiobook' ? theme.colors.primary : theme.colors.secondary;
+
     return (
-      <View style={[styles.typeIcon, { backgroundColor: iconColor }]}>
+      <View style={[styles.typeIcon, {backgroundColor: iconColor}]}>
         <Icon name={iconName} size={12} color="white" />
       </View>
     );
@@ -85,8 +89,7 @@ const BookCard: React.FC<BookCardProps> = ({
     <TouchableOpacity
       style={[styles.container, compact && styles.containerCompact]}
       onPress={handlePress}
-      activeOpacity={0.7}
-    >
+      activeOpacity={0.7}>
       <Card style={[styles.card, compact && styles.cardCompact]}>
         <View style={styles.coverContainer}>
           {renderCover()}
@@ -97,38 +100,34 @@ const BookCard: React.FC<BookCardProps> = ({
             </View>
           )}
         </View>
-        
+
         <Card.Content style={styles.content}>
           <Text
             style={[styles.title, compact && styles.titleCompact]}
             numberOfLines={2}
-            ellipsizeMode="tail"
-          >
+            ellipsizeMode="tail">
             {book.title}
           </Text>
-          
+
           <Text
             style={[styles.author, compact && styles.authorCompact]}
             numberOfLines={1}
-            ellipsizeMode="tail"
-          >
+            ellipsizeMode="tail">
             {book.author}
           </Text>
-          
+
           {book.duration && (
             <Text style={[styles.duration, compact && styles.durationCompact]}>
               {formatDuration(book.duration)}
             </Text>
           )}
-          
+
           {renderProgress()}
-          
+
           {book.rating && (
             <View style={styles.ratingContainer}>
-              <Icon name="star" size={12} color={theme.colors.warning} />
-              <Text style={styles.ratingText}>
-                {book.rating.toFixed(1)}
-              </Text>
+              <Icon name="star" size={12} color={theme.colors.secondary} />
+              <Text style={styles.ratingText}>{book.rating.toFixed(1)}</Text>
             </View>
           )}
         </Card.Content>

@@ -20,18 +20,15 @@
       "@components/*": ["src/components/*"],
       "@screens/*": ["src/screens/*"],
       "@navigation/*": ["src/navigation/*"],
+      "@state/*": ["src/state/*"],
       "@services/*": ["src/services/*"],
+      "@constants/*": ["src/constants/*"],
       "@utils/*": ["src/utils/*"],
       "@types/*": ["src/types/*"],
-      "@assets/*": ["src/assets/*"],
-      "@store/*": ["src/store/*"]
+      "@assets/*": ["src/assets/*"]
     }
   },
-  "include": [
-    "src/**/*",
-    "index.js",
-    "index.ts"
-  ],
+  "include": ["src/**/*", "index.js", "index.ts"],
   "exclude": [
     "node_modules",
     "babel.config.js",

@@ -4,7 +4,9 @@
  * @returns Formatted duration string (e.g., "1h 30m", "45m", "2h 15m 30s")
  */
 export const formatDuration = (seconds: number): string => {
-  if (!seconds || seconds <= 0) return '0m';
+  if (!seconds || seconds <= 0) {
+    return '0m';
+  }
 
   const hours = Math.floor(seconds / 3600);
   const minutes = Math.floor((seconds % 3600) / 60);
@@ -31,7 +33,9 @@ export const formatDuration = (seconds: number): string => {
  * @returns Formatted duration in Armenian (e.g., "1ժ 30ր", "45ր")
  */
 export const formatDurationArmenian = (seconds: number): string => {
-  if (!seconds || seconds <= 0) return '0ր';
+  if (!seconds || seconds <= 0) {
+    return '0ր';
+  }
 
   const hours = Math.floor(seconds / 3600);
   const minutes = Math.floor((seconds % 3600) / 60);
@@ -49,7 +53,9 @@ export const formatDurationArmenian = (seconds: number): string => {
  * @returns Formatted file size (e.g., "1.5 MB", "2.3 GB")
  */
 export const formatFileSize = (bytes: number): string => {
-  if (!bytes || bytes <= 0) return '0 B';
+  if (!bytes || bytes <= 0) {
+    return '0 B';
+  }
 
   const k = 1024;
   const sizes = ['B', 'KB', 'MB', 'GB', 'TB'];
@@ -66,7 +72,9 @@ export const formatFileSize = (bytes: number): string => {
 export const formatRelativeTime = (date: string | Date): string => {
   const now = new Date();
   const targetDate = new Date(date);
-  const diffInSeconds = Math.floor((now.getTime() - targetDate.getTime()) / 1000);
+  const diffInSeconds = Math.floor(
+    (now.getTime() - targetDate.getTime()) / 1000,
+  );
 
   if (diffInSeconds < 60) {
     return 'Just now';
@@ -117,7 +125,9 @@ export const formatNumber = (num: number): string => {
  * @returns Truncated text with ellipsis
  */
 export const truncateText = (text: string, maxLength: number): string => {
-  if (!text || text.length <= maxLength) return text;
+  if (!text || text.length <= maxLength) {
+    return text;
+  }
   return text.substring(0, maxLength) + '...';
 };
 
@@ -127,7 +137,9 @@ export const truncateText = (text: string, maxLength: number): string => {
  * @returns Capitalized text
  */
 export const capitalizeWords = (text: string): string => {
-  if (!text) return '';
+  if (!text) {
+    return '';
+  }
   return text
     .split(' ')
     .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
@@ -141,7 +153,9 @@ export const capitalizeWords = (text: string): string => {
  * @returns Percentage string (e.g., "75%")
  */
 export const formatProgress = (current: number, total: number): string => {
-  if (!total || total <= 0) return '0%';
+  if (!total || total <= 0) {
+    return '0%';
+  }
   const percentage = Math.round((current / total) * 100);
   return `${percentage}%`;
 };
@@ -152,14 +166,18 @@ export const formatProgress = (current: number, total: number): string => {
  * @returns Formatted time (e.g., "3:45", "1:23:45")
  */
 export const formatTime = (seconds: number): string => {
-  if (!seconds || seconds <= 0) return '0:00';
+  if (!seconds || seconds <= 0) {
+    return '0:00';
+  }
 
   const hours = Math.floor(seconds / 3600);
   const minutes = Math.floor((seconds % 3600) / 60);
   const remainingSeconds = Math.floor(seconds % 60);
 
   if (hours > 0) {
-    return `${hours}:${minutes.toString().padStart(2, '0')}:${remainingSeconds.toString().padStart(2, '0')}`;
+    return `${hours}:${minutes.toString().padStart(2, '0')}:${remainingSeconds
+      .toString()
+      .padStart(2, '0')}`;
   } else {
     return `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`;
   }

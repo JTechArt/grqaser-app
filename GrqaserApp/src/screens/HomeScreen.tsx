@@ -1,54 +1,41 @@
-import React, { useEffect, useState } from 'react';
-import {
-  View,
-  ScrollView,
-  StyleSheet,
-  RefreshControl,
-  Dimensions,
-} from 'react-native';
-import { useNavigation } from '@react-navigation/native';
-import { useDispatch, useSelector } from 'react-redux';
-import {
-  Text,
-  Searchbar,
-  Card,
-  Chip,
-  ActivityIndicator,
-  useTheme,
-} from 'react-native-paper';
-import { StackNavigationProp } from '@react-navigation/stack';
+import React, {useEffect, useState} from 'react';
+import {View, ScrollView, StyleSheet, RefreshControl} from 'react-native';
+import {useNavigation} from '@react-navigation/native';
+import {useDispatch, useSelector} from 'react-redux';
+import {Text, Searchbar, ActivityIndicator} from 'react-native-paper';
+import {StackNavigationProp} from '@react-navigation/stack';
 import LinearGradient from 'react-native-linear-gradient';
 
-import { RootStackParamList } from '../navigation/types';
-import { RootState } from '../store';
-import { fetchBooks, fetchCategories, setSearchQuery } from '../store/slices/booksSlice';
-import { Book, BookCategory } from '../types/book';
+import {RootStackParamList} from '../navigation/types';
+import {RootState, AppDispatch} from '../state';
+import {
+  fetchBooks,
+  fetchCategories,
+  setSearchQuery,
+} from '../state/slices/booksSlice';
+import {Book, BookCategory} from '../types/book';
 import BookCard from '../components/BookCard';
 import CategoryCard from '../components/CategoryCard';
 import MiniPlayer from '../components/MiniPlayer';
-import { theme } from '../theme';
+import {theme} from '../theme';
 
-type HomeScreenNavigationProp = StackNavigationProp<RootStackParamList, 'MainTabs'>;
-
-const { width } = Dimensions.get('window');
+type HomeScreenNavigationProp = StackNavigationProp<
+  RootStackParamList,
+  'MainTabs'
+>;
 
 const HomeScreen: React.FC = () => {
   const navigation = useNavigation<HomeScreenNavigationProp>();
-  const dispatch = useDispatch();
-  const theme = useTheme();
+  const dispatch = useDispatch<AppDispatch>();
+  // theme from '../theme' used for consistency; useTheme() would shadow import
   const [refreshing, setRefreshing] = useState(false);
-  const [searchVisible, setSearchVisible] = useState(false);
+  const [_searchVisible, _setSearchVisible] = useState(false);
 
-  const {
-    books,
-    filteredBooks,
-    categories,
-    loading,
-    error,
-    searchQuery,
-  } = useSelector((state: RootState) => state.books);
+  const {books, filteredBooks, categories, loading, searchQuery} = useSelector(
+    (state: RootState) => state.books,
+  );
 
-  const { currentBook } = useSelector((state: RootState) => state.player);
+  const {currentBook} = useSelector((state: RootState) => state.player);
 
   useEffect(() => {
     dispatch(fetchBooks());
@@ -57,10 +44,7 @@ const HomeScreen: React.FC = () => {
 
   const onRefresh = async () => {
     setRefreshing(true);
-    await Promise.all([
-      dispatch(fetchBooks()),
-      dispatch(fetchCategories()),
-    ]);
+    await Promise.all([dispatch(fetchBooks()), dispatch(fetchCategories())]);
     setRefreshing(false);
   };
 
@@ -69,27 +53,26 @@ const HomeScreen: React.FC = () => {
   };
 
   const handleBookPress = (book: Book) => {
-    navigation.navigate('BookDetail', { book });
+    navigation.navigate('BookDetail', {book});
   };
 
   const handleCategoryPress = (category: BookCategory) => {
-    navigation.navigate('Category', { category });
+    navigation.navigate('Category', {category});
   };
 
   const handleSearchPress = () => {
-    navigation.navigate('Search', { initialQuery: searchQuery });
+    navigation.navigate('Search', {initialQuery: searchQuery});
   };
 
   const renderHeader = () => (
     <LinearGradient
       colors={[theme.colors.primary, theme.colors.secondary]}
-      style={styles.header}
-    >
+      style={styles.header}>
       <View style={styles.headerContent}>
         <Text style={styles.appTitle}>Grqaser</Text>
         <Text style={styles.appSubtitle}>Book Lover</Text>
       </View>
-      
+
       <Searchbar
         placeholder="Search for books, authors..."
         onChangeText={handleSearch}
@@ -132,9 +115,8 @@ const HomeScreen: React.FC = () => {
       <ScrollView
         horizontal
         showsHorizontalScrollIndicator={false}
-        contentContainerStyle={styles.categoriesContainer}
-      >
-        {categories.slice(0, 6).map((category) => (
+        contentContainerStyle={styles.categoriesContainer}>
+        {categories.slice(0, 6).map(category => (
           <CategoryCard
             key={category.id}
             category={category}
@@ -155,7 +137,7 @@ const HomeScreen: React.FC = () => {
         <ActivityIndicator size="large" color={theme.colors.primary} />
       ) : (
         <View style={styles.booksGrid}>
-          {filteredBooks.slice(0, 6).map((book) => (
+          {filteredBooks.slice(0, 6).map(book => (
             <BookCard
               key={book.id}
               book={book}
@@ -170,10 +152,16 @@ const HomeScreen: React.FC = () => {
   const renderRecentBooks = () => {
     const recentBooks = books
       .filter(book => book.lastPlayedAt)
-      .sort((a, b) => new Date(b.lastPlayedAt!).getTime() - new Date(a.lastPlayedAt!).getTime())
+      .sort(
+        (a, b) =>
+          new Date(b.lastPlayedAt!).getTime() -
+          new Date(a.lastPlayedAt!).getTime(),
+      )
       .slice(0, 4);
 
-    if (recentBooks.length === 0) return null;
+    if (recentBooks.length === 0) {
+      return null;
+    }
 
     return (
       <View style={styles.section}>
@@ -184,9 +172,8 @@ const HomeScreen: React.FC = () => {
         <ScrollView
           horizontal
           showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.recentBooksContainer}
-        >
-          {recentBooks.map((book) => (
+          contentContainerStyle={styles.recentBooksContainer}>
+          {recentBooks.map(book => (
             <BookCard
               key={book.id}
               book={book}
@@ -206,8 +193,7 @@ const HomeScreen: React.FC = () => {
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
         }
-        showsVerticalScrollIndicator={false}
-      >
+        showsVerticalScrollIndicator={false}>
         {renderHeader()}
         {renderStats()}
         {renderCategories()}
