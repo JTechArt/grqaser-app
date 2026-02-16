@@ -1,6 +1,8 @@
 import React from 'react';
+import {View} from 'react-native';
 import {createBottomTabNavigator} from '@react-navigation/bottom-tabs';
 import {createStackNavigator} from '@react-navigation/stack';
+import {useNavigation} from '@react-navigation/native';
 import {useTheme} from 'react-native-paper';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 
@@ -14,6 +16,7 @@ import BookDetailScreen from '../screens/BookDetailScreen';
 import SearchScreen from '../screens/SearchScreen';
 import CategoryScreen from '../screens/CategoryScreen';
 import SettingsScreen from '../screens/SettingsScreen';
+import MiniPlayer from '../components/MiniPlayer';
 
 // Types
 import {RootStackParamList, TabParamList} from './types';
@@ -56,61 +59,73 @@ const TabBarIcon: React.FC<TabBarIconProps> = ({
 
 const TabNavigator: React.FC = () => {
   const theme = useTheme();
+  const navigation = useNavigation();
 
   return (
-    <Tab.Navigator
-      screenOptions={({route}) => ({
-        // Arrow here is RN's tabBarIcon API; TabBarIcon is stable (no new component type)
-        // eslint-disable-next-line react/no-unstable-nested-components
-        tabBarIcon: ({focused, color, size}) => (
-          <TabBarIcon
-            routeName={route.name}
-            focused={focused}
-            color={color}
-            size={size}
-          />
-        ),
-        tabBarActiveTintColor: theme.colors.primary,
-        tabBarInactiveTintColor: theme.colors.onSurface,
-        tabBarStyle: {
-          backgroundColor: theme.colors.surface,
-          borderTopColor: theme.colors.outline,
-          paddingBottom: 5,
-          paddingTop: 5,
-          height: 60,
-        },
-        tabBarLabelStyle: {
-          fontSize: 12,
-          fontWeight: '500',
-        },
-        headerShown: false,
-      })}>
-      <Tab.Screen
-        name="Home"
-        component={HomeScreen}
-        options={{tabBarLabel: 'Home'}}
+    <View style={{flex: 1}}>
+      <Tab.Navigator
+        screenOptions={({route}) => ({
+          // Arrow here is RN's tabBarIcon API; TabBarIcon is stable (no new component type)
+          // eslint-disable-next-line react/no-unstable-nested-components
+          tabBarIcon: ({focused, color, size}) => (
+            <TabBarIcon
+              routeName={route.name}
+              focused={focused}
+              color={color}
+              size={size}
+            />
+          ),
+          tabBarActiveTintColor: theme.colors.primary,
+          tabBarInactiveTintColor: theme.colors.onSurface,
+          tabBarStyle: {
+            backgroundColor: theme.colors.surface,
+            borderTopColor: theme.colors.outline,
+            paddingBottom: 5,
+            paddingTop: 5,
+            height: 60,
+          },
+          tabBarLabelStyle: {
+            fontSize: 12,
+            fontWeight: '500',
+          },
+          headerShown: false,
+        })}>
+        <Tab.Screen
+          name="Home"
+          component={HomeScreen}
+          options={{tabBarLabel: 'Home'}}
+        />
+        <Tab.Screen
+          name="Library"
+          component={LibraryScreen}
+          options={{tabBarLabel: 'Library'}}
+        />
+        <Tab.Screen
+          name="Player"
+          component={PlayerScreen}
+          options={{tabBarLabel: 'Player'}}
+        />
+        <Tab.Screen
+          name="Favorites"
+          component={FavoritesScreen}
+          options={{tabBarLabel: 'Favorites'}}
+        />
+        <Tab.Screen
+          name="Profile"
+          component={ProfileScreen}
+          options={{tabBarLabel: 'Profile'}}
+        />
+      </Tab.Navigator>
+      <MiniPlayer
+        onPress={() =>
+          (
+            navigation as unknown as {
+              navigate: (a: string, b?: {screen: string}) => void;
+            }
+          ).navigate('MainTabs', {screen: 'Player'})
+        }
       />
-      <Tab.Screen
-        name="Library"
-        component={LibraryScreen}
-        options={{tabBarLabel: 'Library'}}
-      />
-      <Tab.Screen
-        name="Player"
-        component={PlayerScreen}
-        options={{tabBarLabel: 'Player'}}
-      />
-      <Tab.Screen
-        name="Favorites"
-        component={FavoritesScreen}
-        options={{tabBarLabel: 'Favorites'}}
-      />
-      <Tab.Screen
-        name="Profile"
-        component={ProfileScreen}
-        options={{tabBarLabel: 'Profile'}}
-      />
-    </Tab.Navigator>
+    </View>
   );
 };
 
