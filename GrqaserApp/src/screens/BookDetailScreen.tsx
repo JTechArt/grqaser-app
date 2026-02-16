@@ -9,9 +9,10 @@ import {
   TextStyle,
 } from 'react-native';
 import {RouteProp, useNavigation} from '@react-navigation/native';
-import {useSelector} from 'react-redux';
-import {Button} from 'react-native-paper';
+import {useSelector, useDispatch} from 'react-redux';
+import {Button, IconButton} from 'react-native-paper';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
+import {toggleFavorite} from '../state/slices/booksSlice';
 import {RootStackParamList} from '../navigation/types';
 import {theme} from '../theme';
 import {formatDuration} from '../utils/formatters';
@@ -28,8 +29,11 @@ const COVER_MAX_HEIGHT = 280;
 const BookDetailScreen: React.FC<Props> = ({route}) => {
   const {width} = useWindowDimensions();
   const navigation = useNavigation();
+  const dispatch = useDispatch();
   const playerError = useSelector((s: RootState) => s.player.error);
+  const favoriteIds = useSelector((s: RootState) => s.books.favorites);
   const book = route.params?.book;
+  const isFavorite = book ? favoriteIds.includes(book.id) : false;
 
   if (!book) {
     return (
@@ -96,7 +100,15 @@ const BookDetailScreen: React.FC<Props> = ({route}) => {
         )}
       </View>
       <View style={styles.meta}>
-        <Text style={styles.title}>{book.title}</Text>
+        <View style={styles.titleRow}>
+          <Text style={styles.title}>{book.title}</Text>
+          <IconButton
+            icon={isFavorite ? 'heart' : 'heart-outline'}
+            size={28}
+            iconColor={isFavorite ? theme.colors.error : theme.colors.onSurface}
+            onPress={() => book && dispatch(toggleFavorite(book.id))}
+          />
+        </View>
         <Text style={styles.author}>{book.author}</Text>
         <View style={styles.row}>
           {book.duration != null && book.duration > 0 && (
@@ -161,10 +173,16 @@ const styles = StyleSheet.create({
     color: theme.colors.onSurface,
   },
   meta: {padding: theme.spacing.lg},
+  titleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 8,
+  },
   title: {
     ...theme.typography.h2,
     color: theme.colors.text,
-    marginBottom: 8,
+    flex: 1,
   } as TextStyle,
   author: {
     ...theme.typography.body1,

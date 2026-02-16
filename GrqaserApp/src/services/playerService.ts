@@ -12,12 +12,14 @@ import {
   clearError,
   setPlaying,
 } from '../state/slices/playerSlice';
+import {getPlaybackPositions} from './preferencesStorage';
 import type {Book} from '../types/book';
 
 export function bookToTrack(book: Book): {
   url: string;
   title: string;
   artist: string;
+  id?: string;
   duration?: number;
   artwork?: string;
 } {
@@ -26,6 +28,7 @@ export function bookToTrack(book: Book): {
     throw new Error('Book has no audio URL');
   }
   return {
+    id: book.id,
     url,
     title: book.title,
     artist: book.author,
@@ -47,10 +50,17 @@ export async function playBook(book: Book): Promise<void> {
   store.dispatch(clearError());
   try {
     const track = bookToTrack(book);
+    const positions = await getPlaybackPositions();
+    const savedPosition = positions[book.id] ?? 0;
     await TrackPlayer.reset();
     await TrackPlayer.add(track);
+    if (savedPosition > 0) {
+      await TrackPlayer.seekTo(savedPosition);
+      store.dispatch(setProgress(savedPosition));
+    } else {
+      store.dispatch(setProgress(0));
+    }
     store.dispatch(setCurrentBook(book));
-    store.dispatch(setProgress(0));
     store.dispatch(setDuration(book.duration ?? 0));
     await TrackPlayer.play();
     store.dispatch(setPlaying(true));

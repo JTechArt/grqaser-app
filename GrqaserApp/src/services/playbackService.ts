@@ -5,6 +5,10 @@
 import TrackPlayer, {Event} from 'react-native-track-player';
 import {store} from '../state';
 import {setError, setPlaying} from '../state/slices/playerSlice';
+import {savePlaybackPosition} from './preferencesStorage';
+
+const POSITION_SAVE_INTERVAL_MS = 10000;
+let lastPositionSaveAt = 0;
 
 export async function PlaybackService(): Promise<void> {
   TrackPlayer.addEventListener(Event.RemotePlay, () => {
@@ -38,6 +42,20 @@ export async function PlaybackService(): Promise<void> {
     } else {
       TrackPlayer.play();
       store.dispatch(setPlaying(true));
+    }
+  });
+
+  // Persist playback position per book (throttled)
+  TrackPlayer.addEventListener(Event.PlaybackProgressUpdated, async ev => {
+    const now = Date.now();
+    if (now - lastPositionSaveAt < POSITION_SAVE_INTERVAL_MS) {
+      return;
+    }
+    const track = await TrackPlayer.getActiveTrack();
+    const bookId = track?.id as string | undefined;
+    if (bookId && typeof ev.position === 'number') {
+      lastPositionSaveAt = now;
+      savePlaybackPosition(bookId, ev.position).catch(() => {});
     }
   });
 }
