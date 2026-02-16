@@ -1,11 +1,11 @@
 # Implementation Readiness: All Stories
 
 **Checked by:** Architect (Winston)  
-**Date:** 2025-02-14
+**Date:** 2025-02-16 (Epic 6 added)
 
 This document assesses implementation readiness for every story in the Grqaser backlog. Each story is checked for architecture reference integrity, file/path alignment, phase dependencies, and any blocking gaps.
 
-**Per-story documents:** [1.1](1.1-implementation-readiness.md) · [1.2](1.2-implementation-readiness.md) · [1.3](1.3-implementation-readiness.md) · [1.4](1.4-implementation-readiness.md) · [2.1](2.1-implementation-readiness.md) · [2.2](2.2-implementation-readiness.md) · [2.3](2.3-implementation-readiness.md) · [3.1](3.1-implementation-readiness.md) · [3.2](3.2-implementation-readiness.md) · [3.3](3.3-implementation-readiness.md) · [3.4](3.4-implementation-readiness.md) · [4.1](4.1-implementation-readiness.md) · [4.2](4.2-implementation-readiness.md) · [4.3](4.3-implementation-readiness.md) · [5.1](5.1-implementation-readiness.md) · [5.2](5.2-implementation-readiness.md) · [5.3](5.3-implementation-readiness.md)
+**Per-story documents:** [1.1](1.1-implementation-readiness.md) · [1.2](1.2-implementation-readiness.md) · [1.3](1.3-implementation-readiness.md) · [1.4](1.4-implementation-readiness.md) · [2.1](2.1-implementation-readiness.md) · [2.2](2.2-implementation-readiness.md) · [2.3](2.3-implementation-readiness.md) · [3.1](3.1-implementation-readiness.md) · [3.2](3.2-implementation-readiness.md) · [3.3](3.3-implementation-readiness.md) · [3.4](3.4-implementation-readiness.md) · [4.1](4.1-implementation-readiness.md) · [4.2](4.2-implementation-readiness.md) · [4.3](4.3-implementation-readiness.md) · [5.1](5.1-implementation-readiness.md) · [5.2](5.2-implementation-readiness.md) · [5.3](5.3-implementation-readiness.md) · [6.1](6.1-implementation-readiness.md) · [6.2](6.2-implementation-readiness.md) · [6.3](6.3-implementation-readiness.md) · [6.4](6.4-implementation-readiness.md)
 
 ---
 
@@ -18,6 +18,7 @@ This document assesses implementation readiness for every story in the Grqaser b
 | 3 | GrqaserApp foundation | 3.1–3.4 | **Ready** (GrqaserApp exists; state → store in codebase) |
 | 4 | GrqaserApp audio | 4.1–4.3 | **Ready** (depends on Epic 3) |
 | 5 | Testing & deployment | 5.1–5.3 | **Ready** (5.3 references existing troubleshooting doc) |
+| 6 | Books-admin-app | 6.1–6.4 | **Ready** (brownfield merge; implement in story order) |
 
 **Delivery order:** Stories must be implemented in phase order. Epic 2 starts only after Epic 1 is complete; Epic 3 only after Epic 2; Epics 4–5 follow accordingly.
 
@@ -158,6 +159,38 @@ This document assesses implementation readiness for every story in the Grqaser b
 
 ---
 
+## Epic 6: Books-admin-app (brownfield)
+
+### 6.1 — books-admin-app merge and run  
+**Verdict: READY**  
+- **Refs:** books-admin-app-architecture, crawler-pipeline, database-viewer-api, source-tree, tech-stack, epic-6, testing-and-deployment-strategy — all exist.  
+- **Paths:** crawler/ and database-viewer/ present for merge; create books-admin-app/ at repo root.  
+- **Dependency:** None (first story of Epic 6).  
+- **Detail:** See `6.1-implementation-readiness.md`.
+
+### 6.2 — Database versioning and active/backup  
+**Verdict: READY**  
+- **Refs:** books-admin-app-architecture, data-models, crawler-pipeline, database-viewer-api, epic-6, testing-and-deployment-strategy — all exist.  
+- **Paths:** Implement within books-admin-app/ (config/registry, API, UI for DB management).  
+- **Dependency:** Builds on 6.1.  
+- **Detail:** See `6.2-implementation-readiness.md`.
+
+### 6.3 — Crawler start/stop and config management  
+**Verdict: READY**  
+- **Refs:** books-admin-app-architecture, crawler-pipeline, database-viewer-api, epic-6, testing-and-deployment-strategy — all exist.  
+- **Paths:** books-admin-app/ routes and UI for crawler control and config.  
+- **Dependency:** Builds on 6.1, 6.2.  
+- **Detail:** See `6.3-implementation-readiness.md`.
+
+### 6.4 — Data management: view and edit  
+**Verdict: READY**  
+- **Refs:** books-admin-app-architecture, data-models, database-viewer-api, crawler-pipeline (validation), epic-6, testing-and-deployment-strategy — all exist.  
+- **Paths:** books-admin-app/ update route and model; UI edit form; optional last_edited_at in schema.  
+- **Dependency:** Builds on 6.1, 6.2.  
+- **Detail:** See `6.4-implementation-readiness.md`.
+
+---
+
 ## Summary table
 
 | Story | Title (short) | Verdict | Notes |
@@ -179,6 +212,10 @@ This document assesses implementation readiness for every story in the Grqaser b
 | 5.1 | Crawler and viewer testing | Ready | — |
 | 5.2 | GrqaserApp testing and build | Ready | — |
 | 5.3 | Deployment and runbooks | Ready | 06-TROUBLESHOOTING.md exists |
+| 6.1 | books-admin-app merge and run | Ready | — |
+| 6.2 | Database versioning and active/backup | Ready | — |
+| 6.3 | Crawler start/stop and config | Ready | — |
+| 6.4 | Data management: view and edit | Ready | — |
 
 ---
 
@@ -188,3 +225,4 @@ This document assesses implementation readiness for every story in the Grqaser b
 2. **Story 1.1:** Resolve duration schema (structured/formatted) and chapter URLs (in scope or deferred) during implementation; document in data-models-and-schema (or linked doc).
 3. **GrqaserApp:** Stories refer to "state"; codebase uses `store/` and slices. Either keep current naming (store) or add a one-line Dev Note in 3.1/3.3 that "state" is implemented as Redux store under `src/store/`.
 4. **Single readiness reference:** For per-story detail on 1.1, continue to use `1.1-implementation-readiness.md`. This document is the single place for all-stories readiness.
+5. **Epic 6:** Implement in order: 6.1 (merge and run) → 6.2 (DB versioning) → 6.3 (crawler control and config) → 6.4 (data view and edit). Each story depends on the previous; architecture is in [books-admin-app-architecture.md](../architecture/books-admin-app-architecture.md).
