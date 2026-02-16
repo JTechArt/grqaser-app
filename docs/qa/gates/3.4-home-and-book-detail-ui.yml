@@ -1,0 +1,29 @@
+# Quality Gate: 3.4 - Home and book detail UI
+schema: 1
+story: "3.4"
+story_title: "Home and book detail UI"
+gate: PASS
+status_reason: "Home catalog and pull-to-refresh in place; Book detail metadata and Play button ready; type/lint fixes applied in review."
+reviewer: "Quinn (Test Architect)"
+updated: "2025-02-16T12:00:00Z"
+
+waiver: { active: false }
+
+top_issues: []
+
+evidence:
+  tests_reviewed: 0
+  risks_identified: 0
+  trace:
+    ac_covered: [1, 2, 3]
+    ac_gaps: []
+
+nfr_validation:
+  security: { status: PASS, notes: "N/A - UI only" }
+  performance: { status: PASS, notes: "" }
+  reliability: { status: PASS, notes: "Empty state and missing book handled." }
+  maintainability: { status: PASS, notes: "BookDetailScreen type/lint fixed in review." }
+
+recommendations:
+  immediate: []
+  future: []
