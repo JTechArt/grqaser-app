@@ -1,5 +1,5 @@
 import axios from 'axios';
-import { Book, BookCategory, BookSearchResult } from '../types/book';
+import {Book, BookCategory, BookSearchResult} from '../types/book';
 
 // Base API configuration
 const API_BASE_URL = 'https://grqaser.org/api';
@@ -16,26 +16,26 @@ const api = axios.create({
 
 // Request interceptor for logging
 api.interceptors.request.use(
-  (config) => {
+  config => {
     console.log(`API Request: ${config.method?.toUpperCase()} ${config.url}`);
     return config;
   },
-  (error) => {
+  error => {
     console.error('API Request Error:', error);
     return Promise.reject(error);
-  }
+  },
 );
 
 // Response interceptor for error handling
 api.interceptors.response.use(
-  (response) => {
+  response => {
     console.log(`API Response: ${response.status} ${response.config.url}`);
     return response;
   },
-  (error) => {
+  error => {
     console.error('API Response Error:', error.response?.data || error.message);
     return Promise.reject(error);
-  }
+  },
 );
 
 export const booksApi = {
@@ -49,7 +49,7 @@ export const booksApi = {
       return response.data;
     } catch (error) {
       console.warn('Main API failed, trying crawler data...');
-      
+
       // Fallback to crawler data
       try {
         const crawlerResponse = await axios.get(`${CRAWLER_DATA_URL}/books`);
@@ -71,7 +71,9 @@ export const booksApi = {
     } catch (error) {
       // Fallback to crawler data
       try {
-        const crawlerResponse = await axios.get(`${CRAWLER_DATA_URL}/books/${id}`);
+        const crawlerResponse = await axios.get(
+          `${CRAWLER_DATA_URL}/books/${id}`,
+        );
         return crawlerResponse.data;
       } catch (crawlerError) {
         throw new Error(`Book with ID ${id} not found`);
@@ -82,26 +84,31 @@ export const booksApi = {
   /**
    * Search books
    */
-  async searchBooks(query: string, page: number = 1, limit: number = 20): Promise<BookSearchResult> {
+  async searchBooks(
+    query: string,
+    page: number = 1,
+    limit: number = 20,
+  ): Promise<BookSearchResult> {
     try {
       const response = await api.get('/books/search', {
-        params: { q: query, page, limit },
+        params: {q: query, page, limit},
       });
       return response.data;
     } catch (error) {
       // Fallback to local search
       try {
         const allBooks = await this.getBooks();
-        const filteredBooks = allBooks.filter(book =>
-          book.title.toLowerCase().includes(query.toLowerCase()) ||
-          book.author.toLowerCase().includes(query.toLowerCase()) ||
-          book.description?.toLowerCase().includes(query.toLowerCase())
+        const filteredBooks = allBooks.filter(
+          book =>
+            book.title.toLowerCase().includes(query.toLowerCase()) ||
+            book.author.toLowerCase().includes(query.toLowerCase()) ||
+            book.description?.toLowerCase().includes(query.toLowerCase()),
         );
-        
+
         const startIndex = (page - 1) * limit;
         const endIndex = startIndex + limit;
         const paginatedBooks = filteredBooks.slice(startIndex, endIndex);
-        
+
         return {
           books: paginatedBooks,
           totalCount: filteredBooks.length,
@@ -118,22 +125,28 @@ export const booksApi = {
   /**
    * Get books by category
    */
-  async getBooksByCategory(category: string, page: number = 1, limit: number = 20): Promise<BookSearchResult> {
+  async getBooksByCategory(
+    category: string,
+    page: number = 1,
+    limit: number = 20,
+  ): Promise<BookSearchResult> {
     try {
       const response = await api.get(`/books/category/${category}`, {
-        params: { page, limit },
+        params: {page, limit},
       });
       return response.data;
     } catch (error) {
       // Fallback to local filtering
       try {
         const allBooks = await this.getBooks();
-        const filteredBooks = allBooks.filter(book => book.category === category);
-        
+        const filteredBooks = allBooks.filter(
+          book => book.category === category,
+        );
+
         const startIndex = (page - 1) * limit;
         const endIndex = startIndex + limit;
         const paginatedBooks = filteredBooks.slice(startIndex, endIndex);
-        
+
         return {
           books: paginatedBooks,
           totalCount: filteredBooks.length,
@@ -150,24 +163,31 @@ export const booksApi = {
   /**
    * Get books by author
    */
-  async getBooksByAuthor(author: string, page: number = 1, limit: number = 20): Promise<BookSearchResult> {
+  async getBooksByAuthor(
+    author: string,
+    page: number = 1,
+    limit: number = 20,
+  ): Promise<BookSearchResult> {
     try {
-      const response = await api.get(`/books/author/${encodeURIComponent(author)}`, {
-        params: { page, limit },
-      });
+      const response = await api.get(
+        `/books/author/${encodeURIComponent(author)}`,
+        {
+          params: {page, limit},
+        },
+      );
       return response.data;
     } catch (error) {
       // Fallback to local filtering
       try {
         const allBooks = await this.getBooks();
-        const filteredBooks = allBooks.filter(book => 
-          book.author.toLowerCase().includes(author.toLowerCase())
+        const filteredBooks = allBooks.filter(book =>
+          book.author.toLowerCase().includes(author.toLowerCase()),
         );
-        
+
         const startIndex = (page - 1) * limit;
         const endIndex = startIndex + limit;
         const paginatedBooks = filteredBooks.slice(startIndex, endIndex);
-        
+
         return {
           books: paginatedBooks,
           totalCount: filteredBooks.length,
@@ -193,19 +213,21 @@ export const booksApi = {
       try {
         const allBooks = await this.getBooks();
         const categoryMap = new Map<string, number>();
-        
+
         allBooks.forEach(book => {
           const count = categoryMap.get(book.category) || 0;
           categoryMap.set(book.category, count + 1);
         });
-        
-        const categories: BookCategory[] = Array.from(categoryMap.entries()).map(([name, count]) => ({
+
+        const categories: BookCategory[] = Array.from(
+          categoryMap.entries(),
+        ).map(([name, count]) => ({
           id: name.toLowerCase().replace(/\s+/g, '-'),
           name,
           bookCount: count,
           description: `${count} books in ${name}`,
         }));
-        
+
         return categories;
       } catch (categoryError) {
         throw new Error('Failed to fetch categories');
@@ -230,10 +252,14 @@ export const booksApi = {
   /**
    * Get book comments
    */
-  async getBookComments(bookId: string, page: number = 1, limit: number = 20): Promise<any> {
+  async getBookComments(
+    bookId: string,
+    page: number = 1,
+    limit: number = 20,
+  ): Promise<any> {
     try {
       const response = await api.get(`/books/${bookId}/comments`, {
-        params: { page, limit },
+        params: {page, limit},
       });
       return response.data;
     } catch (error) {
@@ -262,8 +288,11 @@ export const booksApi = {
         const allBooks = await this.getBooks();
         const audiobooks = allBooks.filter(book => book.type === 'audiobook');
         const ebooks = allBooks.filter(book => book.type === 'ebook');
-        const totalDuration = allBooks.reduce((sum, book) => sum + (book.duration || 0), 0);
-        
+        const totalDuration = allBooks.reduce(
+          (sum, book) => sum + (book.duration || 0),
+          0,
+        );
+
         return {
           totalBooks: allBooks.length,
           totalAudiobooks: audiobooks.length,
@@ -283,10 +312,13 @@ export const booksApi = {
   /**
    * Get recommendations
    */
-  async getRecommendations(bookId?: string, limit: number = 10): Promise<Book[]> {
+  async getRecommendations(
+    bookId?: string,
+    limit: number = 10,
+  ): Promise<Book[]> {
     try {
-      const params = bookId ? { bookId, limit } : { limit };
-      const response = await api.get('/recommendations', { params });
+      const params = bookId ? {bookId, limit} : {limit};
+      const response = await api.get('/recommendations', {params});
       return response.data;
     } catch (error) {
       // Fallback to random books

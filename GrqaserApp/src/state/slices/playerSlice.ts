@@ -1,6 +1,6 @@
-import { createSlice, PayloadAction } from '@reduxjs/toolkit';
-import TrackPlayer, { Track } from 'react-native-track-player';
-import { Book } from '../../types/book';
+import {createSlice, PayloadAction} from '@reduxjs/toolkit';
+import {Track} from 'react-native-track-player';
+import {Book} from '../../types/book';
 
 interface PlayerState {
   isPlaying: boolean;
@@ -62,10 +62,13 @@ const playerSlice = createSlice({
     setPlaybackRate: (state, action: PayloadAction<number>) => {
       state.playbackRate = action.payload;
     },
-    toggleShuffle: (state) => {
+    toggleShuffle: state => {
       state.isShuffled = !state.isShuffled;
     },
-    setRepeatMode: (state, action: PayloadAction<'off' | 'track' | 'playlist'>) => {
+    setRepeatMode: (
+      state,
+      action: PayloadAction<'off' | 'track' | 'playlist'>,
+    ) => {
       state.repeatMode = action.payload;
     },
     setSleepTimer: (state, action: PayloadAction<number | null>) => {
@@ -77,10 +80,10 @@ const playerSlice = createSlice({
     setError: (state, action: PayloadAction<string | null>) => {
       state.error = action.payload;
     },
-    clearError: (state) => {
+    clearError: state => {
       state.error = null;
     },
-    resetPlayer: (state) => {
+    resetPlayer: state => {
       state.isPlaying = false;
       state.currentTrack = null;
       state.queue = [];

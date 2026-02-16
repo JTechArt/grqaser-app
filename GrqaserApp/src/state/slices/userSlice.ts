@@ -1,4 +1,4 @@
-import { createSlice, PayloadAction } from '@reduxjs/toolkit';
+import {createSlice, PayloadAction} from '@reduxjs/toolkit';
 
 interface UserPreferences {
   language: string;
@@ -33,7 +33,7 @@ const initialState: UserState = {
   isAuthenticated: false,
   user: null,
   preferences: {
-    language: 'hy', // Armenian
+    language: 'hy',
     playbackSpeed: 1.0,
     autoPlay: true,
     downloadOverWifi: true,
@@ -61,11 +61,17 @@ const userSlice = createSlice({
     setUser: (state, action: PayloadAction<UserState['user']>) => {
       state.user = action.payload;
     },
-    updatePreferences: (state, action: PayloadAction<Partial<UserPreferences>>) => {
-      state.preferences = { ...state.preferences, ...action.payload };
+    updatePreferences: (
+      state,
+      action: PayloadAction<Partial<UserPreferences>>,
+    ) => {
+      state.preferences = {...state.preferences, ...action.payload};
     },
-    updateStatistics: (state, action: PayloadAction<Partial<UserState['statistics']>>) => {
-      state.statistics = { ...state.statistics, ...action.payload };
+    updateStatistics: (
+      state,
+      action: PayloadAction<Partial<UserState['statistics']>>,
+    ) => {
+      state.statistics = {...state.statistics, ...action.payload};
     },
     setLoading: (state, action: PayloadAction<boolean>) => {
       state.loading = action.payload;
@@ -73,10 +79,10 @@ const userSlice = createSlice({
     setError: (state, action: PayloadAction<string | null>) => {
       state.error = action.payload;
     },
-    clearError: (state) => {
+    clearError: state => {
       state.error = null;
     },
-    logout: (state) => {
+    logout: state => {
       state.isAuthenticated = false;
       state.user = null;
       state.error = null;
@@ -84,10 +90,10 @@ const userSlice = createSlice({
     incrementListeningTime: (state, action: PayloadAction<number>) => {
       state.statistics.totalListeningTime += action.payload;
     },
-    incrementBooksCompleted: (state) => {
+    incrementBooksCompleted: state => {
       state.statistics.booksCompleted += 1;
     },
-    updateLastActive: (state) => {
+    updateLastActive: state => {
       state.statistics.lastActive = new Date().toISOString();
     },
   },

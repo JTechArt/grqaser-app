@@ -1,7 +1,7 @@
 import React from 'react';
-import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
-import { createStackNavigator } from '@react-navigation/stack';
-import { useTheme } from 'react-native-paper';
+import {createBottomTabNavigator} from '@react-navigation/bottom-tabs';
+import {createStackNavigator} from '@react-navigation/stack';
+import {useTheme} from 'react-native-paper';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 
 // Screens
@@ -16,42 +16,60 @@ import CategoryScreen from '../screens/CategoryScreen';
 import SettingsScreen from '../screens/SettingsScreen';
 
 // Types
-import { RootStackParamList, TabParamList } from './types';
+import {RootStackParamList, TabParamList} from './types';
 
 const Tab = createBottomTabNavigator<TabParamList>();
 const Stack = createStackNavigator<RootStackParamList>();
+
+function getTabIconName(routeName: string, focused: boolean): string {
+  switch (routeName) {
+    case 'Home':
+      return focused ? 'home' : 'home-outline';
+    case 'Library':
+      return focused ? 'library' : 'library-outline';
+    case 'Player':
+      return focused ? 'play-circle' : 'play-circle-outline';
+    case 'Favorites':
+      return focused ? 'heart' : 'heart-outline';
+    case 'Profile':
+      return focused ? 'account' : 'account-outline';
+    default:
+      return 'circle';
+  }
+}
+
+interface TabBarIconProps {
+  routeName: string;
+  focused: boolean;
+  color: string;
+  size: number;
+}
+
+const TabBarIcon: React.FC<TabBarIconProps> = ({
+  routeName,
+  focused,
+  color,
+  size,
+}) => (
+  <Icon name={getTabIconName(routeName, focused)} size={size} color={color} />
+);
 
 const TabNavigator: React.FC = () => {
   const theme = useTheme();
 
   return (
     <Tab.Navigator
-      screenOptions={({ route }) => ({
-        tabBarIcon: ({ focused, color, size }) => {
-          let iconName: string;
-
-          switch (route.name) {
-            case 'Home':
-              iconName = focused ? 'home' : 'home-outline';
-              break;
-            case 'Library':
-              iconName = focused ? 'library' : 'library-outline';
-              break;
-            case 'Player':
-              iconName = focused ? 'play-circle' : 'play-circle-outline';
-              break;
-            case 'Favorites':
-              iconName = focused ? 'heart' : 'heart-outline';
-              break;
-            case 'Profile':
-              iconName = focused ? 'account' : 'account-outline';
-              break;
-            default:
-              iconName = 'circle';
-          }
-
-          return <Icon name={iconName} size={size} color={color} />;
-        },
+      screenOptions={({route}) => ({
+        // Arrow here is RN's tabBarIcon API; TabBarIcon is stable (no new component type)
+        // eslint-disable-next-line react/no-unstable-nested-components
+        tabBarIcon: ({focused, color, size}) => (
+          <TabBarIcon
+            routeName={route.name}
+            focused={focused}
+            color={color}
+            size={size}
+          />
+        ),
         tabBarActiveTintColor: theme.colors.primary,
         tabBarInactiveTintColor: theme.colors.onSurface,
         tabBarStyle: {
@@ -66,32 +84,31 @@ const TabNavigator: React.FC = () => {
           fontWeight: '500',
         },
         headerShown: false,
-      })}
-    >
-      <Tab.Screen 
-        name="Home" 
+      })}>
+      <Tab.Screen
+        name="Home"
         component={HomeScreen}
-        options={{ tabBarLabel: 'Home' }}
+        options={{tabBarLabel: 'Home'}}
       />
-      <Tab.Screen 
-        name="Library" 
+      <Tab.Screen
+        name="Library"
         component={LibraryScreen}
-        options={{ tabBarLabel: 'Library' }}
+        options={{tabBarLabel: 'Library'}}
       />
-      <Tab.Screen 
-        name="Player" 
+      <Tab.Screen
+        name="Player"
         component={PlayerScreen}
-        options={{ tabBarLabel: 'Player' }}
+        options={{tabBarLabel: 'Player'}}
       />
-      <Tab.Screen 
-        name="Favorites" 
+      <Tab.Screen
+        name="Favorites"
         component={FavoritesScreen}
-        options={{ tabBarLabel: 'Favorites' }}
+        options={{tabBarLabel: 'Favorites'}}
       />
-      <Tab.Screen 
-        name="Profile" 
+      <Tab.Screen
+        name="Profile"
         component={ProfileScreen}
-        options={{ tabBarLabel: 'Profile' }}
+        options={{tabBarLabel: 'Profile'}}
       />
     </Tab.Navigator>
   );
@@ -111,17 +128,16 @@ const RootNavigator: React.FC = () => {
           fontWeight: 'bold',
         },
         headerShadowVisible: false,
-      }}
-    >
+      }}>
       <Stack.Screen
         name="MainTabs"
         component={TabNavigator}
-        options={{ headerShown: false }}
+        options={{headerShown: false}}
       />
       <Stack.Screen
         name="BookDetail"
         component={BookDetailScreen}
-        options={({ route }) => ({
+        options={({route}) => ({
           title: route.params?.book?.title || 'Book Details',
           headerBackTitle: 'Back',
         })}
@@ -137,7 +153,7 @@ const RootNavigator: React.FC = () => {
       <Stack.Screen
         name="Category"
         component={CategoryScreen}
-        options={({ route }) => ({
+        options={({route}) => ({
           title: route.params?.category?.name || 'Category',
           headerBackTitle: 'Back',
         })}
