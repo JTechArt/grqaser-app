@@ -24,4 +24,20 @@ export async function PlaybackService(): Promise<void> {
     store.dispatch(setError(ev?.message ?? 'Playback error'));
     store.dispatch(setPlaying(false));
   });
+
+  // Interruptions (e.g. phone calls): pause/duck and resume when ended
+  TrackPlayer.addEventListener(Event.RemoteDuck, ev => {
+    if (ev.permanent) {
+      TrackPlayer.reset();
+      store.dispatch(setPlaying(false));
+      return;
+    }
+    if (ev.paused) {
+      TrackPlayer.pause();
+      store.dispatch(setPlaying(false));
+    } else {
+      TrackPlayer.play();
+      store.dispatch(setPlaying(true));
+    }
+  });
 }
