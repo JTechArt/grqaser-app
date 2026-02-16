@@ -135,6 +135,12 @@ const HomeScreen: React.FC = () => {
       </View>
       {loading ? (
         <ActivityIndicator size="large" color={theme.colors.primary} />
+      ) : filteredBooks.length === 0 ? (
+        <View style={styles.emptyState}>
+          <Text style={styles.emptyStateText}>
+            No books yet. Pull down to refresh.
+          </Text>
+        </View>
       ) : (
         <View style={styles.booksGrid}>
           {filteredBooks.slice(0, 6).map(book => (
@@ -304,6 +310,14 @@ const styles = StyleSheet.create({
   },
   recentBooksContainer: {
     paddingHorizontal: 20,
+  },
+  emptyState: {
+    padding: 24,
+    alignItems: 'center',
+  },
+  emptyStateText: {
+    fontSize: 16,
+    color: theme.colors.onSurface,
   },
 });
 
