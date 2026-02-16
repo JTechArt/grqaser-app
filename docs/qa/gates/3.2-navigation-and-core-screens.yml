@@ -1,0 +1,31 @@
+# Quality Gate: 3.2 - Navigation and core screens
+schema: 1
+story: "3.2"
+story_title: "Navigation and core screens"
+gate: PASS
+status_reason: "Tab and stack navigation in place; core screens reachable with typed params; types and deep-link stub documented."
+reviewer: "Quinn (Test Architect)"
+updated: "2025-02-16T00:00:00Z"
+
+waiver: { active: false }
+
+top_issues: []
+
+evidence:
+  tests_reviewed: 0
+  risks_identified: 0
+  trace:
+    ac_covered: [1, 2, 3]
+    ac_gaps: []
+
+nfr_validation:
+  security: { status: PASS, notes: "N/A - navigation/shells only" }
+  performance: { status: PASS, notes: "" }
+  reliability: { status: PASS, notes: "" }
+  maintainability: { status: PASS, notes: "Types and README clear; deep-link stub ready for future." }
+
+recommendations:
+  immediate: []
+  future:
+    - action: "Optional: type ProfileScreen navigate to Settings without 'as never'"
+      refs: ["GrqaserApp/src/screens/ProfileScreen.tsx"]
