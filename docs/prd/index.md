@@ -148,6 +148,7 @@ Grqaser (“book lover” in Armenian) is an ecosystem of three applications aro
 3. **[Epic 3: GrqaserApp foundation](./epic-3.md)** — Set up the React Native app and implement browse and book-detail flows. **Start only after Epic 2 is complete and crawler data has been validated via the database-viewer.** GrqaserApp relies on the result of the crawler (Phase 1). This is Phase 3 (mobile app).
 4. **[Epic 4: GrqaserApp audio and playback](./epic-4.md)** — Integrate audio playback and user preferences. Depends on Epic 3.
 5. **[Epic 5: Quality, release, and operations](./epic-5.md)** — Testing, build, and deployment for all three applications. Can be planned per application but follows the same phase order (crawler first, then viewer, then app).
+6. **[Epic 6: Books Admin App (merge + data management)](./epic-6.md)** — Brownfield: merge crawler and database-viewer into **books-admin-app**; add DB versioning (active/backup), crawler start/stop and config management, and data management (view + edit any field). Local-only; no auth.
 
 ---
 
