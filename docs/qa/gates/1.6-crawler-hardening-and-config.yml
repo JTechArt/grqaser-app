@@ -1,0 +1,45 @@
+# Quality Gate: 1.6
+schema: 1
+story: "1.6"
+story_title: "Crawler hardening & config sanity"
+gate: PASS
+status_reason: "Config merge, retry backoff, validation, dedup (id + title|author), observability, and ESLint config in place; 80 tests pass, lint runs."
+reviewer: "Quinn (Test Architect)"
+updated: "2025-02-15T00:00:00Z"
+
+waiver: { active: false }
+
+top_issues: []
+
+risk_summary:
+  totals: { critical: 0, high: 0, medium: 0, low: 0 }
+  recommendations:
+    must_fix: []
+    monitor: []
+
+evidence:
+  tests_reviewed: 80
+  risks_identified: 0
+  trace:
+    ac_covered: [1, 2, 3, 4, 5, 6]
+    ac_gaps: []
+
+nfr_validation:
+  security:
+    status: PASS
+    notes: "Config merge and backoff are internal."
+  performance:
+    status: PASS
+    notes: "Sleep/backoff appropriate; dedup O(1)."
+  reliability:
+    status: PASS
+    notes: "Retry with backoff; dedup and validation reduce bad data."
+  maintainability:
+    status: PASS
+    notes: "ESLint config; tests for config merge and hardening."
+
+recommendations:
+  immediate: []
+  future:
+    - action: "Fix 2 ESLint warnings (unused vars) for clean lint."
+      refs: ["crawler/src/add-chapter-urls-column.js", "crawler/src/models/database.js"]

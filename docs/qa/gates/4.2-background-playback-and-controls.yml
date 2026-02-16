@@ -1,0 +1,31 @@
+# Quality Gate: 4.2 - Background playback and controls
+schema: 1
+story: "4.2"
+story_title: "Background playback and controls"
+gate: PASS
+status_reason: "Background audio (iOS UIBackgroundModes); RemoteDuck for interruptions/resume; updateOptions for lock-screen/notification controls."
+reviewer: "Quinn (Test Architect)"
+updated: "2025-02-16T00:00:00Z"
+
+waiver: { active: false }
+
+top_issues: []
+
+evidence:
+  tests_reviewed: 0
+  risks_identified: 0
+  trace:
+    ac_covered: [1, 2, 3]
+    ac_gaps: []
+
+nfr_validation:
+  security: { status: PASS, notes: "N/A - playback config" }
+  performance: { status: PASS, notes: "" }
+  reliability: { status: PASS, notes: "RemoteDuck pause/resume; alwaysPauseOnInterruption on Android." }
+  maintainability: { status: PASS, notes: "Curly-brace fix in TrackPlayerProvider." }
+
+recommendations:
+  immediate: []
+  future:
+    - action: "Manual test on iOS and Android: background, lock-screen, call-interruption resume"
+      refs: ["Story 4.2 Task 3 subtask"]

@@ -1,0 +1,43 @@
+# Quality Gate: 1.5
+schema: 1
+story: "1.5"
+story_title: "Unified crawler with configurable modes"
+gate: PASS
+status_reason: "Story 1.5 complete; book-validator validations implemented; all 70 tests pass (re-review)."
+reviewer: "Quinn (Test Architect)"
+updated: "2025-02-15T12:00:00Z"
+
+waiver: { active: false }
+
+top_issues: []
+
+risk_summary:
+  totals: { critical: 0, high: 0, medium: 0, low: 0 }
+  recommendations:
+    must_fix: []
+    monitor: []
+
+evidence:
+  tests_reviewed: 70
+  risks_identified: 0
+  trace:
+    ac_covered: [1, 2, 3, 4, 5]
+    ac_gaps: []
+
+nfr_validation:
+  security:
+    status: PASS
+    notes: "Mode/limits config- and CLI-driven."
+  performance:
+    status: PASS
+    notes: "Optional maxConcurrentPages for update modes."
+  reliability:
+    status: PASS
+    notes: "Single crawler; shared validation and logging."
+  maintainability:
+    status: PASS
+    notes: "One entrypoint; README and learning docs updated."
+
+recommendations:
+  immediate: []  # book-validator fixes implemented
+  future: []

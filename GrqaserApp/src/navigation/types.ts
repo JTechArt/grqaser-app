@@ -1,4 +1,4 @@
-import { Book, BookCategory } from '../types/book';
+import {Book, BookCategory} from '../types/book';
 
 export type TabParamList = {
   Home: undefined;

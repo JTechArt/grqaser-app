@@ -1,23 +1,36 @@
-import { MD3LightTheme } from 'react-native-paper';
+import {MD3LightTheme, MD3DarkTheme} from 'react-native-paper';
+
+const lightColors = {
+  primary: '#667eea',
+  secondary: '#764ba2',
+  background: '#ffffff',
+  surface: '#f8f9fa',
+  error: '#dc3545',
+  text: '#333333',
+  onSurface: '#666666',
+  disabled: '#999999',
+  placeholder: '#cccccc',
+  backdrop: 'rgba(0, 0, 0, 0.5)',
+  notification: '#ff6b6b',
+  success: '#28a745',
+  warning: '#ffc107',
+  info: '#17a2b8',
+};
+
+const darkColors = {
+  ...lightColors,
+  background: '#121212',
+  surface: '#1e1e1e',
+  text: '#e0e0e0',
+  onSurface: '#b0b0b0',
+  placeholder: '#606060',
+};
 
 export const theme = {
   ...MD3LightTheme,
   colors: {
     ...MD3LightTheme.colors,
-    primary: '#667eea',
-    secondary: '#764ba2',
-    background: '#ffffff',
-    surface: '#f8f9fa',
-    error: '#dc3545',
-    text: '#333333',
-    onSurface: '#666666',
-    disabled: '#999999',
-    placeholder: '#cccccc',
-    backdrop: 'rgba(0, 0, 0, 0.5)',
-    notification: '#ff6b6b',
-    success: '#28a745',
-    warning: '#ffc107',
-    info: '#17a2b8',
+    ...lightColors,
   },
   spacing: {
     xs: 4,
@@ -107,4 +120,25 @@ export const theme = {
   },
 };
 
+export const darkTheme = {
+  ...MD3DarkTheme,
+  colors: {
+    ...MD3DarkTheme.colors,
+    ...darkColors,
+  },
+  spacing: theme.spacing,
+  borderRadius: theme.borderRadius,
+  typography: theme.typography,
+  shadows: theme.shadows,
+};
+
 export type Theme = typeof theme;
+
+export type ThemeMode = 'light' | 'dark' | 'auto';
+
+export function getAppTheme(mode: ThemeMode): typeof theme {
+  if (mode === 'dark') {
+    return darkTheme;
+  }
+  return theme;
+}

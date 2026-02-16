@@ -1,6 +1,6 @@
-import { createSlice, createAsyncThunk, PayloadAction } from '@reduxjs/toolkit';
-import { Book, BookCategory, BookFilter } from '../../types/book';
-import { booksApi } from '../../services/booksApi';
+import {createSlice, createAsyncThunk, PayloadAction} from '@reduxjs/toolkit';
+import {Book, BookCategory, BookFilter} from '../../types/book';
+import {booksApi, getErrorMessage} from '../../services/booksApi';
 
 interface BooksState {
   books: Book[];
@@ -10,6 +10,8 @@ interface BooksState {
   recentlyPlayed: string[];
   loading: boolean;
   error: string | null;
+  searchLoading: boolean;
+  searchError: string | null;
   filters: BookFilter;
   searchQuery: string;
 }
@@ -22,6 +24,8 @@ const initialState: BooksState = {
   recentlyPlayed: [],
   loading: false,
   error: null,
+  searchLoading: false,
+  searchError: null,
   filters: {
     category: 'all',
     type: 'all',
@@ -33,38 +37,35 @@ const initialState: BooksState = {
 
 export const fetchBooks = createAsyncThunk(
   'books/fetchBooks',
-  async (_, { rejectWithValue }) => {
+  async (_, {rejectWithValue}) => {
     try {
-      const response = await booksApi.getBooks();
-      return response;
+      return await booksApi.getBooks();
     } catch (error) {
-      return rejectWithValue('Failed to fetch books');
+      return rejectWithValue(getErrorMessage(error));
     }
-  }
+  },
 );
 
 export const fetchCategories = createAsyncThunk(
   'books/fetchCategories',
-  async (_, { rejectWithValue }) => {
+  async (_, {rejectWithValue}) => {
     try {
-      const response = await booksApi.getCategories();
-      return response;
+      return await booksApi.getCategories();
     } catch (error) {
-      return rejectWithValue('Failed to fetch categories');
+      return rejectWithValue(getErrorMessage(error));
     }
-  }
+  },
 );
 
 export const searchBooks = createAsyncThunk(
   'books/searchBooks',
-  async (query: string, { rejectWithValue }) => {
+  async (query: string, {rejectWithValue}) => {
     try {
-      const response = await booksApi.searchBooks(query);
-      return response;
+      return await booksApi.searchBooks(query);
     } catch (error) {
-      return rejectWithValue('Failed to search books');
+      return rejectWithValue(getErrorMessage(error));
     }
-  }
+  },
 );
 
 const booksSlice = createSlice({
@@ -72,12 +73,20 @@ const booksSlice = createSlice({
   initialState,
   reducers: {
     setFilters: (state, action: PayloadAction<Partial<BookFilter>>) => {
-      state.filters = { ...state.filters, ...action.payload };
-      state.filteredBooks = applyFilters(state.books, state.filters, state.searchQuery);
+      state.filters = {...state.filters, ...action.payload};
+      state.filteredBooks = applyFilters(
+        state.books,
+        state.filters,
+        state.searchQuery,
+      );
     },
     setSearchQuery: (state, action: PayloadAction<string>) => {
       state.searchQuery = action.payload;
-      state.filteredBooks = applyFilters(state.books, state.filters, action.payload);
+      state.filteredBooks = applyFilters(
+        state.books,
+        state.filters,
+        action.payload,
+      );
     },
     toggleFavorite: (state, action: PayloadAction<string>) => {
       const bookId = action.payload;
@@ -87,6 +96,9 @@ const booksSlice = createSlice({
       } else {
         state.favorites.push(bookId);
       }
+    },
+    setFavorites: (state, action: PayloadAction<string[]>) => {
+      state.favorites = action.payload;
     },
     addToRecentlyPlayed: (state, action: PayloadAction<string>) => {
       const bookId = action.payload;
@@ -99,30 +111,48 @@ const booksSlice = createSlice({
         state.recentlyPlayed.pop();
       }
     },
-    clearError: (state) => {
+    clearError: state => {
       state.error = null;
     },
+    clearSearchError: state => {
+      state.searchError = null;
+    },
   },
-  extraReducers: (builder) => {
+  extraReducers: builder => {
     builder
-      .addCase(fetchBooks.pending, (state) => {
+      .addCase(fetchBooks.pending, state => {
         state.loading = true;
         state.error = null;
       })
       .addCase(fetchBooks.fulfilled, (state, action) => {
         state.loading = false;
         state.books = action.payload;
-        state.filteredBooks = applyFilters(action.payload, state.filters, state.searchQuery);
+        state.filteredBooks = applyFilters(
+          action.payload,
+          state.filters,
+          state.searchQuery,
+        );
       })
       .addCase(fetchBooks.rejected, (state, action) => {
         state.loading = false;
-        state.error = action.payload as string;
+        state.error = (action.payload as string) ?? 'Failed to load books';
       })
       .addCase(fetchCategories.fulfilled, (state, action) => {
         state.categories = action.payload;
       })
+      .addCase(searchBooks.pending, state => {
+        state.searchLoading = true;
+        state.searchError = null;
+      })
       .addCase(searchBooks.fulfilled, (state, action) => {
-        state.filteredBooks = action.payload;
+        state.searchLoading = false;
+        state.searchError = null;
+        state.filteredBooks = action.payload.books;
+      })
+      .addCase(searchBooks.rejected, (state, action) => {
+        state.searchLoading = false;
+        state.searchError =
+          (action.payload as string) ?? 'Search failed. Please try again.';
       });
   },
 });
@@ -130,47 +160,42 @@ const booksSlice = createSlice({
 const applyFilters = (
   books: Book[],
   filters: BookFilter,
-  searchQuery: string
+  searchQuery: string,
 ): Book[] => {
   let filtered = books;
 
-  // Apply search filter
   if (searchQuery.trim()) {
     const query = searchQuery.toLowerCase();
     filtered = filtered.filter(
-      (book) =>
+      book =>
         book.title.toLowerCase().includes(query) ||
         book.author.toLowerCase().includes(query) ||
-        book.description?.toLowerCase().includes(query)
+        book.description?.toLowerCase().includes(query),
     );
   }
 
-  // Apply category filter
   if (filters.category !== 'all') {
-    filtered = filtered.filter((book) => book.category === filters.category);
+    filtered = filtered.filter(book => book.category === filters.category);
   }
 
-  // Apply type filter
   if (filters.type !== 'all') {
-    filtered = filtered.filter((book) => book.type === filters.type);
+    filtered = filtered.filter(book => book.type === filters.type);
   }
 
-  // Apply language filter
   if (filters.language !== 'all') {
-    filtered = filtered.filter((book) => book.language === filters.language);
+    filtered = filtered.filter(book => book.language === filters.language);
   }
 
-  // Apply duration filter
   if (filters.duration !== 'all') {
-    filtered = filtered.filter((book) => {
+    filtered = filtered.filter(book => {
       const duration = book.duration || 0;
       switch (filters.duration) {
         case 'short':
-          return duration < 1800; // Less than 30 minutes
+          return duration < 1800;
         case 'medium':
-          return duration >= 1800 && duration < 7200; // 30 minutes to 2 hours
+          return duration >= 1800 && duration < 7200;
         case 'long':
-          return duration >= 7200; // More than 2 hours
+          return duration >= 7200;
         default:
           return true;
       }
@@ -184,8 +209,10 @@ export const {
   setFilters,
   setSearchQuery,
   toggleFavorite,
+  setFavorites,
   addToRecentlyPlayed,
   clearError,
+  clearSearchError,
 } = booksSlice.actions;
 
 export default booksSlice.reducer;

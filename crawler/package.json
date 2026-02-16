@@ -9,8 +9,9 @@
     "dev": "NODE_ENV=development node src/crawler.js",
     "prod": "NODE_ENV=production node src/crawler.js",
     "test": "jest src/tests/",
+    "test:unit": "jest src/tests/",
     "test:watch": "jest src/tests/ --watch",
-    "lint": "eslint src/",
+    "lint": "eslint -c .eslintrc.cjs src/",
     "clean": "rm -rf logs/* && rm -rf data/*.log"
   },
   "dependencies": {
@@ -34,6 +35,6 @@
   "author": "Grqaser Team",
   "license": "MIT",
   "engines": {
-    "node": ">=16.0.0"
+    "node": ">=22.0.0"
   }
 }
