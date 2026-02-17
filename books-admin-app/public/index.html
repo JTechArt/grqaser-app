@@ -426,6 +426,7 @@
             <button type="button" class="nav-tab active" data-view="dashboard">Dashboard</button>
             <button type="button" class="nav-tab" data-view="books">Books</button>
             <button type="button" class="nav-tab" data-view="crawler">Crawler</button>
+            <button type="button" class="nav-tab" data-view="databases">Databases</button>
         </nav>
 
         <section id="view-dashboard" class="view-panel">
@@ -523,6 +524,22 @@
                 <h3>Recent logs</h3>
                 <div class="crawler-logs-list" id="crawlerLogsList">
                     <div class="loading">Loading logs...</div>
+                </div>
+            </div>
+        </section>
+
+        <section id="view-databases" class="view-panel hidden">
+            <div class="controls">
+                <h2>🗄️ Database versioning</h2>
+                <p style="margin-bottom: 1rem; color: #666;">One database is active; crawler writes and data view read from it. Others are backups you can promote or delete.</p>
+                <button type="button" class="btn" id="refreshDatabasesBtn">Refresh list</button>
+            </div>
+            <div class="books-container">
+                <div class="books-header">
+                    <h2>Known databases</h2>
+                </div>
+                <div id="databasesList">
+                    <div class="loading">Loading databases...</div>
                 </div>
             </div>
         </section>
@@ -966,6 +983,81 @@
                 loadCrawlerStatus();
                 loadCrawlerLogs();
             }
+            if (viewId === 'databases') {
+                loadDatabases();
+            }
+        }
+
+        async function loadDatabases() {
+            const el = document.getElementById('databasesList');
+            el.innerHTML = '<div class="loading">Loading databases...</div>';
+            try {
+                const res = await fetch(API_BASE + '/databases');
+                const data = await res.json();
+                if (data.success && data.data.databases) {
+                    const dbs = data.data.databases;
+                    if (dbs.length === 0) {
+                        el.innerHTML = '<div class="loading">No databases found. Add db.v1, db.v2 dirs under data/ with grqaser.db, or use data/grqaser.db as default.</div>';
+                        return;
+                    }
+                    el.innerHTML = dbs.map(function (db) {
+                        const activeBadge = db.active ? '<span style="background: #28a745; color: white; padding: 0.2rem 0.5rem; border-radius: 4px; font-size: 0.85rem;">Active</span>' : '';
+                        let actions = '';
+                        if (!db.active) {
+                            actions = '<button type="button" class="btn" style="margin-right: 0.5rem;" data-db-id="' + escapeHtml(db.id) + '" data-action="set-active">Set active</button>' +
+                                '<button type="button" class="btn btn-secondary" data-db-id="' + escapeHtml(db.id) + '" data-action="delete">Delete backup</button>';
+                        }
+                        return '<div class="book-item" style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap;">' +
+                            '<div><strong>' + escapeHtml(db.id) + '</strong> ' + activeBadge + '<br><span style="font-size: 0.85rem; color: #666;">' + escapeHtml(db.path) + '</span></div>' +
+                            '<div>' + actions + '</div></div>';
+                    }).join('');
+                    document.querySelectorAll('#databasesList [data-action="set-active"]').forEach(function (btn) {
+                        btn.addEventListener('click', function () { setActiveDb(this.getAttribute('data-db-id')); });
+                    });
+                    document.querySelectorAll('#databasesList [data-action="delete"]').forEach(function (btn) {
+                        btn.addEventListener('click', function () { deleteBackupDb(this.getAttribute('data-db-id')); });
+                    });
+                } else {
+                    el.innerHTML = '<div class="error">' + (data.error ? data.error.message : 'Failed to load databases') + '</div>';
+                }
+            } catch (err) {
+                console.error('Databases:', err);
+                el.innerHTML = '<div class="error">Failed to load databases</div>';
+            }
+        }
+
+        function setActiveDb(id) {
+            fetch(API_BASE + '/databases/active', {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ id: id })
+            }).then(function (res) { return res.json(); })
+                .then(function (data) {
+                    if (data.success) {
+                        loadDatabases();
+                        loadStats();
+                        loadBooks(1);
+                    } else {
+                        alert(data.error ? data.error.message : 'Failed to set active');
+                    }
+                }).catch(function (e) {
+                    alert('Error: ' + e.message);
+                });
+        }
+
+        function deleteBackupDb(id) {
+            if (!confirm('Delete backup database "' + id + '"? This cannot be undone.')) return;
+            fetch(API_BASE + '/databases/' + encodeURIComponent(id), { method: 'DELETE' })
+                .then(function (res) { return res.json(); })
+                .then(function (data) {
+                    if (data.success) {
+                        loadDatabases();
+                    } else {
+                        alert(data.error ? data.error.message : 'Failed to delete');
+                    }
+                }).catch(function (e) {
+                    alert('Error: ' + e.message);
+                });
         }
 
         // Crawler status and logs (AC3)
@@ -1040,6 +1132,9 @@
             document.getElementById('refreshCrawlerBtn').addEventListener('click', function() {
                 loadCrawlerStatus();
                 loadCrawlerLogs();
+            });
+            document.getElementById('refreshDatabasesBtn').addEventListener('click', function() {
+                loadDatabases();
             });
         });
     </script>

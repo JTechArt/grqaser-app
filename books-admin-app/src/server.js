@@ -14,12 +14,20 @@ const path = require('path');
 
 const config = require('./config/config');
 const Database = require('./models/database');
+const dbRegistry = require('./models/db-registry');
 const createBooksRouter = require('./routes/books');
 const createStatsRouter = require('./routes/stats');
 const createCrawlerRouter = require('./routes/crawler');
+const createDatabasesRouter = require('./routes/databases');
 
 const app = express();
-const db = new Database();
+const activePath = dbRegistry.getActivePath();
+const db = new Database(activePath);
+const dbHolder = {
+  _db: db,
+  getDb() { return this._db; },
+  setDb(newDb) { this._db = newDb; }
+};
 
 app.use(helmet(config.security.helmet));
 app.use(compression());
@@ -38,9 +46,10 @@ app.use('/api/', limiter);
 
 app.use(express.static(path.join(__dirname, '../public')));
 
-app.use(`${config.api.basePath}/books`, createBooksRouter(db));
-app.use(`${config.api.basePath}/stats`, createStatsRouter(db));
-app.use(`${config.api.basePath}/crawler`, createCrawlerRouter(db));
+app.use(`${config.api.basePath}/books`, createBooksRouter(dbHolder));
+app.use(`${config.api.basePath}/stats`, createStatsRouter(dbHolder));
+app.use(`${config.api.basePath}/crawler`, createCrawlerRouter(dbHolder));
+app.use(`${config.api.basePath}/databases`, createDatabasesRouter(dbHolder, dbRegistry));
 
 app.get(`${config.api.basePath}/health`, async (req, res) => {
   const payload = {
@@ -53,7 +62,7 @@ app.get(`${config.api.basePath}/health`, async (req, res) => {
     }
   };
   try {
-    await db.get('SELECT 1');
+    await dbHolder.getDb().get('SELECT 1');
     payload.data.database = 'connected';
     res.status(200).json(payload);
   } catch (err) {
@@ -73,6 +82,7 @@ app.get('/', (req, res) => {
       books: `${config.api.basePath}/books`,
       stats: `${config.api.basePath}/stats`,
       crawler: `${config.api.basePath}/crawler`,
+      databases: `${config.api.basePath}/databases`,
       health: `${config.api.basePath}/health`
     }
   });
@@ -102,19 +112,19 @@ app.use((error, req, res, next) => {
 
 process.on('SIGTERM', async () => {
   console.log('SIGTERM received, shutting down gracefully');
-  await db.close();
+  await dbHolder.getDb().close();
   process.exit(0);
 });
 
 process.on('SIGINT', async () => {
   console.log('SIGINT received, shutting down gracefully');
-  await db.close();
+  await dbHolder.getDb().close();
   process.exit(0);
 });
 
 async function startServer() {
   try {
-    await db.connect();
+    await dbHolder.getDb().connect();
     if (process.env.NODE_ENV === 'test') {
       return;
     }

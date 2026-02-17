@@ -13,8 +13,9 @@ module.exports = {
   },
 
   database: {
-    // DB path: externalized; Story 6.2 will add versioning/active backup
+    // DB path: default single file; Story 6.2 active path from db-registry when not set via env
     path: process.env.DB_PATH || path.join(__dirname, '../../data/grqaser.db'),
+    dataRoot: process.env.DB_DATA_ROOT || path.join(__dirname, '../../data'),
     timeout: 30000,
     verbose: false
   },

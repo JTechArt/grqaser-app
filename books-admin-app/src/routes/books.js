@@ -4,10 +4,11 @@
 
 const express = require('express');
 
-function createBooksRouter(db) {
+function createBooksRouter(dbHolder) {
   const router = express.Router();
 
   router.get('/', async (req, res) => {
+    const db = dbHolder.getDb();
     try {
       const {
         page = 1,
@@ -47,6 +48,7 @@ function createBooksRouter(db) {
   });
 
   router.get('/search', async (req, res) => {
+    const db = dbHolder.getDb();
     try {
       const { q, page = 1, limit = 20 } = req.query;
       if (!q) {
@@ -68,6 +70,7 @@ function createBooksRouter(db) {
   });
 
   router.get('/:id', async (req, res) => {
+    const db = dbHolder.getDb();
     try {
       const { id } = req.params;
       const book = await db.getBookById(id);
