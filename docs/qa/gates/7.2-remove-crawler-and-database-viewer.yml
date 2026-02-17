@@ -1,0 +1,36 @@
+# Quality Gate: 7.2 — Remove crawler and database-viewer
+schema: 1
+story: "7.2"
+story_title: "Remove crawler and database-viewer"
+gate: PASS
+status_reason: "Crawler and database-viewer archived; root and docs reference books-admin-app only; GrqaserApp points at books-admin-app API; data contract unchanged."
+reviewer: "Quinn (Test Architect)"
+updated: "2025-02-17T13:30:00Z"
+
+waiver: { active: false }
+top_issues: []
+
+risk_summary:
+  totals: { critical: 0, high: 0, medium: 0, low: 0 }
+  recommendations:
+    must_fix: []
+    monitor: []
+
+evidence:
+  tests_reviewed: 42
+  risks_identified: 0
+  trace:
+    ac_covered: [1, 2, 3, 4]
+    ac_gaps: []
+
+nfr_validation:
+  security: { status: PASS, notes: "No auth/schema change; archive is read-only usage." }
+  performance: { status: PASS, notes: "N/A" }
+  reliability: { status: PASS, notes: "books-admin-app depends on archive/crawler via file link; npm install resolves." }
+  maintainability: { status: PASS, notes: "Docs and source-tree clearly state post-7.2 layout and archive." }
+
+recommendations:
+  immediate: []
+  future: []
+
+# Re-review 2025-02-17: All 8 test suites (42 tests) pass; sqlite3/env issue resolved by dev.
