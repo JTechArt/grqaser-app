@@ -1,11 +1,11 @@
 # Implementation Readiness: All Stories
 
 **Checked by:** Architect (Winston)  
-**Date:** 2025-02-16 (Epic 6 added)
+**Date:** 2025-02-17 (Epic 7 added)
 
 This document assesses implementation readiness for every story in the Grqaser backlog. Each story is checked for architecture reference integrity, file/path alignment, phase dependencies, and any blocking gaps.
 
-**Per-story documents:** [1.1](1.1-implementation-readiness.md) · [1.2](1.2-implementation-readiness.md) · [1.3](1.3-implementation-readiness.md) · [1.4](1.4-implementation-readiness.md) · [2.1](2.1-implementation-readiness.md) · [2.2](2.2-implementation-readiness.md) · [2.3](2.3-implementation-readiness.md) · [3.1](3.1-implementation-readiness.md) · [3.2](3.2-implementation-readiness.md) · [3.3](3.3-implementation-readiness.md) · [3.4](3.4-implementation-readiness.md) · [4.1](4.1-implementation-readiness.md) · [4.2](4.2-implementation-readiness.md) · [4.3](4.3-implementation-readiness.md) · [5.1](5.1-implementation-readiness.md) · [5.2](5.2-implementation-readiness.md) · [5.3](5.3-implementation-readiness.md) · [6.1](6.1-implementation-readiness.md) · [6.2](6.2-implementation-readiness.md) · [6.3](6.3-implementation-readiness.md) · [6.4](6.4-implementation-readiness.md)
+**Per-story documents:** [1.1](1.1-implementation-readiness.md) · [1.2](1.2-implementation-readiness.md) · [1.3](1.3-implementation-readiness.md) · [1.4](1.4-implementation-readiness.md) · [2.1](2.1-implementation-readiness.md) · [2.2](2.2-implementation-readiness.md) · [2.3](2.3-implementation-readiness.md) · [3.1](3.1-implementation-readiness.md) · [3.2](3.2-implementation-readiness.md) · [3.3](3.3-implementation-readiness.md) · [3.4](3.4-implementation-readiness.md) · [4.1](4.1-implementation-readiness.md) · [4.2](4.2-implementation-readiness.md) · [4.3](4.3-implementation-readiness.md) · [5.1](5.1-implementation-readiness.md) · [5.2](5.2-implementation-readiness.md) · [5.3](5.3-implementation-readiness.md) · [6.1](6.1-implementation-readiness.md) · [6.2](6.2-implementation-readiness.md) · [6.3](6.3-implementation-readiness.md) · [6.4](6.4-implementation-readiness.md) · [7.1](7.1-implementation-readiness.md) · [7.2](7.2-implementation-readiness.md) · [7.3](7.3-implementation-readiness.md) · [7.4](7.4-implementation-readiness.md) · [7.5](7.5-implementation-readiness.md)
 
 ---
 
@@ -19,10 +19,11 @@ This document assesses implementation readiness for every story in the Grqaser b
 | 4 | GrqaserApp audio | 4.1–4.3 | **Ready** (depends on Epic 3) |
 | 5 | Testing & deployment | 5.1–5.3 | **Ready** (5.3 references existing troubleshooting doc) |
 | 6 | Books-admin-app | 6.1–6.4 | **Ready** (brownfield merge; implement in story order) |
+| 7 | Remove crawler/viewer; design system & UI/UX | 7.1–7.5 | **Ready** (7.1 before 7.2; 7.3 can parallel; 7.4/7.5 after 7.3) |
 
-**Delivery order:** Stories must be implemented in phase order. Epic 2 starts only after Epic 1 is complete; Epic 3 only after Epic 2; Epics 4–5 follow accordingly.
+**Delivery order:** Stories must be implemented in phase order. Epic 2 starts only after Epic 1 is complete; Epic 3 only after Epic 2; Epics 4–5 follow accordingly. **Epic 7:** 7.1 (parity) before or in tandem with Epic 5 verification; 7.2 (removal) after 7.1 sign-off; 7.3 (design system and mockups) can run in parallel; 7.4 and 7.5 (UI/UX implementation) after or alongside 7.3.
 
-**Cross-cutting:** All cited architecture docs exist. Crawler and database-viewer file paths match the repo. GrqaserApp uses `store/` (Redux) rather than `state/` in the tree—acceptable; stories say "state" and architecture allows equivalent.
+**Cross-cutting:** All cited architecture docs exist. Post–Epic 7 architecture states books-admin-app as single admin app; crawler and database-viewer removed or archived. GrqaserApp uses `store/` (Redux) rather than `state/` in the tree—acceptable; stories say "state" and architecture allows equivalent. docs/design/ exists with README, hub, and mockup folders for Epic 7.
 
 ---
 
@@ -191,6 +192,45 @@ This document assesses implementation readiness for every story in the Grqaser b
 
 ---
 
+## Epic 7: Remove crawler and database-viewer; design system and UI/UX
+
+### 7.1 — Verify books-admin-app functional parity  
+**Verdict: READY**  
+- **Refs:** books-admin-app-architecture, crawler-pipeline, database-viewer-api, delivery-order, source-tree, testing-and-deployment; epic-1, epic-2, epic-6, story 6.4 — all exist.  
+- **Paths:** books-admin-app/ (subject of verification); parity doc under docs/ or docs/architecture/.  
+- **Dependency:** Epic 6 complete. Enables 7.2 and Epic 5 alignment.  
+- **Detail:** See `7.1-implementation-readiness.md`.
+
+### 7.2 — Remove crawler and database-viewer  
+**Verdict: READY**  
+- **Refs:** source-tree, books-admin-app-architecture, delivery-order, grqaserapp-data-integration-and-audio, testing-and-deployment, epic-7 — all exist.  
+- **Paths:** Remove or archive crawler/ and database-viewer/; root package.json and CI; docs and GrqaserApp API base.  
+- **Dependency:** Story 7.1 complete and signed off.  
+- **Detail:** See `7.2-implementation-readiness.md`.
+
+### 7.3 — Design system and UI/UX mockups  
+**Verdict: READY**  
+- **Refs:** source-tree, books-admin-app-architecture, grqaserapp-data-integration-and-audio, epic-7, testing-and-deployment — all exist.  
+- **Paths:** docs/design/README.md, index.html, books-admin-app/, grqaser-app/ — structure exists; story creates or completes content.  
+- **Dependency:** None (can run in parallel with 7.1). Prerequisite for 7.4 and 7.5.  
+- **Detail:** See `7.3-implementation-readiness.md`.
+
+### 7.4 — Books-admin-app UI/UX implementation from mockups  
+**Verdict: READY**  
+- **Refs:** books-admin-app-architecture, source-tree, delivery-order, tech-stack, testing-and-deployment, epic-7 — all exist; docs/design/ present.  
+- **Paths:** books-admin-app/public/; mockups in docs/design/books-admin-app/ and docs/design/README.md.  
+- **Dependency:** Story 7.3 complete.  
+- **Detail:** See `7.4-implementation-readiness.md`.
+
+### 7.5 — GrqaserApp UI/UX implementation from mockups  
+**Verdict: READY**  
+- **Refs:** grqaserapp-data-integration-and-audio, source-tree, delivery-order, tech-stack, testing-and-deployment, epic-7 — all exist; docs/design/ present.  
+- **Paths:** GrqaserApp/src/; mockups in docs/design/grqaser-app/ and docs/design/README.md.  
+- **Dependency:** Story 7.3 complete.  
+- **Detail:** See `7.5-implementation-readiness.md`.
+
+---
+
 ## Summary table
 
 | Story | Title (short) | Verdict | Notes |
@@ -216,6 +256,11 @@ This document assesses implementation readiness for every story in the Grqaser b
 | 6.2 | Database versioning and active/backup | Ready | — |
 | 6.3 | Crawler start/stop and config | Ready | — |
 | 6.4 | Data management: view and edit | Ready | — |
+| 7.1 | Verify books-admin-app functional parity | Ready | Verification and doc only; enables 7.2 |
+| 7.2 | Remove crawler and database-viewer | Ready | After 7.1 sign-off |
+| 7.3 | Design system and UI/UX mockups | Ready | docs/design/ structure exists |
+| 7.4 | Books-admin-app UI/UX from mockups | Ready | After 7.3 |
+| 7.5 | GrqaserApp UI/UX from mockups | Ready | After 7.3 |
 
 ---
 
@@ -226,3 +271,4 @@ This document assesses implementation readiness for every story in the Grqaser b
 3. **GrqaserApp:** Stories refer to "state"; codebase uses `store/` and slices. Either keep current naming (store) or add a one-line Dev Note in 3.1/3.3 that "state" is implemented as Redux store under `src/store/`.
 4. **Single readiness reference:** For per-story detail on 1.1, continue to use `1.1-implementation-readiness.md`. This document is the single place for all-stories readiness.
 5. **Epic 6:** Implement in order: 6.1 (merge and run) → 6.2 (DB versioning) → 6.3 (crawler control and config) → 6.4 (data view and edit). Each story depends on the previous; architecture is in [books-admin-app-architecture.md](../architecture/books-admin-app-architecture.md).
+6. **Epic 7:** 7.1 (parity verification) before 7.2 (removal). 7.3 (design system and mockups) can run in parallel with 7.1; 7.4 and 7.5 (UI/UX implementation) require 7.3 complete. Architecture for post–Epic 7 (single admin app, docs/design/) is in [delivery-order-and-application-boundaries.md](../architecture/delivery-order-and-application-boundaries.md) and [source-tree.md](../architecture/source-tree.md).

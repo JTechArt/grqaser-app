@@ -1,6 +1,6 @@
 # Database-viewer API and deployment
 
-**Phase 2 application.** Start only after Phase 1 (crawler) is complete. Use the database-viewer to verify that crawled data is correct before starting GrqaserApp. See [delivery order and application boundaries](./delivery-order-and-application-boundaries.md).
+**Superseded by books-admin-app (Epic 6–7).** The standalone **database-viewer** is **removed or archived** (Epic 7.2). This document describes the API and behavior that **books-admin-app** preserves and implements. Use books-admin-app for all admin API and web UI; see [Books-admin-app architecture](./books-admin-app-architecture.md) and [delivery order](./delivery-order-and-application-boundaries.md).
 
 ## Role and boundaries
 

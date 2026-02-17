@@ -1,6 +1,6 @@
-# Books-admin-app architecture (Epic 6)
+# Books-admin-app architecture (Epic 6–7)
 
-**Brownfield enhancement.** Consolidate the existing **crawler** and **database-viewer** into a single local admin application named **books-admin-app**. This document defines the architecture for the merged app: run model, database versioning, crawler control, config management, and data view + edit. See [Epic 6](../prd/epic-6.md). **No authentication; local-only use (not deployed).**
+**Brownfield enhancement.** **books-admin-app** is the **single local admin application** (Epic 6). After **Epic 7**, the standalone crawler and database-viewer are **removed or archived** (Story 7.2); books-admin-app is the only admin entrypoint. This document defines the merged app: run model, database versioning, crawler control, config management, data view + edit, and **design system and UI/UX** (Epic 7). See [Epic 6](../prd/epic-6.md) and [Epic 7](../prd/epic-7.md). **No authentication; local-only use (not deployed).**
 
 ## Role and boundaries
 
@@ -60,15 +60,23 @@
 
 - Reuse existing crawler stack: Node.js, Puppeteer, SQLite. Reuse database-viewer stack: Express, REST, vanilla JS/HTML/CSS (or same UI approach) in `public/`. Config: env + JS (port, logging, active DB path, crawler config). No new runtime or framework required.
 
+## Design system and UI/UX (Epic 7)
+
+- **Design system:** Documented in `docs/design/README.md`: colors (slate + teal), typography (Plus Jakarta Sans), radii, usage for web vs mobile. Shared by books-admin-app and GrqaserApp.
+- **Mockups:** Static HTML under `docs/design/`: `docs/design/index.html` is the design hub; `docs/design/books-admin-app/` contains mockups for Dashboard, Books, Crawler, Databases, Book detail/edit (Story 7.3).
+- **Implementation (Story 7.4):** books-admin-app web UI (layout, navigation, colors, typography, components) matches or aligns with these mockups and the design system. Sidebar (or equivalent), sections Dashboard/Books/Crawler/Databases; buttons, forms, cards follow the design system. No regression in behavior; accessibility improvements where low-effort are optional.
+
 ## Risk mitigation (from Epic 6)
 
 - **Primary risk:** Breaking existing crawler or viewer behavior during merge. **Mitigation:** Merge incrementally; keep crawler and viewer modules identifiable; preserve existing tests and add integration tests for the single app.
-- **Rollback:** Keep crawler and database-viewer code in history; books-admin-app can be retired and the two apps restored if needed.
+- **Rollback (pre–Epic 7.2):** Crawler and database-viewer code may be in history or archive; books-admin-app can be retired and the two apps restored if needed. After Epic 7.2, standalone apps are removed or archived per team policy.
 
 ## References
 
 - [Epic 6](../prd/epic-6.md) — Books Admin App (merge crawler + database-viewer, data management).
-- [Delivery order and application boundaries](./delivery-order-and-application-boundaries.md) — Phase context; books-admin-app consolidates Phase 1 + 2 for local admin.
-- [Crawler pipeline and data contract](./crawler-pipeline-and-data-contract.md) — Crawler behavior to preserve.
-- [Database-viewer API and deployment](./database-viewer-api-and-deployment.md) — Viewer/API behavior to preserve.
+- [Epic 7](../prd/epic-7.md) — Remove crawler and database-viewer; design system and UI/UX for books-admin-app and GrqaserApp.
+- [Delivery order and application boundaries](./delivery-order-and-application-boundaries.md) — books-admin-app is the single admin app (post–Epic 7).
+- [Crawler pipeline and data contract](./crawler-pipeline-and-data-contract.md) — Crawler behavior preserved in books-admin-app.
+- [Database-viewer API and deployment](./database-viewer-api-and-deployment.md) — Viewer/API behavior preserved in books-admin-app.
 - [Data models and schema](./data-models-and-schema.md) — Shared schema and optional edit-audit fields.
+- `docs/design/` — Design system (README.md) and mockups (books-admin-app/, grqaser-app/).
