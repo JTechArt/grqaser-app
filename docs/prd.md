@@ -25,7 +25,7 @@ Grqaser (“book lover” in Armenian) is an ecosystem of three applications aro
 
 ## Critical: Delivery order and application boundaries
 
-**The three applications must be cared for separately and delivered in this order. Do not start the next phase until the current one is done and validated.**
+**The three applications must be cared for separately and delivered in this order. Do not start the next phase until the current one is done and validated.** From **Epic 6** onward, crawler and database-viewer are merged into **books-admin-app**; Epic 5 verification and runbooks target books-admin-app. Epic 7 removes the standalone crawler and database-viewer after parity is confirmed.
 
 | Phase | Application      | Rule |
 |-------|------------------|------|
@@ -116,7 +116,7 @@ Grqaser (“book lover” in Armenian) is an ecosystem of three applications aro
 
 ### Repository Structure: Monorepo
 
-- Single repository containing `crawler/`, `database-viewer/`, and `GrqaserApp/` (or equivalent app directory). Shared data contract (e.g., schema, types) can live in a shared folder or be documented in one place.
+- Single repository containing `books-admin-app/` (merge of crawler and database-viewer per Epic 6), `GrqaserApp/`, and optionally `crawler/` until Epic 7 removal. Shared data contract (e.g., schema, types) can live in a shared folder or be documented in one place.
 
 ### Service Architecture
 
@@ -141,13 +141,15 @@ Grqaser (“book lover” in Armenian) is an ecosystem of three applications aro
 
 ## Epic List
 
-**Mandatory order:** Complete each epic (and validate where stated) before starting the next. Epics 2–5 depend on previous epics as noted.
+**Mandatory order:** Complete each epic (and validate where stated) before starting the next. Epics 2–5 depend on previous epics as noted. **Epic 6** merges crawler and database-viewer into **books-admin-app**; **Epic 7** removes the standalone crawler and database-viewer after parity is verified.
 
 1. **Epic 1: Crawler pipeline and data contract** — Harden the data crawler, complete extraction (metadata + audio URLs, categories, authors), normalize and validate data, and define the shared schema. **Must be fully done before any Epic 2 work.** This is Phase 1 (data crawler).
 2. **Epic 2: Database-viewer (admin panel)** — Ensure the database-viewer’s API and web UI support browsing books, stats, and crawler monitoring. **Start only after Epic 1 is complete.** Use the viewer to verify that crawled data is correct; do not start Epic 3 until this validation is done. This is Phase 2 (database-viewer).
 3. **Epic 3: GrqaserApp foundation** — Set up the React Native app and implement browse and book-detail flows. **Start only after Epic 2 is complete and crawler data has been validated via the database-viewer.** GrqaserApp relies on the result of the crawler (Phase 1). This is Phase 3 (mobile app).
 4. **Epic 4: GrqaserApp audio and playback** — Integrate audio playback and user preferences. Depends on Epic 3.
-5. **Epic 5: Quality, release, and operations** — Testing, build, and deployment for all three applications. Can be planned per application but follows the same phase order (crawler first, then viewer, then app).
+5. **Epic 5: Quality, release, and operations** — Testing, build, and deployment for **books-admin-app** and GrqaserApp. Books-admin-app is the single admin application (merge of crawler and database-viewer); verification and runbooks target books-admin-app. Can be planned per application; phase order: verify books-admin-app first, then GrqaserApp.
+6. **Epic 6: Books Admin App** — Merge crawler and database-viewer into books-admin-app, add DB versioning, crawler control/config, and data view/edit. See docs/prd/epic-6.md.
+7. **Epic 7: Remove crawler and database-viewer** — After books-admin-app parity is verified (Epic 5 / Story 7.1), remove standalone crawler and database-viewer; update docs and CI. Optional: books-admin-app UI/UX polish. See docs/prd/epic-7.md.
 
 ---
 

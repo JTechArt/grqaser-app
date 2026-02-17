@@ -1,22 +1,22 @@
 # Epic 5: Quality, release, and operations
 
-Can be planned per application but follows the same phase order (crawler first, then viewer, then app).
+Can be planned per application. **Admin side:** books-admin-app (merge of crawler and database-viewer) is the single admin application to test and run. **Consumer side:** GrqaserApp. Phase order: verify books-admin-app (crawler + viewer behavior) first, then GrqaserApp.
 
-**Goal:** Reliable testing, build, and deployment for the crawler, database-viewer, and GrqaserApp so the system can be run and released with confidence.
+**Goal:** Reliable testing, build, and deployment for **books-admin-app** and GrqaserApp so the system can be run and released with confidence. Books-admin-app replaces the former standalone crawler and database-viewer (see Epic 7 for removal of legacy apps).
 
 ---
 
-## Story 5.1 — Crawler and database-viewer testing
+## Story 5.1 — Books-admin-app testing (crawler + viewer behavior)
 
 **As a** developer,  
-**I want** automated tests for the crawler (parsing, validation, DB writes) and database-viewer (API, optional UI),  
-**so that** regressions are caught before release.
+**I want** automated tests for books-admin-app covering crawler behavior (parsing, validation, DB writes) and viewer behavior (API, optional UI),  
+**so that** regressions are caught before release and we have one test surface for the admin application.
 
 ### Acceptance Criteria
 
-1. Crawler has unit tests for parsing/normalization and integration tests for DB writes.
-2. Database-viewer has tests for main API routes and health.
-3. Tests run in a single command (e.g., npm script or CI job).
+1. Books-admin-app’s crawler capability has unit tests for parsing/normalization and integration tests for DB writes (or equivalent coverage via books-admin-app test suite).
+2. Books-admin-app has tests for main API routes (books, stats, crawler, health) and health check.
+3. Tests run in a single command (e.g., npm script or CI job) for books-admin-app.
 
 ---
 
@@ -37,12 +37,12 @@ Can be planned per application but follows the same phase order (crawler first, 
 ## Story 5.3 — Deployment and runbooks
 
 **As an** operator,  
-**I want** clear steps to run the crawler, database-viewer, and (where applicable) GrqaserApp distribution,  
+**I want** clear steps to run books-admin-app and (where applicable) GrqaserApp distribution,  
 **so that** the system can be deployed and updated safely.
 
 ### Acceptance Criteria
 
-1. Crawler run instructions (env, DB path, schedule if any) are documented.
-2. Database-viewer run instructions (port, DB path, CORS) are documented.
+1. Books-admin-app run instructions are documented (port, DB path, env, how to start/stop crawler and use DB versioning per Epic 6).
+2. Crawler run is documented as part of books-admin-app (start/stop and config via app per 6.3); no separate standalone crawler runbook.
 3. GrqaserApp store submission (or internal distribution) steps and requirements are documented.
 4. Known troubleshooting (e.g., from docs/tasks/06-TROUBLESHOOTING.md) is referenced or summarized.
