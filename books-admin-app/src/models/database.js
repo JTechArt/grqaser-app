@@ -167,13 +167,15 @@ class Database {
   async getBookById(id) {
     const book = await this.get('SELECT * FROM books WHERE id = ?', [id]);
     if (book) {
-      return {
+      const out = {
         ...book,
         duration_formatted: this.formatDuration(book.duration),
         created_at: new Date(book.created_at).toISOString(),
         updated_at: new Date(book.updated_at).toISOString(),
         chapter_urls: book.chapter_urls ? JSON.parse(book.chapter_urls) : []
       };
+      if (book.last_edited_at) out.last_edited_at = new Date(book.last_edited_at).toISOString();
+      return out;
     }
     return null;
   }
@@ -332,6 +334,80 @@ class Database {
     const hours = Math.floor(seconds / 3600);
     const minutes = Math.floor((seconds % 3600) / 60);
     return hours > 0 ? `${hours}h ${minutes}m` : `${minutes}m`;
+  }
+
+  /** Ensure last_edited_at column exists (Epic 6 / Story 6.4). Idempotent. */
+  async ensureLastEditedAtColumn() {
+    const row = await this.get("SELECT 1 FROM pragma_table_info('books') WHERE name = 'last_edited_at'");
+    if (row) return;
+    await this.run('ALTER TABLE books ADD COLUMN last_edited_at TIMESTAMP');
+  }
+
+  /**
+   * Update a book by id (in-place UPDATE). Sets updated_at and last_edited_at.
+   * Validates: non-empty title; URLs http/https; duration >= 0; rating 0-5; language length <= 10.
+   * @param {number} id - Book id
+   * @param {object} fields - Editable fields (title, author, description, duration, etc.)
+   * @returns {object} Updated book or throws with message
+   */
+  async updateBook(id, fields) {
+    const allowed = [
+      'title', 'author', 'description', 'duration', 'duration_formatted', 'type', 'language',
+      'category', 'rating', 'rating_count', 'cover_image_url', 'main_audio_url', 'download_url',
+      'file_size', 'published_at', 'has_chapters', 'chapter_count', 'chapter_urls', 'crawl_status', 'is_active'
+    ];
+    const errors = [];
+    if (fields.title !== undefined) {
+      if (typeof fields.title !== 'string' || fields.title.trim() === '') errors.push('title must be non-empty');
+    }
+    if (fields.duration !== undefined) {
+      const d = fields.duration;
+      if (d !== null && (typeof d !== 'number' || Number.isNaN(d) || d < 0)) errors.push('duration must be non-negative number');
+    }
+    if (fields.rating !== undefined && fields.rating !== null) {
+      const r = Number(fields.rating);
+      if (Number.isNaN(r) || r < 0 || r > 5) errors.push('rating must be between 0 and 5');
+    }
+    if (fields.language !== undefined && fields.language !== null) {
+      if (String(fields.language).length > 10) errors.push('language max length 10');
+    }
+    const urlFields = ['main_audio_url', 'download_url', 'cover_image_url'];
+    for (const key of urlFields) {
+      if (fields[key] !== undefined && fields[key] !== null && String(fields[key]).trim() !== '') {
+        const u = String(fields[key]).trim();
+        try {
+          const parsed = new URL(u);
+          if (!['http:', 'https:'].includes(parsed.protocol)) errors.push(`${key} must be http or https`);
+        } catch {
+          errors.push(`${key} must be a valid URL`);
+        }
+      }
+    }
+    if (errors.length > 0) throw new Error(errors.join('; '));
+
+    await this.ensureLastEditedAtColumn();
+
+    const setParts = [];
+    const params = [];
+    for (const key of allowed) {
+      if (fields[key] === undefined) continue;
+      setParts.push(`${key} = ?`);
+      if (key === 'chapter_urls' && (Array.isArray(fields[key]) || typeof fields[key] === 'object')) {
+        params.push(JSON.stringify(fields[key]));
+      } else if (key === 'has_chapters') {
+        params.push(fields[key] ? 1 : 0);
+      } else {
+        params.push(fields[key] === null || fields[key] === '' ? null : fields[key]);
+      }
+    }
+    if (setParts.length === 0) throw new Error('No editable fields provided');
+    setParts.push("updated_at = CURRENT_TIMESTAMP");
+    setParts.push("last_edited_at = CURRENT_TIMESTAMP");
+    params.push(id);
+    const sql = `UPDATE books SET ${setParts.join(', ')} WHERE id = ?`;
+    const result = await this.run(sql, params);
+    if (result.changes === 0) return null;
+    return this.getBookById(id);
   }
 }
 

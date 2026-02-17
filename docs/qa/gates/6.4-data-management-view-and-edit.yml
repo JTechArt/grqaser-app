@@ -1,0 +1,52 @@
+# Quality Gate: 6.4 data management — view and edit
+schema: 1
+story: "6.4"
+story_title: "data management — view and edit"
+gate: PASS
+status_reason: "All acceptance criteria met. Data view uses active DB; PATCH /books/:id with validation and in-place UPDATE; last_edited_at column and UI indicator; edit form and save in UI; tests cover update API."
+reviewer: "Quinn (Test Architect)"
+updated: "2026-02-17T00:00:00Z"
+
+waiver: { active: false }
+
+top_issues: []
+
+risk_summary:
+  totals: { critical: 0, high: 0, medium: 0, low: 0 }
+  recommendations:
+    must_fix: []
+    monitor: []
+
+evidence:
+  tests_reviewed: 1
+  risks_identified: 0
+  trace:
+    ac_covered: [1, 2, 3, 4]
+    ac_gaps: []
+
+nfr_validation:
+  security:
+    status: PASS
+    notes: "Local-only; writes to active DB only; validation on update."
+  performance:
+    status: PASS
+    notes: "Single UPDATE by id; no N+1 or duplicate writes."
+  reliability:
+    status: PASS
+    notes: "ensureLastEditedAtColumn idempotent; validation before write."
+  maintainability:
+    status: PASS
+    notes: "PATCH tests for success, validation, 404, 400; README documents data management."
+
+quality_score: 100
+recommendations:
+  immediate: []
+  future: []
+
+history:
+  - at: "2026-02-17T00:00:00Z"
+    gate: PASS
+    note: "Initial review; all ACs met."
+  - at: "2026-02-17T00:00:00Z"
+    gate: PASS
+    note: "Re-review after dev fixes; Dev Agent Record and File List complete."
