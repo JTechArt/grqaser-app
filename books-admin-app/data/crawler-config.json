@@ -1,5 +1,5 @@
 {
-  "mode": "update",
+  "mode": "full",
   "testLimit": 5,
   "updateLimit": null,
   "maxConcurrentPages": 1,

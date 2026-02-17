@@ -27,7 +27,7 @@ describe('Crawler integration (mode=test)', () => {
     process.env.CRAWLER_MODE = 'test';
     process.env.CRAWLER_DB_PATH = testDbPath;
     process.env.DB_PATH = testDbPath;
-    const { GrqaserCrawler } = require('grqaser-crawler');
+    const { GrqaserCrawler } = require('../src/crawler/crawler');
 
     const cliOverrides = { mode: 'test', testLimit: 1, testDbPath };
     const crawler = new GrqaserCrawler(cliOverrides);

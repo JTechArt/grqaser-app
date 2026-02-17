@@ -16,8 +16,9 @@
     "cors": "^2.8.5",
     "express": "^4.18.2",
     "express-rate-limit": "^6.10.0",
-    "grqaser-crawler": "file:../archive/crawler",
     "helmet": "^7.0.0",
+    "puppeteer": "^24.2.0",
+    "sqlite3": "^5.1.7",
     "morgan": "^1.10.0"
   },
   "devDependencies": {
