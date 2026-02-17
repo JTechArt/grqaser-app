@@ -1,0 +1,10 @@
+{
+  "mode": "update",
+  "testLimit": 5,
+  "updateLimit": null,
+  "maxConcurrentPages": 1,
+  "delayBetweenRequests": 1000,
+  "timeout": 30000,
+  "retryAttempts": 3,
+  "maxConcurrentUrls": 1
+}
