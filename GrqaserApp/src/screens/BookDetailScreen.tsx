@@ -65,7 +65,7 @@ const BookDetailScreen: React.FC<Props> = ({route}) => {
   const ratingChip =
     book.rating != null ? (
       <View style={styles.chip}>
-        <Icon name="star" size={14} color={theme.colors.secondary} />
+        <Icon name="star" size={14} color={theme.colors.primary} />
         <Text style={styles.chipText}>{book.rating.toFixed(1)}</Text>
       </View>
     ) : null;
