@@ -1,8 +1,8 @@
-# Epic 7: Remove crawler and database-viewer (consolidate on books-admin-app)
+# Epic 7: Remove crawler and database-viewer; UI/UX for books-admin-app and GrqaserApp
 
 **Prerequisite:** Epic 6 (books-admin-app) is complete. books-admin-app is the merge of crawler and database-viewer; it provides the same functionality in a single application.
 
-**Goal:** Once books-admin-app has been verified to match crawler and database-viewer functionality (per Epics 1 and 2), remove the standalone crawler and database-viewer applications from the repo. Update all references, runbooks, and quality/operations (Epic 5) to target books-admin-app. Optionally improve books-admin-app UI/UX for a cohesive admin experience.
+**Goal:** (1) Once books-admin-app has been verified to match crawler and database-viewer functionality (per Epics 1 and 2), remove the standalone crawler and database-viewer. (2) **UI/UX improvements for both the books-admin-app (web) and GrqaserApp (mobile):** a single design system (slate + teal, Plus Jakarta Sans), HTML mockups in `docs/design/`, and separate stories to implement or update both applications to follow the mockups and design rules.
 
 ---
 
@@ -35,26 +35,57 @@
 
 ---
 
-## Story 7.3 — Books-admin-app UI/UX polish (optional)
+## Story 7.3 — Design system and UI/UX mockups (books-admin-app and GrqaserApp)
 
-**As an** operator,  
-**I want** the books-admin-app web UI to be consistent, clear, and aligned with a single admin experience (tabs/sections for Books, Crawler, Databases, Data management),  
-**so that** I can use one interface without confusion and with improved usability.
+**As a** designer / developer,  
+**I want** a single design system and static HTML mockups for both books-admin-app (web) and GrqaserApp (mobile) in the main docs folder,  
+**so that** both applications share the same design rules, colors, and typography and we have a shared reference for implementation.
 
 ### Acceptance Criteria
 
-1. Navigation and layout are consistent: clear sections or tabs for Books (list/detail/search), Crawler (status, config, start/stop), Databases (active/backup), and Data management (view/edit) where applicable.
-2. Visual and interaction patterns are consistent (e.g. buttons, forms, feedback messages); no leftover duplicate styles from the former database-viewer-only UI.
-3. Responsive admin experience is maintained (desktop-first); key actions (start/stop crawler, set active DB, edit book) are easy to find and use.
-4. Optional: accessibility and keyboard use improved where low-effort; no regression in existing behavior.
+1. **Design system** is documented in `docs/design/README.md`: colors (slate + teal), typography (Plus Jakarta Sans), radii, and usage for web vs mobile.
+2. **Mockups live under `docs/design/`** (main docs folder): `docs/design/index.html` is the design hub (entry to all mockups); `docs/design/books-admin-app/` contains HTML mockups for Dashboard, Books, Crawler, Databases, Book detail/edit; `docs/design/grqaser-app/` contains HTML mockups for Home, Book detail, Library, Audio player, Profile.
+3. **GrqaserApp mockups** follow the same design rules and colors as books-admin-app (teal accent, slate background/text, no purple gradient); mobile frame (e.g. max-width 390px) and bottom tab navigation as appropriate.
+4. All mockups are static HTML (no backend); opening `docs/design/index.html` in a browser allows navigating to every mock view. Sidebar (web) and bottom nav (mobile) link back to the design hub or between mock pages as appropriate.
+
+---
+
+## Story 7.4 — Books-admin-app UI/UX implementation from mockups
+
+**As an** operator,  
+**I want** the books-admin-app web UI to match the design system and mockups in `docs/design/books-admin-app/`,  
+**so that** the admin experience is consistent, clear, and aligned with the defined layout and patterns.
+
+### Acceptance Criteria
+
+1. Books-admin-app (layout, navigation, colors, typography, components) **matches or aligns with** the mockups in `docs/design/books-admin-app/` and the design system in `docs/design/README.md`.
+2. Navigation and layout are consistent: sidebar (or equivalent), same sections (Dashboard, Books, Crawler, Databases); visual and interaction patterns (buttons, forms, cards) follow the design system.
+3. No regression in existing behavior; key actions (start/stop crawler, set active DB, edit book) remain easy to find and use.
+4. Optional: accessibility and keyboard use improved where low-effort.
+
+---
+
+## Story 7.5 — GrqaserApp UI/UX implementation from mockups
+
+**As a** mobile user / developer,  
+**I want** GrqaserApp (React Native) to follow the same design system and mockups in `docs/design/grqaser-app/`,  
+**so that** the mobile experience is visually and behaviorally consistent with the design system and matches the mockups (Home, Book detail, Library, Player, Profile).
+
+### Acceptance Criteria
+
+1. GrqaserApp (colors, typography, components, navigation) **matches or aligns with** the mockups in `docs/design/grqaser-app/` and the design system in `docs/design/README.md` (teal accent, slate palette, Plus Jakarta Sans or equivalent).
+2. Core screens (Home, Search, Book detail, Audio player, Library/Profile) follow the structure and patterns shown in the mockups; bottom tab (or equivalent) navigation is clear.
+3. No regression in existing behavior; browse → book detail → listen flow remains intact.
+4. Optional: theme (dark/light) and accessibility improvements where low-effort.
 
 ---
 
 ## Compatibility and scope
 
-- **Functionality:** No new features beyond parity verification, removal of legacy apps, and optional UI/UX polish. Data contract and schema remain as for Epic 6.
+- **Functionality:** No new features beyond parity verification, removal of legacy apps, and UI/UX improvements. Data contract and schema remain as for Epic 6.
+- **Design:** One design system for both books-admin-app and GrqaserApp; mockups in docs/design/; implementation stories (7.4, 7.5) update the apps to follow mockups and design rules.
 - **Epic 5 alignment:** Epic 5 (quality, release, operations) is updated so that “crawler and database-viewer” verification and runbooks refer to books-admin-app. Story 7.1 supports that verification; Story 7.2 ensures runbooks and CI match.
-- **Order:** 7.1 (parity verification) should be done before or in tandem with Epic 5 books-admin-app verification. 7.2 (removal) after parity and Epic 5 updates are agreed. 7.3 (UI/UX) can be done in parallel or after 7.2.
+- **Order:** 7.1 (parity) before or in tandem with Epic 5 verification. 7.2 (removal) after parity and Epic 5 updates. 7.3 (design system and mockups) can be done in parallel. 7.4 (books-admin-app UI/UX) and 7.5 (GrqaserApp UI/UX) can be done in parallel after or alongside 7.3.
 
 ---
 
@@ -62,5 +93,7 @@
 
 - [ ] Story 7.1: Parity documented and signed off; books-admin-app is the single admin app for crawler + viewer behavior.
 - [ ] Story 7.2: crawler and database-viewer removed or archived; docs and scripts reference books-admin-app only.
-- [ ] Story 7.3 (optional): UI/UX polish completed per AC; no regression.
+- [ ] Story 7.3: Design system in docs/design/README.md; design hub docs/design/index.html; mockups in docs/design/books-admin-app/ and docs/design/grqaser-app/; GrqaserApp mockups use same design rules as books-admin-app.
+- [ ] Story 7.4: books-admin-app UI/UX updated to match mockups and design system; no regression.
+- [ ] Story 7.5: GrqaserApp UI/UX updated to match mockups and design system; no regression.
 - [ ] Epic 5 and PRD updated so delivery order and verification refer to books-admin-app.

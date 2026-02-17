@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Crawler — Books Admin Mock</title>
+  <link rel="stylesheet" href="shared.css">
+</head>
+<body>
+  <div class="app-shell">
+    <aside class="sidebar">
+      <div class="sidebar-brand"><h1>📚 Books Admin</h1><p>Grqaser · Local</p></div>
+      <nav class="sidebar-nav">
+        <a href="../index.html">Design hub</a>
+        <a href="dashboard.html">Dashboard</a>
+        <a href="books.html">Books</a>
+        <a href="crawler.html" class="active">Crawler</a>
+        <a href="databases.html">Databases</a>
+      </nav>
+    </aside>
+    <main class="main">
+      <h1 class="page-title">Crawler</h1>
+      <div class="controls">
+        <h2>Control &amp; status</h2>
+        <p style="margin-bottom: 1rem; color: var(--text-muted); font-size: 0.9375rem;">Start/stop the crawler. Config applies to the next run. Writes to the active database.</p>
+        <div style="display: flex; gap: 0.5rem; flex-wrap: wrap; align-items: center;">
+          <button type="button" class="btn">▶ Start</button>
+          <button type="button" class="btn btn-secondary" disabled>⏹ Stop</button>
+          <span style="font-weight: 600; color: var(--text-muted); font-size: 0.9375rem;">○ Stopped</span>
+          <button type="button" class="btn btn-secondary">Refresh</button>
+        </div>
+      </div>
+      <div class="controls">
+        <h3>Config</h3>
+        <div class="filters" style="grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));">
+          <div class="filter-group"><label>Mode</label><select><option>full</option><option>update</option><option>test</option></select></div>
+          <div class="filter-group"><label>Test limit</label><input type="number" value="10"></div>
+          <div class="filter-group"><label>Update limit</label><input type="number" placeholder="—"></div>
+          <div class="filter-group"><label>Delay (ms)</label><input type="number" value="1000"></div>
+          <div class="filter-group"><label>Timeout (ms)</label><input type="number" value="30000"></div>
+        </div>
+        <p style="margin-top: 0.75rem; font-size: 0.875rem; color: var(--text-muted);"><strong>Active DB:</strong> <code style="background: var(--border-muted); padding: 0.2rem 0.5rem; border-radius: 4px;">data/db.v2/grqaser.db</code></p>
+        <button type="button" class="btn" style="margin-top: 0.5rem;">Save config</button>
+      </div>
+      <div class="stats-grid" style="margin-bottom: 1.5rem;">
+        <div class="stat-card"><h3>State</h3><div class="number">Stopped</div></div>
+        <div class="stat-card"><h3>Last run</h3><div class="number" style="font-size: 1rem;">17/02 14:30</div></div>
+        <div class="stat-card"><h3>Total</h3><div class="number">142</div></div>
+        <div class="stat-card"><h3>Processed</h3><div class="number">12</div></div>
+      </div>
+      <div class="books-container">
+        <div class="books-header"><h2>Recent logs</h2></div>
+        <div style="max-height: 280px; overflow-y: auto; padding: 1rem;">
+          <div class="log-entry">[17/02 14:30] info – Crawl started (mode: full)</div>
+          <div class="log-entry">[17/02 14:31] info – Processing book 123</div>
+          <div class="log-entry">[17/02 14:32] info – Completed 1/142</div>
+        </div>
+      </div>
+    </main>
+  </div>
+</body>
+</html>

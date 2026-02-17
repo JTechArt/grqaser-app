@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Grqaser design — Mockups</title>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap">
+  <style>
+    :root { --bg: #f8fafc; --card: #fff; --border: #e2e8f0; --text: #0f172a; --text-muted: #64748b; --accent: #0d9488; --accent-light: #ccfbf1; --radius: 12px; }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: 'Plus Jakarta Sans', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; padding: 2rem; line-height: 1.6; }
+    .wrap { max-width: 720px; margin: 0 auto; }
+    h1 { font-size: 1.75rem; font-weight: 700; margin-bottom: 0.5rem; }
+    p { color: var(--text-muted); font-size: 0.9375rem; margin-bottom: 2rem; }
+    .section { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 1.5rem; margin-bottom: 1.5rem; }
+    .section h2 { font-size: 1.125rem; font-weight: 600; margin-bottom: 0.75rem; }
+    .section ul { list-style: none; }
+    .section li { margin-bottom: 0.5rem; }
+    .section a { color: var(--accent); font-weight: 500; text-decoration: none; }
+    .section a:hover { text-decoration: underline; }
+    .badge { display: inline-block; background: var(--accent-light); color: var(--accent); font-size: 0.75rem; font-weight: 600; padding: 0.25rem 0.5rem; border-radius: 999px; margin-left: 0.5rem; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <h1>Grqaser design</h1>
+    <p>Static HTML mockups for books-admin-app (web) and GrqaserApp (mobile). Same design system: slate + teal, Plus Jakarta Sans. Open links below in a browser.</p>
+
+    <section class="section">
+      <h2>Books Admin App <span class="badge">Web</span></h2>
+      <ul>
+        <li><a href="books-admin-app/dashboard.html">Dashboard</a> — Stats grid</li>
+        <li><a href="books-admin-app/books.html">Books</a> — List, filters, pagination</li>
+        <li><a href="books-admin-app/crawler.html">Crawler</a> — Start/stop, config, logs</li>
+        <li><a href="books-admin-app/databases.html">Databases</a> — Active/backup</li>
+        <li><a href="books-admin-app/book-detail.html">Book detail &amp; edit</a></li>
+      </ul>
+    </section>
+
+    <section class="section">
+      <h2>GrqaserApp <span class="badge">Mobile</span></h2>
+      <ul>
+        <li><a href="grqaser-app/home.html">Home</a> — Search, categories, book grid</li>
+        <li><a href="grqaser-app/book-detail.html">Book detail</a> — Cover, play, chapters</li>
+        <li><a href="grqaser-app/library.html">Library</a> — Saved / in progress</li>
+        <li><a href="grqaser-app/audio-player.html">Audio player</a> — Playback UI</li>
+        <li><a href="grqaser-app/profile.html">Profile</a> — Settings, theme</li>
+      </ul>
+    </section>
+
+    <p style="margin-top: 2rem; font-size: 0.875rem; color: var(--text-muted);">Design system: <a href="README.md" style="color: var(--accent);">README.md</a>. Epic 7: UI/UX improvements for both apps.</p>
+  </div>
+</body>
+</html>
