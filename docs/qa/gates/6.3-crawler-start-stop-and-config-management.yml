@@ -1,0 +1,54 @@
+# Quality Gate: 6.3 crawler start/stop and config management
+schema: 1
+story: "6.3"
+story_title: "crawler start/stop and config management"
+gate: PASS
+status_reason: "All acceptance criteria met. Start/stop and config API + UI implemented; active DB path injected at run time; status and logs preserved; tests cover config store and crawler API."
+reviewer: "Quinn (Test Architect)"
+updated: "2026-02-17T00:00:00Z"
+
+waiver: { active: false }
+
+top_issues: []
+
+risk_summary:
+  totals: { critical: 0, high: 0, medium: 0, low: 0 }
+  recommendations:
+    must_fix: []
+    monitor: []
+
+evidence:
+  tests_reviewed: 2
+  risks_identified: 0
+  trace:
+    ac_covered: [1, 2, 3, 4]
+    ac_gaps: []
+
+nfr_validation:
+  security:
+    status: PASS
+    notes: "Local-only; no new auth; subprocess spawn from app."
+  performance:
+    status: PASS
+    notes: "One run at a time; config load/save lightweight."
+  reliability:
+    status: PASS
+    notes: "SIGTERM for stop; 409 when already running; config validated."
+  maintainability:
+    status: PASS
+    notes: "Unit tests for config store; API tests for config and start/stop."
+
+quality_score: 100
+recommendations:
+  immediate: []
+  future:
+    - action: "If crawler should respect app-edited delay/timeout, add CRAWLER_DELAY_MS/CRAWLER_TIMEOUT_MS to crawler env and runner"
+      refs: ["crawler/src/config/crawler-config.js", "books-admin-app/src/services/crawler-runner.js"]
+
+history:
+  - at: "2026-02-17T00:00:00Z"
+    gate: PASS
+    note: "Initial review; all ACs met."
+  - at: "2026-02-17T00:00:00Z"
+    gate: PASS
+    note: "Re-review; implementation confirmed unchanged."

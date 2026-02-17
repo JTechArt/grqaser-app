@@ -514,8 +514,47 @@
 
         <section id="view-crawler" class="view-panel hidden">
             <div class="controls">
-                <h2>🕷️ Crawler Status &amp; Logs</h2>
-                <button type="button" class="btn" id="refreshCrawlerBtn">Refresh</button>
+                <h2>🕷️ Crawler control &amp; status</h2>
+                <p style="margin-bottom: 1rem; color: #666;">Start and stop the crawler; config applies to the next run. Writes go to the active database.</p>
+                <div style="display: flex; gap: 0.5rem; flex-wrap: wrap; align-items: center;">
+                    <button type="button" class="btn" id="crawlerStartBtn">▶ Start crawler</button>
+                    <button type="button" class="btn btn-secondary" id="crawlerStopBtn">⏹ Stop crawler</button>
+                    <span id="crawlerRunState" style="font-weight: 600;"></span>
+                    <button type="button" class="btn btn-secondary" id="refreshCrawlerBtn">Refresh</button>
+                </div>
+            </div>
+            <div class="controls" style="margin-top: 1rem;">
+                <h3>Crawler config</h3>
+                <div class="filters" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem;">
+                    <div class="filter-group">
+                        <label for="crawlerMode">Mode</label>
+                        <select id="crawlerMode">
+                            <option value="full">full</option>
+                            <option value="update">update</option>
+                            <option value="fix-download-all">fix-download-all</option>
+                            <option value="full-database">full-database</option>
+                            <option value="test">test</option>
+                        </select>
+                    </div>
+                    <div class="filter-group">
+                        <label for="crawlerTestLimit">Test limit</label>
+                        <input type="number" id="crawlerTestLimit" min="1" placeholder="10">
+                    </div>
+                    <div class="filter-group">
+                        <label for="crawlerUpdateLimit">Update limit (empty = no limit)</label>
+                        <input type="number" id="crawlerUpdateLimit" min="1" placeholder="—">
+                    </div>
+                    <div class="filter-group">
+                        <label for="crawlerDelayMs">Delay between requests (ms)</label>
+                        <input type="number" id="crawlerDelayMs" min="0" placeholder="1000">
+                    </div>
+                    <div class="filter-group">
+                        <label for="crawlerTimeout">Timeout (ms)</label>
+                        <input type="number" id="crawlerTimeout" min="1000" placeholder="30000">
+                    </div>
+                </div>
+                <p style="margin-top: 0.5rem; font-size: 0.9rem; color: #666;"><strong>Active DB path</strong> (from Databases tab): <code id="crawlerDbPathDisplay">—</code></p>
+                <button type="button" class="btn" id="crawlerSaveConfigBtn" style="margin-top: 0.5rem;">Save config</button>
             </div>
             <div class="crawler-status-grid" id="crawlerStatusGrid">
                 <div class="loading">Loading crawler status...</div>
@@ -982,6 +1021,7 @@
             if (viewId === 'crawler') {
                 loadCrawlerStatus();
                 loadCrawlerLogs();
+                loadCrawlerConfig();
             }
             if (viewId === 'databases') {
                 loadDatabases();
@@ -1060,7 +1100,17 @@
                 });
         }
 
-        // Crawler status and logs (AC3)
+        // Crawler status, control, and config
+        function updateCrawlerButtons(isRunning) {
+            const startBtn = document.getElementById('crawlerStartBtn');
+            const stopBtn = document.getElementById('crawlerStopBtn');
+            const stateEl = document.getElementById('crawlerRunState');
+            if (startBtn) startBtn.disabled = !!isRunning;
+            if (stopBtn) stopBtn.disabled = !isRunning;
+            if (stateEl) stateEl.textContent = isRunning ? '● Running' : '○ Stopped';
+            if (stateEl) stateEl.style.color = isRunning ? '#28a745' : '#666';
+        }
+
         async function loadCrawlerStatus() {
             const el = document.getElementById('crawlerStatusGrid');
             el.innerHTML = '<div class="loading">Loading crawler status...</div>';
@@ -1069,7 +1119,11 @@
                 const data = await res.json();
                 if (data.success) {
                     const s = data.data;
+                    updateCrawlerButtons(s.is_running);
+                    const lastRun = s.last_run_started_at ? new Date(s.last_run_started_at).toLocaleString() : '—';
                     el.innerHTML = `
+                        <div class="stat-card"><h3>State</h3><div class="number">${s.is_running ? 'Running' : 'Stopped'}</div></div>
+                        <div class="stat-card"><h3>Last run started</h3><div class="number" style="font-size:1rem">${lastRun}</div></div>
                         <div class="stat-card"><h3>Total books</h3><div class="number">${s.total_books ?? '-'}</div></div>
                         <div class="stat-card"><h3>Processed</h3><div class="number">${s.processed_books ?? '-'}</div></div>
                         <div class="stat-card"><h3>Discovered</h3><div class="number">${s.discovered_books ?? '-'}</div></div>
@@ -1083,6 +1137,84 @@
             } catch (err) {
                 console.error('Crawler status:', err);
                 el.innerHTML = '<div class="error">Failed to load crawler status</div>';
+            }
+        }
+
+        async function loadCrawlerConfig() {
+            try {
+                const res = await fetch(`${API_BASE}/crawler/config`);
+                const data = await res.json();
+                if (data.success && data.data) {
+                    const c = data.data;
+                    const modeEl = document.getElementById('crawlerMode');
+                    if (modeEl) modeEl.value = c.mode || 'full';
+                    const testLimitEl = document.getElementById('crawlerTestLimit');
+                    if (testLimitEl) testLimitEl.value = c.testLimit != null ? c.testLimit : '';
+                    const updateLimitEl = document.getElementById('crawlerUpdateLimit');
+                    if (updateLimitEl) updateLimitEl.value = c.updateLimit != null ? c.updateLimit : '';
+                    const delayEl = document.getElementById('crawlerDelayMs');
+                    if (delayEl) delayEl.value = c.delayBetweenRequests != null ? c.delayBetweenRequests : '';
+                    const timeoutEl = document.getElementById('crawlerTimeout');
+                    if (timeoutEl) timeoutEl.value = c.timeout != null ? c.timeout : '';
+                    const dbPathEl = document.getElementById('crawlerDbPathDisplay');
+                    if (dbPathEl) dbPathEl.textContent = c.dbPath || '—';
+                }
+            } catch (err) {
+                console.error('Crawler config:', err);
+            }
+        }
+
+        async function saveCrawlerConfig() {
+            const payload = {
+                mode: document.getElementById('crawlerMode').value,
+                testLimit: parseInt(document.getElementById('crawlerTestLimit').value, 10) || undefined,
+                updateLimit: (function(){ const v = document.getElementById('crawlerUpdateLimit').value; if (v === '') return null; const n = parseInt(v, 10); return Number.isNaN(n) ? undefined : n; })(),
+                delayBetweenRequests: parseInt(document.getElementById('crawlerDelayMs').value, 10) || undefined,
+                timeout: parseInt(document.getElementById('crawlerTimeout').value, 10) || undefined
+            };
+            try {
+                const res = await fetch(`${API_BASE}/crawler/config`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                const data = await res.json();
+                if (data.success) {
+                    loadCrawlerConfig();
+                    alert('Config saved. Changes apply to the next crawler run.');
+                } else {
+                    alert(data.error?.message || 'Failed to save config');
+                }
+            } catch (err) {
+                alert('Error: ' + err.message);
+            }
+        }
+
+        async function startCrawler() {
+            try {
+                const res = await fetch(`${API_BASE}/crawler/start`, { method: 'POST' });
+                const data = await res.json();
+                if (data.success) {
+                    loadCrawlerStatus();
+                    loadCrawlerLogs();
+                } else {
+                    alert(data.error?.message || 'Failed to start');
+                }
+            } catch (err) {
+                alert('Error: ' + err.message);
+            }
+        }
+
+        async function stopCrawler() {
+            try {
+                const res = await fetch(`${API_BASE}/crawler/stop`, { method: 'POST' });
+                const data = await res.json();
+                if (data.success) {
+                    loadCrawlerStatus();
+                    loadCrawlerLogs();
+                }
+            } catch (err) {
+                alert('Error: ' + err.message);
             }
         }
 
@@ -1133,6 +1265,9 @@
                 loadCrawlerStatus();
                 loadCrawlerLogs();
             });
+            document.getElementById('crawlerStartBtn').addEventListener('click', startCrawler);
+            document.getElementById('crawlerStopBtn').addEventListener('click', stopCrawler);
+            document.getElementById('crawlerSaveConfigBtn').addEventListener('click', saveCrawlerConfig);
             document.getElementById('refreshDatabasesBtn').addEventListener('click', function() {
                 loadDatabases();
             });
