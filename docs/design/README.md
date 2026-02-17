@@ -15,11 +15,13 @@ Shared UI/UX design for **books-admin-app** (web) and **GrqaserApp** (mobile). B
 | **Accent** | `#0d9488` | Primary actions, links, active state (teal-600) |
 | **Accent hover** | `#0f766e` | Button hover (teal-700) |
 | **Accent light** | `#ccfbf1` | Active nav background (teal-100) |
-| **Radius** | `12px` / `8px` | Card and button radius |
+| **Radius** | `12px` / `8px` | Cards 12px, buttons 8px; mobile may use 16px for large cards |
 | **Typography** | Plus Jakarta Sans | All apps (Google Fonts) |
 
-- **Books-admin-app:** Sidebar navigation, desktop-first; accent for primary buttons and active nav.
-- **GrqaserApp:** Bottom tab navigation, mobile frame (max-width 390px in mocks); same accent and type.
+**Usage — web vs mobile**
+
+- **Books-admin-app (web):** Sidebar navigation, desktop-first; cards and panels use 12px radius, buttons 8px; accent for primary buttons and active nav.
+- **GrqaserApp (mobile):** Bottom tab navigation, mobile frame (max-width 390px in mocks); same palette and Plus Jakarta Sans. Large cards may use 16px radius. **Do not use purple gradient** — use only the slate + teal palette above.
 
 ## Mockups (static HTML)
 

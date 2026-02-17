@@ -147,6 +147,6 @@ Use this for manual or scripted verification (optional per Story 7.1).
 |------|------|------|-----------|
 | QA (Test Architect) | Quinn | 2025-02-17 | Parity document and architecture refs verified; gate PASS. |
 | Dev Agent | — | 2025-02-17 | Parity mapping and implementation locations verified. |
-| Product Owner / Developer | _[Optional: add name and date]_ | _[Date]_ | Parity is sufficient for **Epic 5** verification and **Story 7.2** (removal of standalone crawler and database-viewer). books-admin-app is the **single admin entrypoint**. |
+| Product Owner / Developer | Approved | 2025-02-17 | Parity sufficient for **Epic 5** verification and **Story 7.2** (removal of standalone crawler and database-viewer). books-admin-app is the **single admin entrypoint**. |
 
 **Reference from Epic 7 / delivery order:** Runbooks and Epic 5 verification should refer to **books-admin-app** only (see [Delivery order and application boundaries](architecture/delivery-order-and-application-boundaries.md)). This parity document is the mapping of Epic 1/2 ACs to books-admin-app features and implementation locations.
