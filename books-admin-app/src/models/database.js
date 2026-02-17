@@ -27,11 +27,47 @@ class Database {
   async connect() {
     try {
       this.db = new DatabaseNative(this.dbPath);
+      await this.ensureCrawlerTables();
       return Promise.resolve();
     } catch (err) {
       console.error('❌ Database connection failed:', err);
       return Promise.reject(err);
     }
+  }
+
+  /**
+   * Ensure url_queue and crawl_logs exist (CREATE TABLE IF NOT EXISTS).
+   * Fixes 500s when crawler status/logs API is hit before the crawler has run.
+   */
+  async ensureCrawlerTables() {
+    const urlQueueSql = `
+      CREATE TABLE IF NOT EXISTS url_queue (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        url TEXT NOT NULL,
+        url_type TEXT NOT NULL,
+        priority INTEGER DEFAULT 1,
+        status TEXT DEFAULT 'pending',
+        retry_count INTEGER DEFAULT 0,
+        max_retries INTEGER DEFAULT 3,
+        error_message TEXT,
+        created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+        updated_at TEXT DEFAULT CURRENT_TIMESTAMP
+      )
+    `.trim();
+    const crawlLogsSql = `
+      CREATE TABLE IF NOT EXISTS crawl_logs (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        level TEXT NOT NULL,
+        message TEXT NOT NULL,
+        book_id INTEGER,
+        url TEXT,
+        error_details TEXT,
+        created_at TEXT DEFAULT CURRENT_TIMESTAMP
+      )
+    `.trim();
+    await this.run(urlQueueSql);
+    await this.run(crawlLogsSql);
+    return Promise.resolve();
   }
 
   async close() {
