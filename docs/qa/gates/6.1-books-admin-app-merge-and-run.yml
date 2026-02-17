@@ -1,0 +1,52 @@
+# Quality Gate: 6.1 books-admin-app merge and run
+schema: 1
+story: "6.1"
+story_title: "books-admin-app merge and run"
+gate: PASS
+status_reason: "All acceptance criteria met; TEST-001 and coverage gaps closed by dev (stats.test.js, crawler-api.test.js). No blocking issues."
+reviewer: "Quinn (Test Architect)"
+updated: "2026-02-16T00:00:00Z"
+
+waiver: { active: false }
+
+top_issues: []
+
+risk_summary:
+  totals: { critical: 0, high: 0, medium: 0, low: 0 }
+  recommendations:
+    must_fix: []
+    monitor: []
+
+evidence:
+  tests_reviewed: 5
+  risks_identified: 0
+  trace:
+    ac_covered: [1, 2, 3, 4, 5]
+    ac_gaps: []
+
+nfr_validation:
+  security:
+    status: PASS
+    notes: "Local-only, no auth as required; helmet and rate limiting present."
+  performance:
+    status: PASS
+    notes: "Pagination and rate limits configured; no bottlenecks observed."
+  reliability:
+    status: PASS
+    notes: "Error handling and graceful shutdown (SIGTERM/SIGINT) implemented."
+  maintainability:
+    status: PASS
+    notes: "Stats and crawler API routes now covered; health, books, crawler smoke, stats, crawler-api tests in place."
+
+quality_score: 100
+recommendations:
+  immediate: []
+  future: []
+
+history:
+  - at: "2026-02-16T00:00:00Z"
+    gate: CONCERNS
+    note: "Initial review; TEST-001 stats/crawler API untested, MNT-001 env note."
+  - at: "2026-02-16T00:00:00Z"
+    gate: PASS
+    note: "Re-review after dev added stats.test.js and crawler-api.test.js; all issues closed."

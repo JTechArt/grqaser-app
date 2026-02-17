@@ -25,7 +25,8 @@ function deepMerge(target, source) {
 const baseConfig = {
   // Base settings
   baseUrl: 'https://grqaser.org',
-  dbPath: path.join(__dirname, '../../data/grqaser.db'),
+  // DB path: env for books-admin-app / Story 6.2; else crawler default
+  dbPath: process.env.CRAWLER_DB_PATH || process.env.DB_PATH || path.join(__dirname, '../../data/grqaser.db'),
   dataDir: path.join(__dirname, '../../data'),
 
   // Crawler mode: full (default) | update | fix-download-all | full-database | test

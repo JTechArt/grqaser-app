@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Book detail &amp; edit — Books Admin Mock</title>
+  <link rel="stylesheet" href="shared.css">
+</head>
+<body>
+  <div class="app-shell">
+    <aside class="sidebar">
+      <div class="sidebar-brand"><h1>📚 Books Admin</h1><p>Grqaser · Local</p></div>
+      <nav class="sidebar-nav">
+        <a href="../index.html">Design hub</a>
+        <a href="dashboard.html">Dashboard</a>
+        <a href="books.html" class="active">Books</a>
+        <a href="crawler.html">Crawler</a>
+        <a href="databases.html">Databases</a>
+      </nav>
+    </aside>
+    <main class="main">
+      <p style="margin-bottom: 1rem;"><a href="books.html" class="btn btn-secondary">← Back to Books</a></p>
+      <div class="controls" id="detailView">
+        <div style="display: flex; gap: 1.5rem; align-items: flex-start; margin-bottom: 1.5rem;">
+          <div class="book-cover" style="width: 120px; height: 160px;"></div>
+          <div style="flex: 1;">
+            <h2 style="font-size: 1.25rem; font-weight: 700; margin-bottom: 0.25rem;">Sample Book Title</h2>
+            <p style="color: var(--text-muted); margin-bottom: 0.75rem;">by Author</p>
+            <span style="background: var(--accent-light); color: var(--accent); padding: 0.25rem 0.75rem; border-radius: 999px; font-size: 0.8125rem; font-weight: 600;">🎧 Audio Book</span>
+            <span style="background: var(--border-muted); color: var(--text-muted); padding: 0.25rem 0.75rem; border-radius: 999px; font-size: 0.8125rem; margin-left: 0.5rem;">⏱ 1h 20m</span>
+          </div>
+        </div>
+        <h3 style="font-size: 0.9375rem; font-weight: 600; color: var(--text-muted); margin-bottom: 0.5rem;">Basic info</h3>
+        <div class="detail-grid" style="margin-bottom: 1rem;">
+          <div class="detail-item"><span class="detail-label">Title</span><span class="detail-value">Sample Book Title</span></div>
+          <div class="detail-item"><span class="detail-label">Author</span><span class="detail-value">Author</span></div>
+          <div class="detail-item"><span class="detail-label">Category</span><span class="detail-value">Fiction</span></div>
+          <div class="detail-item"><span class="detail-label">Duration</span><span class="detail-value">1h 20m</span></div>
+        </div>
+        <h3 style="font-size: 0.9375rem; font-weight: 600; color: var(--text-muted); margin-bottom: 0.5rem;">Timestamps</h3>
+        <div class="detail-grid" style="margin-bottom: 1rem;">
+          <div class="detail-item"><span class="detail-label">Created</span><span class="detail-value">17/02/2026 10:00</span></div>
+          <div class="detail-item"><span class="detail-label">Last edited (manual)</span><span class="detail-value">17/02/2026 12:30</span></div>
+        </div>
+        <button type="button" class="btn" id="editBookBtn">✏️ Edit book</button>
+      </div>
+      <div class="controls" id="editForm" style="display: none;">
+        <h3>Edit book</h3>
+        <form>
+          <div class="filters" style="grid-template-columns: 1fr 1fr;">
+            <div class="filter-group"><label>Title *</label><input type="text" value="Sample Book Title"></div>
+            <div class="filter-group"><label>Author</label><input type="text" value="Author"></div>
+            <div class="filter-group" style="grid-column: 1 / -1;"><label>Description</label><textarea rows="4">Sample description.</textarea></div>
+            <div class="filter-group"><label>Category</label><input type="text" value="Fiction"></div>
+            <div class="filter-group"><label>Language</label><input type="text" value="hy" maxlength="10"></div>
+            <div class="filter-group"><label>Duration (s)</label><input type="number" value="4800" min="0"></div>
+            <div class="filter-group"><label>Rating (0–5)</label><input type="number" value="4.5" min="0" max="5" step="0.1"></div>
+            <div class="filter-group" style="grid-column: 1 / -1;"><label>Cover URL</label><input type="url" placeholder="https://"></div>
+            <div class="filter-group" style="grid-column: 1 / -1;"><label>Main audio URL</label><input type="url" placeholder="https://"></div>
+          </div>
+          <div style="margin-top: 1rem;"><button type="submit" class="btn">Save</button><button type="button" class="btn btn-secondary">Cancel</button></div>
+        </form>
+      </div>
+    </main>
+  </div>
+  <script>
+    document.getElementById('editBookBtn').addEventListener('click', function() {
+      document.getElementById('detailView').style.display = 'none';
+      document.getElementById('editForm').style.display = 'block';
+    });
+  </script>
+</body>
+</html>

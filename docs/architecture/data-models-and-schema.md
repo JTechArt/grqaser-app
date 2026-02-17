@@ -5,7 +5,7 @@ Shared data contract for the crawler (writer), database-viewer (reader), and Grq
 ## Canonical store
 
 - **Database:** SQLite (`grqaser.db`), path configurable (e.g. `crawler/data/grqaser.db` or `database-viewer/data/grqaser.db` when copied).
-- **Writer:** Crawler only. Database-viewer and GrqaserApp never write to this DB in MVP.
+- **Writer:** Crawler (and, in Epic 6, books-admin-app for manual edits to the active DB). Database-viewer is read-only; GrqaserApp never writes.
 - **Schema ownership:** Defined and evolved in Phase 1; documented here for viewer and app.
 
 ## Core entities (summary)
@@ -57,6 +57,7 @@ Current canonical schema:
 | has_chapters | BOOLEAN | DEFAULT 0 | |
 | chapter_count | INTEGER | DEFAULT 0 | |
 | chapter_urls | TEXT | | JSON array of per-chapter audio URLs (Story 1.5); used by update/fix-download-all/full-database modes. |
+| last_edited_at | TIMESTAMP | NULL | (Epic 6) Set when a row is updated via books-admin-app manual edit; NULL means only crawler has written. Optional for local-only edit audit. |
 
 **Required for insert:** id, title, author. All text fields must be free of HTML; URLs must pass scheme validation (http/https).
 

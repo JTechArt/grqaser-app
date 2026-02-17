@@ -1,0 +1,1153 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Grqaser Books Admin</title>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap">
+    <style>
+        :root {
+            --bg: #f8fafc;
+            --card: #ffffff;
+            --border: #e2e8f0;
+            --border-muted: #f1f5f9;
+            --text: #0f172a;
+            --text-muted: #64748b;
+            --accent: #0d9488;
+            --accent-hover: #0f766e;
+            --accent-light: #ccfbf1;
+            --radius: 12px;
+            --radius-sm: 8px;
+            --shadow: 0 1px 3px rgba(15,23,42,0.08);
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Plus Jakarta Sans', -apple-system, sans-serif;
+            line-height: 1.6;
+            color: var(--text);
+            background: var(--bg);
+            min-height: 100vh;
+        }
+        .app-shell { display: flex; min-height: 100vh; }
+        .sidebar {
+            width: 260px;
+            flex-shrink: 0;
+            background: var(--card);
+            border-right: 1px solid var(--border);
+            padding: 1.5rem 0;
+        }
+        .sidebar-brand { padding: 0 1.25rem 1rem; border-bottom: 1px solid var(--border-muted); margin-bottom: 0.5rem; }
+        .sidebar-brand h1 { font-size: 1.25rem; font-weight: 700; color: var(--text); }
+        .sidebar-brand p { font-size: 0.8125rem; color: var(--text-muted); margin-top: 0.25rem; }
+        .sidebar .nav-tabs { flex-direction: column; gap: 0; border: none; margin: 0; }
+        .sidebar .nav-tab {
+            display: block;
+            width: 100%;
+            text-align: left;
+            padding: 0.75rem 1.25rem;
+            border: none;
+            border-left: 3px solid transparent;
+            border-radius: 0;
+            background: transparent;
+            color: var(--text-muted);
+            font-weight: 500;
+        }
+        .sidebar .nav-tab:hover { background: var(--border-muted); color: var(--text); }
+        .sidebar .nav-tab.active { color: var(--accent); background: var(--accent-light); border-left-color: var(--accent); }
+        .main { flex: 1; padding: 1.5rem 2rem; overflow-x: hidden; }
+        .container { max-width: 1200px; margin: 0; padding: 0; }
+        .header { display: none; }
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+        .stat-card {
+            background: var(--card);
+            padding: 1.5rem;
+            border-radius: var(--radius);
+            border: 1px solid var(--border);
+            box-shadow: 0 1px 2px rgba(15,23,42,0.05);
+            text-align: center;
+        }
+        .stat-card h3 { font-size: 0.8125rem; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.02em; margin-bottom: 0.5rem; }
+        .stat-card .number { font-size: 1.75rem; font-weight: 700; color: var(--text); }
+        .controls {
+            background: var(--card);
+            padding: 1.5rem;
+            border-radius: var(--radius);
+            border: 1px solid var(--border);
+            margin-bottom: 1.5rem;
+        }
+        .controls h2 { font-size: 1.125rem; font-weight: 600; margin-bottom: 1rem; color: var(--text); }
+        .filters { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 1rem; margin-bottom: 1rem; }
+        .filter-group { display: flex; flex-direction: column; }
+        .filter-group label { margin-bottom: 0.375rem; font-weight: 500; font-size: 0.8125rem; color: var(--text); }
+        .filter-group input, .filter-group select, .filter-group textarea {
+            padding: 0.5rem 0.75rem;
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            font-size: 0.9375rem;
+            font-family: inherit;
+        }
+        .filter-group input:focus, .filter-group select:focus { outline: none; border-color: var(--accent); }
+        .btn {
+            background: var(--accent);
+            color: white;
+            border: none;
+            padding: 0.625rem 1.25rem;
+            border-radius: var(--radius-sm);
+            cursor: pointer;
+            font-size: 0.9375rem;
+            font-weight: 600;
+            font-family: inherit;
+            transition: background 0.15s;
+        }
+        .btn:hover { background: var(--accent-hover); }
+        .books-container {
+            background: var(--card);
+            border-radius: var(--radius);
+            border: 1px solid var(--border);
+            overflow: hidden;
+        }
+        .books-header {
+            padding: 1rem 1.5rem;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-weight: 600;
+        }
+        .books-header h2 { font-size: 1rem; color: var(--text); }
+        .books-list { max-height: 600px; overflow-y: auto; }
+        .book-item {
+            padding: 1rem 1.5rem;
+            border-bottom: 1px solid var(--border-muted);
+            transition: background 0.1s;
+            cursor: pointer;
+            display: flex;
+            gap: 1rem;
+            align-items: flex-start;
+        }
+        .book-cover { width: 56px; height: 76px; object-fit: cover; border-radius: var(--radius-sm); flex-shrink: 0; }
+        .book-content { flex: 1; }
+        .book-item:hover { background: var(--bg); }
+        .book-item:last-child { border-bottom: none; }
+        .book-title { font-weight: 600; color: var(--text); margin-bottom: 0.25rem; font-size: 0.9375rem; }
+        .book-author { color: var(--text-muted); margin-bottom: 0.25rem; }
+        .book-meta { display: flex; gap: 1rem; font-size: 0.8125rem; color: var(--text-muted); flex-wrap: wrap; }
+
+        .loading { text-align: center; padding: 2rem; color: var(--text-muted); }
+        .error { background: #fef2f2; color: #b91c1c; padding: 1rem; border-radius: var(--radius-sm); margin-bottom: 1rem; border: 1px solid #fecaca; }
+        .pagination { display: flex; justify-content: center; gap: 0.375rem; padding: 1rem; border-top: 1px solid var(--border); flex-wrap: wrap; }
+        .pagination button { padding: 0.5rem 0.75rem; border: 1px solid var(--border); background: var(--card); cursor: pointer; border-radius: var(--radius-sm); font-size: 0.875rem; font-weight: 500; }
+        .pagination button:hover { background: var(--border-muted); }
+        .pagination button:disabled { opacity: 0.5; cursor: not-allowed; }
+        .pagination .current { background: var(--accent); color: white; border-color: var(--accent); }
+        .modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; background: rgba(15,23,42,0.4); }
+        .modal-content { background: var(--card); margin: 5% auto; padding: 2rem; border-radius: var(--radius); width: 90%; max-width: 800px; max-height: 80vh; overflow-y: auto; border: 1px solid var(--border); box-shadow: var(--shadow); }
+        .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; padding-bottom: 1rem; border-bottom: 1px solid var(--border); }
+        .modal-title { font-size: 1.25rem; font-weight: 700; color: var(--text); }
+        .close { color: var(--text-muted); font-size: 1.5rem; font-weight: bold; cursor: pointer; }
+        .close:hover { color: var(--text); }
+        .book-detail { display: grid; gap: 1rem; }
+        .book-detail-section { background: var(--border-muted); padding: 1rem; border-radius: var(--radius-sm); }
+        .book-detail-section h3 { font-size: 0.9375rem; font-weight: 600; color: var(--text-muted); margin-bottom: 0.5rem; }
+        .book-detail-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 1rem; }
+        .detail-item { display: flex; flex-direction: column; }
+        .detail-label { font-weight: 500; color: var(--text-muted); font-size: 0.8125rem; }
+        .detail-value { color: var(--text); margin-top: 0.25rem; }
+        .view-panel { min-height: 200px; }
+        .view-panel.hidden { display: none; }
+        .btn-secondary { background: var(--card); color: var(--text); border: 1px solid var(--border); margin-left: 0.5rem; }
+        .btn-secondary:hover { background: var(--border-muted); }
+        .crawler-status-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 1rem; margin-bottom: 1.5rem; }
+        .crawler-logs-container { background: var(--card); border-radius: var(--radius); border: 1px solid var(--border); overflow: hidden; }
+        .crawler-logs-container h3 { padding: 1rem 1.5rem; border-bottom: 1px solid var(--border); margin: 0; font-size: 1rem; font-weight: 600; color: var(--text); }
+        .crawler-logs-list { max-height: 400px; overflow-y: auto; padding: 1rem; }
+        .log-entry { padding: 0.5rem 0; border-bottom: 1px solid var(--border-muted); font-family: ui-monospace, monospace; font-size: 0.8125rem; color: var(--text-muted); }
+        .log-entry:last-child { border-bottom: none; }
+        @media (max-width: 768px) {
+            .app-shell { flex-direction: column; }
+            .sidebar { width: 100%; border-right: none; border-bottom: 1px solid var(--border); padding: 1rem; }
+            .sidebar .nav-tabs { flex-direction: row; flex-wrap: wrap; }
+            .sidebar .nav-tab { border-left: none; border-bottom: 3px solid transparent; }
+            .sidebar .nav-tab.active { border-bottom-color: var(--accent); }
+            .main { padding: 1rem; }
+        }
+    </style>
+</head>
+<body>
+    <div class="app-shell">
+        <aside class="sidebar">
+            <div class="sidebar-brand">
+                <h1>📚 Books Admin</h1>
+                <p>Grqaser · Local</p>
+            </div>
+            <nav class="nav-tabs" role="navigation" aria-label="Main">
+                <button type="button" class="nav-tab active" data-view="dashboard">Dashboard</button>
+                <button type="button" class="nav-tab" data-view="books">Books</button>
+                <button type="button" class="nav-tab" data-view="crawler">Crawler</button>
+                <button type="button" class="nav-tab" data-view="databases">Databases</button>
+            </nav>
+        </aside>
+        <main class="main">
+            <div class="container">
+        <section id="view-dashboard" class="view-panel">
+            <div class="stats-grid" id="statsGrid">
+                <div class="stat-card">
+                    <h3>Total Books</h3>
+                    <div class="number" id="totalBooks">-</div>
+                </div>
+                <div class="stat-card">
+                    <h3>Discovered</h3>
+                    <div class="number" id="discoveredBooks">-</div>
+                </div>
+                <div class="stat-card">
+                    <h3>Processed</h3>
+                    <div class="number" id="processedBooks">-</div>
+                </div>
+                <div class="stat-card">
+                    <h3>Failed</h3>
+                    <div class="number" id="failedBooks">-</div>
+                </div>
+            </div>
+        </section>
+
+        <section id="view-books" class="view-panel hidden">
+            <div class="controls">
+                <h2>📖 Books</h2>
+                <div class="filters">
+                    <div class="filter-group">
+                        <label for="searchQuery">Search</label>
+                        <input type="text" id="searchQuery" placeholder="Search by title or author...">
+                    </div>
+                    <div class="filter-group">
+                        <label for="authorFilter">Author</label>
+                        <input type="text" id="authorFilter" placeholder="Filter by author...">
+                    </div>
+                    <div class="filter-group">
+                        <label for="categoryFilter">Category</label>
+                        <select id="categoryFilter">
+                            <option value="">All Categories</option>
+                        </select>
+                    </div>
+                    <div class="filter-group">
+                        <label for="statusFilter">Status</label>
+                        <select id="statusFilter">
+                            <option value="">All Statuses</option>
+                            <option value="discovered">Discovered</option>
+                            <option value="processing">Processing</option>
+                            <option value="completed">Completed</option>
+                            <option value="failed">Failed</option>
+                        </select>
+                    </div>
+                    <div class="filter-group">
+                        <label for="typeFilter">Type</label>
+                        <select id="typeFilter">
+                            <option value="">All Types</option>
+                            <option value="audiobook">Audio Book</option>
+                            <option value="ebook">E-Book</option>
+                        </select>
+                    </div>
+                    <div class="filter-group">
+                        <label for="sortBy">Sort By</label>
+                        <select id="sortBy">
+                            <option value="created_at">Date Created</option>
+                            <option value="title">Title</option>
+                            <option value="author">Author</option>
+                            <option value="duration">Duration</option>
+                        </select>
+                    </div>
+                </div>
+                <button class="btn" id="loadBooksBtn">🔍 Load Books</button>
+                <button class="btn btn-secondary" id="searchBooksBtn">Search</button>
+            </div>
+
+            <div class="books-container">
+                <div class="books-header">
+                    <h2>📚 Books List</h2>
+                    <div id="booksCount">0 books</div>
+                </div>
+                <div class="books-list" id="booksList">
+                    <div class="loading">Loading books...</div>
+                </div>
+                <div class="pagination" id="pagination"></div>
+            </div>
+        </section>
+
+        <section id="view-crawler" class="view-panel hidden">
+            <div class="controls">
+                <h2>🕷️ Crawler control &amp; status</h2>
+                <p style="margin-bottom: 1rem; color: #666;">Start and stop the crawler; config applies to the next run. Writes go to the active database.</p>
+                <div style="display: flex; gap: 0.5rem; flex-wrap: wrap; align-items: center;">
+                    <button type="button" class="btn" id="crawlerStartBtn">▶ Start crawler</button>
+                    <button type="button" class="btn btn-secondary" id="crawlerStopBtn">⏹ Stop crawler</button>
+                    <span id="crawlerRunState" style="font-weight: 600;"></span>
+                    <button type="button" class="btn btn-secondary" id="refreshCrawlerBtn">Refresh</button>
+                </div>
+            </div>
+            <div class="controls" style="margin-top: 1rem;">
+                <h3>Crawler config</h3>
+                <div class="filters" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem;">
+                    <div class="filter-group">
+                        <label for="crawlerMode">Mode</label>
+                        <select id="crawlerMode">
+                            <option value="full">full</option>
+                            <option value="update">update</option>
+                            <option value="fix-download-all">fix-download-all</option>
+                            <option value="full-database">full-database</option>
+                            <option value="test">test</option>
+                        </select>
+                    </div>
+                    <div class="filter-group">
+                        <label for="crawlerTestLimit">Test limit</label>
+                        <input type="number" id="crawlerTestLimit" min="1" placeholder="10">
+                    </div>
+                    <div class="filter-group">
+                        <label for="crawlerUpdateLimit">Update limit (empty = no limit)</label>
+                        <input type="number" id="crawlerUpdateLimit" min="1" placeholder="—">
+                    </div>
+                    <div class="filter-group">
+                        <label for="crawlerDelayMs">Delay between requests (ms)</label>
+                        <input type="number" id="crawlerDelayMs" min="0" placeholder="1000">
+                    </div>
+                    <div class="filter-group">
+                        <label for="crawlerTimeout">Timeout (ms)</label>
+                        <input type="number" id="crawlerTimeout" min="1000" placeholder="30000">
+                    </div>
+                </div>
+                <p style="margin-top: 0.5rem; font-size: 0.9rem; color: #666;"><strong>Active DB path</strong> (from Databases tab): <code id="crawlerDbPathDisplay">—</code></p>
+                <button type="button" class="btn" id="crawlerSaveConfigBtn" style="margin-top: 0.5rem;">Save config</button>
+            </div>
+            <div class="crawler-status-grid" id="crawlerStatusGrid">
+                <div class="loading">Loading crawler status...</div>
+            </div>
+            <div class="crawler-logs-container">
+                <h3>Recent logs</h3>
+                <div class="crawler-logs-list" id="crawlerLogsList">
+                    <div class="loading">Loading logs...</div>
+                </div>
+            </div>
+        </section>
+
+        <section id="view-databases" class="view-panel hidden">
+            <div class="controls">
+                <h2>🗄️ Database versioning</h2>
+                <p style="margin-bottom: 1rem; color: #666;">One database is active; crawler writes and data view read from it. Others are backups you can promote or delete.</p>
+                <button type="button" class="btn" id="refreshDatabasesBtn">Refresh list</button>
+            </div>
+            <div class="books-container">
+                <div class="books-header">
+                    <h2>Known databases</h2>
+                </div>
+                <div id="databasesList">
+                    <div class="loading">Loading databases...</div>
+                </div>
+            </div>
+        </section>
+            </div>
+        </main>
+    <!-- Book Detail Modal -->
+    <div id="bookModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <div class="modal-title" id="modalTitle">Book Details</div>
+                <span class="close" id="closeModal">&times;</span>
+            </div>
+            <div class="book-detail" id="bookDetail">
+                <div class="loading">Loading book details...</div>
+            </div>
+            <div id="bookDetailEditForm" class="book-detail" style="display: none;">
+                <div class="error" id="bookEditError" style="display: none;"></div>
+                <form id="bookEditForm" class="book-detail-section">
+                    <h3>Edit book</h3>
+                    <div class="book-detail-grid" style="grid-template-columns: 1fr 1fr;">
+                        <div class="filter-group"><label for="editTitle">Title *</label><input type="text" id="editTitle" required></div>
+                        <div class="filter-group"><label for="editAuthor">Author</label><input type="text" id="editAuthor"></div>
+                        <div class="filter-group" style="grid-column: 1 / -1;"><label for="editDescription">Description</label><textarea id="editDescription" rows="4" style="width:100%; padding:0.5rem; border:1px solid #ddd; border-radius:5px;"></textarea></div>
+                        <div class="filter-group"><label for="editCategory">Category</label><input type="text" id="editCategory"></div>
+                        <div class="filter-group"><label for="editLanguage">Language (max 10)</label><input type="text" id="editLanguage" maxlength="10"></div>
+                        <div class="filter-group"><label for="editType">Type</label><input type="text" id="editType" placeholder="e.g. audiobook"></div>
+                        <div class="filter-group"><label for="editDuration">Duration (seconds, ≥0)</label><input type="number" id="editDuration" min="0" step="1"></div>
+                        <div class="filter-group"><label for="editRating">Rating (0–5)</label><input type="number" id="editRating" min="0" max="5" step="0.1"></div>
+                        <div class="filter-group" style="grid-column: 1 / -1;"><label for="editCoverImageUrl">Cover image URL</label><input type="url" id="editCoverImageUrl" placeholder="https://"></div>
+                        <div class="filter-group" style="grid-column: 1 / -1;"><label for="editMainAudioUrl">Main audio URL</label><input type="url" id="editMainAudioUrl" placeholder="https://"></div>
+                        <div class="filter-group" style="grid-column: 1 / -1;"><label for="editDownloadUrl">Download URL</label><input type="url" id="editDownloadUrl" placeholder="https://"></div>
+                    </div>
+                    <div style="margin-top: 1rem; display: flex; gap: 0.5rem;">
+                        <button type="submit" class="btn">Save</button>
+                        <button type="button" class="btn btn-secondary" id="bookEditCancelBtn">Cancel</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = '/api/v1';
+        let currentPage = 1;
+        let totalPages = 1;
+
+        // Escape for safe HTML text content (XSS mitigation for DB-derived content)
+        function escapeHtml(str) {
+            if (str == null || str === '') return '';
+            const s = String(str);
+            return s
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#39;');
+        }
+
+        // Load statistics
+        async function loadStats() {
+            try {
+                const response = await fetch(`${API_BASE}/stats/overview`);
+                const data = await response.json();
+                
+                if (data.success) {
+                    const stats = data.data;
+                    document.getElementById('totalBooks').textContent = stats.totalBooks || 0;
+                    
+                    const discovered = stats.booksByStatus?.find(s => s.crawl_status === 'discovered')?.count || 0;
+                    const processed = stats.booksByStatus?.find(s => s.crawl_status === 'completed')?.count || 0;
+                    const failed = stats.booksByStatus?.find(s => s.crawl_status === 'failed')?.count || 0;
+                    
+                    document.getElementById('discoveredBooks').textContent = discovered;
+                    document.getElementById('processedBooks').textContent = processed;
+                    document.getElementById('failedBooks').textContent = failed;
+                }
+            } catch (error) {
+                console.error('Error loading stats:', error);
+            }
+        }
+
+        // Load books (list with filters or search)
+        async function loadBooks(page = 1) {
+            const booksList = document.getElementById('booksList');
+            booksList.innerHTML = '<div class="loading">Loading books...</div>';
+
+            const searchQ = document.getElementById('searchQuery').value.trim();
+
+            try {
+                let url;
+                if (searchQ) {
+                    url = `${API_BASE}/books/search?q=${encodeURIComponent(searchQ)}&page=${page}&limit=20`;
+                } else {
+                    const params = new URLSearchParams({
+                        page: page,
+                        limit: 20,
+                        sort_by: document.getElementById('sortBy').value,
+                        sort_order: 'DESC'
+                    });
+                    const author = document.getElementById('authorFilter').value;
+                    const category = document.getElementById('categoryFilter').value;
+                    const status = document.getElementById('statusFilter').value;
+                    const type = document.getElementById('typeFilter').value;
+                    if (author) params.append('author', author);
+                    if (category) params.append('category', category);
+                    if (status) params.append('crawl_status', status);
+                    if (type) params.append('type', type);
+                    url = `${API_BASE}/books?${params}`;
+                }
+
+                const response = await fetch(url);
+                const data = await response.json();
+
+                if (data.success) {
+                    displayBooks(data.data);
+                    currentPage = page;
+                    totalPages = data.data.pagination.pages;
+                    updatePagination();
+                } else {
+                    booksList.innerHTML = `<div class="error">Error: ${data.error.message}</div>`;
+                }
+            } catch (error) {
+                console.error('Error loading books:', error);
+                booksList.innerHTML = '<div class="error">Failed to load books</div>';
+            }
+        }
+
+        // Display books
+        function displayBooks(data) {
+            const booksList = document.getElementById('booksList');
+            const booksCount = document.getElementById('booksCount');
+
+            booksCount.textContent = `${data.pagination.total} books`;
+
+            if (data.books.length === 0) {
+                booksList.innerHTML = '<div class="loading">No books found</div>';
+                return;
+            }
+
+            const booksHtml = data.books.map(book => {
+                // Determine book type based on audio URL or duration
+                // If book has duration, it's likely an audio book even if audio URL is missing
+                const hasAudioUrl = book.main_audio_url && book.main_audio_url.trim() !== '';
+                const hasDuration = book.duration && book.duration.trim() !== '';
+                const bookType = (hasAudioUrl || hasDuration) ? 'audiobook' : 'ebook';
+                const typeIcon = bookType === 'audiobook' ? '🎧' : '📖';
+                const typeLabel = bookType === 'audiobook' ? 'Audio Book' : 'E-Book';
+                
+                return `
+                    <div class="book-item" data-book-id="${book.id}">
+                        <img class="book-cover" src="${book.cover_image_url || 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iODAiIHZpZXdCb3g9IjAgMCA2MCA4MCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjYwIiBoZWlnaHQ9IjgwIiBmaWxsPSIjRjVGNUY1Ii8+CjxwYXRoIGQ9Ik0xNSAyMEg0NVY2MEgxNVYyMFoiIGZpbGw9IiNEN0Q3RDciLz4KPHBhdGggZD0iTTIwIDI1SDQwVjU1SDIwVjI1WiIgZmlsbD0iI0M5QzlDOSIvPgo8cGF0aCBkPSJNMjUgMzBIMzVWNTBIMjVWMzBaIiBmaWxsPSIjQjVCNUI1Ii8+Cjwvc3ZnPgo='}" alt="Book cover" onerror="this.src='data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iODAiIHZpZXdCb3g9IjAgMCA2MCA4MCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjYwIiBoZWlnaHQ9IjgwIiBmaWxsPSIjRjVGNUY1Ii8+CjxwYXRoIGQ9Ik0xNSAyMEg0NVY2MEgxNVYyMFoiIGZpbGw9IiNEN0Q3RDciLz4KPHBhdGggZD0iTTIwIDI1SDQwVjU1SDIwVjI1WiIgZmlsbD0iI0M5QzlDOSIvPgo8cGF0aCBkPSJNMjUgMzBIMzVWNTBIMjVWMzBaIiBmaWxsPSIjQjVCNUI1Ii8+Cjwvc3ZnPgo='">
+                        <div class="book-content">
+                            <div class="book-title">
+                                ${escapeHtml(book.title)}
+                                <span style="font-size: 0.8rem; color: #666; font-weight: normal;">(ID: ${book.id})</span>
+                                <a href="https://grqaser.org/books/${book.id}" target="_blank" style="font-size: 0.8rem; color: #0d9488; text-decoration: none; margin-left: 10px;">
+                                    🔗 View on Grqaser.org
+                                </a>
+                            </div>
+                            <div class="book-author">by ${escapeHtml(book.author)}</div>
+                                            <div class="book-meta">
+                    <span style="font-weight: bold; color: ${bookType === 'audiobook' ? '#0d9488' : '#16a34a'};">
+                        ${typeIcon} ${typeLabel}
+                    </span>
+                    <span>⏱️ ${escapeHtml(book.duration_formatted)}</span>
+                    <span>🎧 ${book.chapter_count || 0} MP3s</span>
+                    <span>📂 ${escapeHtml(book.category || 'No category')}</span>
+                    <span>🔄 ${escapeHtml(book.crawl_status)}</span>
+                    <span>📅 ${new Date(book.created_at).toLocaleDateString()}</span>
+                </div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+
+            booksList.innerHTML = booksHtml;
+
+            // Add click event listeners to book items
+            document.querySelectorAll('.book-item').forEach(item => {
+                item.addEventListener('click', function() {
+                    const bookId = this.getAttribute('data-book-id');
+                    showBookDetail(bookId);
+                });
+            });
+        }
+
+        // Show book detail modal
+        async function showBookDetail(bookId) {
+            const modal = document.getElementById('bookModal');
+            const modalTitle = document.getElementById('modalTitle');
+            const bookDetail = document.getElementById('bookDetail');
+
+            modal.style.display = 'block';
+            bookDetail.innerHTML = '<div class="loading">Loading book details...</div>';
+
+            try {
+                const response = await fetch(`${API_BASE}/books/${bookId}`);
+                const data = await response.json();
+
+                if (data.success) {
+                    const book = data.data;
+                    modalTitle.textContent = book.title;
+
+                    // Determine book type for detail view
+                    const hasAudioUrl = book.main_audio_url && book.main_audio_url.trim() !== '';
+                    const hasDuration = book.duration && book.duration.trim() !== '';
+                    const bookType = (hasAudioUrl || hasDuration) ? 'audiobook' : 'ebook';
+                    const typeIcon = bookType === 'audiobook' ? '🎧' : '📖';
+                    const typeLabel = bookType === 'audiobook' ? 'Audio Book' : 'E-Book';
+
+                    bookDetail.innerHTML = `
+                        <div class="book-detail-section">
+                            <div style="display: flex; gap: 2rem; align-items: flex-start; margin-bottom: 1rem;">
+                                <img src="${book.cover_image_url || 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTIwIiBoZWlnaHQ9IjE2MCIgdmlld0JveD0iMCAwIDEyMCAxNjAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSIxMjAiIGhlaWdodD0iMTYwIiBmaWxsPSIjRjVGNUY1Ii8+CjxwYXRoIGQ9Ik0zMCA0MEg5MFYxMjBIMzBWNDBaIiBmaWxsPSIjRDdEN0Q3Ii8+CjxwYXRoIGQ9Ik00MCA1MEg4MFYxMTBINDBWNTBaIiBmaWxsPSIjQzlDOUM5Ii8+CjxwYXRoIGQ9Ik01MCA2MEg3MFYxMDBINTBWNjBaIiBmaWxsPSIjQjVCNUI1Ii8+Cjwvc3ZnPgo='}" alt="Book cover" style="width: 120px; height: 160px; object-fit: cover; border-radius: 8px; box-shadow: 0 4px 8px rgba(0,0,0,0.1);" onerror="this.src='data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTIwIiBoZWlnaHQ9IjE2MCIgdmlld0JveD0iMCAwIDEyMCAxNjAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSIxMjAiIGhlaWdodD0iMTYwIiBmaWxsPSIjRjVGNUY1Ii8+CjxwYXRoIGQ9Ik0zMCA0MEg5MFYxMjBIMzBWNDBaIiBmaWxsPSIjRDdEN0Q3Ii8+CjxwYXRoIGQ9Ik00MCA1MEg4MFYxMTBINDBWNTBaIiBmaWxsPSIjQzlDOUM5Ii8+CjxwYXRoIGQ9Ik01MCA2MEg3MFYxMDBINTBWNjBaIiBmaWxsPSIjQjVCNUI1Ii8+Cjwvc3ZnPgo='">
+                                <div style="flex: 1;">
+                                    <h2 style="margin: 0 0 0.5rem 0; color: #333;">${escapeHtml(book.title)}</h2>
+                                    <p style="margin: 0 0 1rem 0; color: #666; font-size: 1.1rem;">by ${escapeHtml(book.author)}</p>
+                                    <div style="display: flex; gap: 1rem; flex-wrap: wrap;">
+                                        <span style="background: ${bookType === 'audiobook' ? '#0d9488' : '#16a34a'}; color: white; padding: 0.25rem 0.75rem; border-radius: 15px; font-size: 0.9rem;">
+                                            ${typeIcon} ${typeLabel}
+                                        </span>
+                                        <span style="background: #f8f9fa; color: #666; padding: 0.25rem 0.75rem; border-radius: 15px; font-size: 0.9rem;">
+                                            ⏱️ ${book.duration_formatted}
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+                            <h3>📖 Basic Information</h3>
+                            <div class="book-detail-grid">
+                                <div class="detail-item">
+                                    <div class="detail-label">Title</div>
+                                    <div class="detail-value">${escapeHtml(book.title)}</div>
+                                </div>
+                                <div class="detail-item">
+                                    <div class="detail-label">Author</div>
+                                    <div class="detail-value">${escapeHtml(book.author)}</div>
+                                </div>
+                                <div class="detail-item">
+                                    <div class="detail-label">Category</div>
+                                    <div class="detail-value">${escapeHtml(book.category || 'No category')}</div>
+                                </div>
+                                <div class="detail-item">
+                                    <div class="detail-label">Language</div>
+                                    <div class="detail-value">${escapeHtml(book.language)}</div>
+                                </div>
+                                <div class="detail-item">
+                                    <div class="detail-label">Type</div>
+                                    <div class="detail-value">${escapeHtml(book.type)}</div>
+                                </div>
+                                <div class="detail-item">
+                                    <div class="detail-label">Duration</div>
+                                    <div class="detail-value">${escapeHtml(book.duration_formatted)}</div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="book-detail-section">
+                            <h3>📝 Description</h3>
+                            <div class="detail-value">${escapeHtml(book.description || 'No description available')}</div>
+                        </div>
+                        
+                        <div class="book-detail-section">
+                            <h3>🔗 URLs</h3>
+                            <div class="book-detail-grid">
+                                <div class="detail-item">
+                                    <div class="detail-label">Grqaser.org URL</div>
+                                    <div class="detail-value">
+                                        <a href="https://grqaser.org/books/${book.id}" target="_blank" style="color: #0d9488; text-decoration: none;">
+                                            https://grqaser.org/books/${book.id}
+                                        </a>
+                                    </div>
+                                </div>
+                                <div class="detail-item">
+                                    <div class="detail-label">MP3 Chapters</div>
+                                    <div class="detail-value">${book.chapter_count || 0} files</div>
+                                </div>
+                                <div class="detail-item">
+                                    <div class="detail-label">Main Audio</div>
+                                    <div class="detail-value">${escapeHtml(book.main_audio_url || 'No audio URL')}</div>
+                                </div>
+                                <div class="detail-item">
+                                    <div class="detail-label">Download URL</div>
+                                    <div class="detail-value">${escapeHtml(book.download_url || 'No download URL')}</div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        ${book.chapter_urls && book.chapter_urls.length > 0 ? `
+                        <div class="book-detail-section">
+                            <h3>🎧 Individual MP3 Files (${book.chapter_urls.length} files)</h3>
+                            <div style="max-height: 300px; overflow-y: auto; border: 1px solid #eee; border-radius: 5px; padding: 1rem;">
+                                ${book.chapter_urls.map((url, index) => {
+                                    const u = (url && String(url)).trim();
+                                    const safeHref = (u.startsWith('http://') || u.startsWith('https://')) ? u : '#';
+                                    const displayText = escapeHtml(u.split('/').pop() || u);
+                                    return `
+                                    <div style="margin-bottom: 0.5rem; padding: 0.5rem; background: #f8f9fa; border-radius: 3px;">
+                                        <strong>Chapter ${index + 1}:</strong> 
+                                        <a href="${safeHref}" target="_blank" style="color: #0d9488; text-decoration: none; word-break: break-all;">${displayText}</a>
+                                    </div>`;
+                                }).join('')}
+                            </div>
+                        </div>
+                        ` : ''}
+                        
+                        <div class="book-detail-section">
+                            <h3>📊 Crawler Information</h3>
+                            <div class="book-detail-grid">
+                                <div class="detail-item">
+                                    <div class="detail-label">Status</div>
+                                    <div class="detail-value">${escapeHtml(book.crawl_status)}</div>
+                                </div>
+                                <div class="detail-item">
+                                    <div class="detail-label">Attempts</div>
+                                    <div class="detail-value">${book.crawl_attempts}</div>
+                                </div>
+                                <div class="detail-item">
+                                    <div class="detail-label">Last Attempt</div>
+                                    <div class="detail-value">${book.last_crawl_attempt ? new Date(book.last_crawl_attempt).toLocaleString() : 'Never'}</div>
+                                </div>
+                                <div class="detail-item">
+                                    <div class="detail-label">Has Chapters</div>
+                                    <div class="detail-value">${book.has_chapters ? 'Yes' : 'No'}</div>
+                                </div>
+                                <div class="detail-item">
+                                    <div class="detail-label">Chapter Count</div>
+                                    <div class="detail-value">${book.chapter_count}</div>
+                                </div>
+                                <div class="detail-item">
+                                    <div class="detail-label">File Size</div>
+                                    <div class="detail-value">${escapeHtml(book.file_size || 'Unknown')}</div>
+                                </div>
+                            </div>
+                            ${book.crawl_error ? `
+                                <div style="margin-top: 1rem; padding: 1rem; background: #fee; border-radius: 5px;">
+                                    <strong>Error:</strong> ${escapeHtml(book.crawl_error)}
+                                </div>
+                            ` : ''}
+                        </div>
+                        
+                        <div class="book-detail-section">
+                            <h3>📅 Timestamps</h3>
+                            <div class="book-detail-grid">
+                                <div class="detail-item">
+                                    <div class="detail-label">Created</div>
+                                    <div class="detail-value">${new Date(book.created_at).toLocaleString()}</div>
+                                </div>
+                                <div class="detail-item">
+                                    <div class="detail-label">Updated</div>
+                                    <div class="detail-value">${new Date(book.updated_at).toLocaleString()}</div>
+                                </div>
+                                ${book.last_edited_at ? `
+                                <div class="detail-item">
+                                    <div class="detail-label">Last edited (manual)</div>
+                                    <div class="detail-value">${new Date(book.last_edited_at).toLocaleString()}</div>
+                                </div>
+                                ` : ''}
+                                <div class="detail-item">
+                                    <div class="detail-label">Published</div>
+                                    <div class="detail-value">${book.published_at ? new Date(book.published_at).toLocaleString() : 'Unknown'}</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div style="margin-top: 1rem;">
+                            <button type="button" class="btn" id="bookDetailEditBtn">✏️ Edit book</button>
+                        </div>
+                    `;
+                } else {
+                    bookDetail.innerHTML = `<div class="error">Error: ${escapeHtml(data.error.message)}</div>`;
+                }
+            } catch (error) {
+                console.error('Error loading book details:', error);
+                bookDetail.innerHTML = '<div class="error">Failed to load book details</div>';
+            }
+
+            currentModalBookId = bookId;
+            const editBtn = document.getElementById('bookDetailEditBtn');
+            if (editBtn) {
+                editBtn.onclick = function() { showBookEditForm(data.data); };
+            }
+        }
+
+        let currentModalBookId = null;
+
+        function showBookEditForm(book) {
+            document.getElementById('bookDetail').style.display = 'none';
+            const formWrap = document.getElementById('bookDetailEditForm');
+            formWrap.style.display = 'block';
+            document.getElementById('bookEditError').style.display = 'none';
+            document.getElementById('editTitle').value = book.title || '';
+            document.getElementById('editAuthor').value = book.author || '';
+            document.getElementById('editDescription').value = book.description || '';
+            document.getElementById('editCategory').value = book.category || '';
+            document.getElementById('editLanguage').value = book.language || '';
+            document.getElementById('editType').value = book.type || '';
+            document.getElementById('editDuration').value = book.duration !== undefined && book.duration !== null ? book.duration : '';
+            document.getElementById('editRating').value = book.rating !== undefined && book.rating !== null ? book.rating : '';
+            document.getElementById('editCoverImageUrl').value = book.cover_image_url || '';
+            document.getElementById('editMainAudioUrl').value = book.main_audio_url || '';
+            document.getElementById('editDownloadUrl').value = book.download_url || '';
+        }
+
+        function hideBookEditForm() {
+            document.getElementById('bookDetailEditForm').style.display = 'none';
+            document.getElementById('bookDetail').style.display = 'block';
+        }
+
+        document.getElementById('bookEditForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            if (!currentModalBookId) return;
+            const errEl = document.getElementById('bookEditError');
+            errEl.style.display = 'none';
+            const payload = {
+                title: document.getElementById('editTitle').value.trim(),
+                author: document.getElementById('editAuthor').value.trim() || null,
+                description: document.getElementById('editDescription').value.trim() || null,
+                category: document.getElementById('editCategory').value.trim() || null,
+                language: document.getElementById('editLanguage').value.trim() || null,
+                type: document.getElementById('editType').value.trim() || null,
+                duration: document.getElementById('editDuration').value === '' ? null : parseInt(document.getElementById('editDuration').value, 10),
+                rating: document.getElementById('editRating').value === '' ? null : parseFloat(document.getElementById('editRating').value),
+                cover_image_url: document.getElementById('editCoverImageUrl').value.trim() || null,
+                main_audio_url: document.getElementById('editMainAudioUrl').value.trim() || null,
+                download_url: document.getElementById('editDownloadUrl').value.trim() || null
+            };
+            if (!payload.title) {
+                errEl.textContent = 'Title is required.';
+                errEl.style.display = 'block';
+                return;
+            }
+            try {
+                const res = await fetch(`${API_BASE}/books/${currentModalBookId}`, {
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                const data = await res.json();
+                if (data.success) {
+                    hideBookEditForm();
+                    showBookDetail(currentModalBookId);
+                    loadBooks(currentPage);
+                } else {
+                    errEl.textContent = data.error?.message || 'Failed to save';
+                    errEl.style.display = 'block';
+                }
+            } catch (err) {
+                errEl.textContent = 'Error: ' + err.message;
+                errEl.style.display = 'block';
+            }
+        });
+
+        document.getElementById('bookEditCancelBtn').addEventListener('click', function() {
+            hideBookEditForm();
+        });
+
+        // Update pagination
+        function updatePagination() {
+            const pagination = document.getElementById('pagination');
+            
+            if (totalPages <= 1) {
+                pagination.innerHTML = '';
+                return;
+            }
+
+            let paginationHtml = '';
+            
+            // Previous button
+            paginationHtml += `
+                <button class="pagination-btn" data-page="${currentPage - 1}" ${currentPage === 1 ? 'disabled' : ''}>
+                    ← Previous
+                </button>
+            `;
+
+            // Page numbers
+            for (let i = 1; i <= totalPages; i++) {
+                if (i === 1 || i === totalPages || (i >= currentPage - 2 && i <= currentPage + 2)) {
+                    paginationHtml += `
+                        <button class="pagination-btn ${i === currentPage ? 'current' : ''}" data-page="${i}">
+                            ${i}
+                        </button>
+                    `;
+                } else if (i === currentPage - 3 || i === currentPage + 3) {
+                    paginationHtml += '<span>...</span>';
+                }
+            }
+
+            // Next button
+            paginationHtml += `
+                <button class="pagination-btn" data-page="${currentPage + 1}" ${currentPage === totalPages ? 'disabled' : ''}>
+                    Next →
+                </button>
+            `;
+
+            pagination.innerHTML = paginationHtml;
+
+            // Add event listeners to pagination buttons
+            document.querySelectorAll('.pagination-btn').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    const page = parseInt(this.getAttribute('data-page'));
+                    if (page && page !== currentPage) {
+                        loadBooks(page);
+                    }
+                });
+            });
+        }
+
+        // Load categories for filter
+        async function loadCategories() {
+            try {
+                const response = await fetch(`${API_BASE}/stats/categories`);
+                const data = await response.json();
+                
+                if (data.success) {
+                    const categorySelect = document.getElementById('categoryFilter');
+                    data.data.categories.forEach(category => {
+                        const option = document.createElement('option');
+                        option.value = category.category;
+                        option.textContent = category.category;
+                        categorySelect.appendChild(option);
+                    });
+                }
+            } catch (error) {
+                console.error('Error loading categories:', error);
+            }
+        }
+
+        // Modal close functionality
+        function setupModal() {
+            const modal = document.getElementById('bookModal');
+            const closeBtn = document.getElementById('closeModal');
+
+            closeBtn.addEventListener('click', function() {
+                modal.style.display = 'none';
+            });
+
+            window.addEventListener('click', function(event) {
+                if (event.target === modal) {
+                    modal.style.display = 'none';
+                }
+            });
+        }
+
+        // Tab switching
+        function showView(viewId) {
+            document.querySelectorAll('.view-panel').forEach(function(panel) {
+                panel.classList.toggle('hidden', panel.id !== 'view-' + viewId);
+            });
+            document.querySelectorAll('.nav-tab').forEach(function(tab) {
+                tab.classList.toggle('active', tab.getAttribute('data-view') === viewId);
+            });
+            if (viewId === 'crawler') {
+                loadCrawlerStatus();
+                loadCrawlerLogs();
+                loadCrawlerConfig();
+            }
+            if (viewId === 'databases') {
+                loadDatabases();
+            }
+        }
+
+        async function loadDatabases() {
+            const el = document.getElementById('databasesList');
+            el.innerHTML = '<div class="loading">Loading databases...</div>';
+            try {
+                const res = await fetch(API_BASE + '/databases');
+                const data = await res.json();
+                if (data.success && data.data.databases) {
+                    const dbs = data.data.databases;
+                    if (dbs.length === 0) {
+                        el.innerHTML = '<div class="loading">No databases found. Add db.v1, db.v2 dirs under data/ with grqaser.db, or use data/grqaser.db as default.</div>';
+                        return;
+                    }
+                    el.innerHTML = dbs.map(function (db) {
+                        const activeBadge = db.active ? '<span style="background: #28a745; color: white; padding: 0.2rem 0.5rem; border-radius: 4px; font-size: 0.85rem;">Active</span>' : '';
+                        let actions = '';
+                        if (!db.active) {
+                            actions = '<button type="button" class="btn" style="margin-right: 0.5rem;" data-db-id="' + escapeHtml(db.id) + '" data-action="set-active">Set active</button>' +
+                                '<button type="button" class="btn btn-secondary" data-db-id="' + escapeHtml(db.id) + '" data-action="delete">Delete backup</button>';
+                        }
+                        return '<div class="book-item" style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap;">' +
+                            '<div><strong>' + escapeHtml(db.id) + '</strong> ' + activeBadge + '<br><span style="font-size: 0.85rem; color: #666;">' + escapeHtml(db.path) + '</span></div>' +
+                            '<div>' + actions + '</div></div>';
+                    }).join('');
+                    document.querySelectorAll('#databasesList [data-action="set-active"]').forEach(function (btn) {
+                        btn.addEventListener('click', function () { setActiveDb(this.getAttribute('data-db-id')); });
+                    });
+                    document.querySelectorAll('#databasesList [data-action="delete"]').forEach(function (btn) {
+                        btn.addEventListener('click', function () { deleteBackupDb(this.getAttribute('data-db-id')); });
+                    });
+                } else {
+                    el.innerHTML = '<div class="error">' + (data.error ? data.error.message : 'Failed to load databases') + '</div>';
+                }
+            } catch (err) {
+                console.error('Databases:', err);
+                el.innerHTML = '<div class="error">Failed to load databases</div>';
+            }
+        }
+
+        function setActiveDb(id) {
+            fetch(API_BASE + '/databases/active', {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ id: id })
+            }).then(function (res) { return res.json(); })
+                .then(function (data) {
+                    if (data.success) {
+                        loadDatabases();
+                        loadStats();
+                        loadBooks(1);
+                    } else {
+                        alert(data.error ? data.error.message : 'Failed to set active');
+                    }
+                }).catch(function (e) {
+                    alert('Error: ' + e.message);
+                });
+        }
+
+        function deleteBackupDb(id) {
+            if (!confirm('Delete backup database "' + id + '"? This cannot be undone.')) return;
+            fetch(API_BASE + '/databases/' + encodeURIComponent(id), { method: 'DELETE' })
+                .then(function (res) { return res.json(); })
+                .then(function (data) {
+                    if (data.success) {
+                        loadDatabases();
+                    } else {
+                        alert(data.error ? data.error.message : 'Failed to delete');
+                    }
+                }).catch(function (e) {
+                    alert('Error: ' + e.message);
+                });
+        }
+
+        // Crawler status, control, and config
+        function updateCrawlerButtons(isRunning) {
+            const startBtn = document.getElementById('crawlerStartBtn');
+            const stopBtn = document.getElementById('crawlerStopBtn');
+            const stateEl = document.getElementById('crawlerRunState');
+            if (startBtn) startBtn.disabled = !!isRunning;
+            if (stopBtn) stopBtn.disabled = !isRunning;
+            if (stateEl) stateEl.textContent = isRunning ? '● Running' : '○ Stopped';
+            if (stateEl) stateEl.style.color = isRunning ? '#28a745' : '#666';
+        }
+
+        async function loadCrawlerStatus() {
+            const el = document.getElementById('crawlerStatusGrid');
+            el.innerHTML = '<div class="loading">Loading crawler status...</div>';
+            try {
+                const res = await fetch(`${API_BASE}/crawler/status`);
+                const data = await res.json();
+                if (data.success) {
+                    const s = data.data;
+                    updateCrawlerButtons(s.is_running);
+                    const lastRun = s.last_run_started_at ? new Date(s.last_run_started_at).toLocaleString() : '—';
+                    el.innerHTML = `
+                        <div class="stat-card"><h3>State</h3><div class="number">${s.is_running ? 'Running' : 'Stopped'}</div></div>
+                        <div class="stat-card"><h3>Last run started</h3><div class="number" style="font-size:1rem">${lastRun}</div></div>
+                        <div class="stat-card"><h3>Total books</h3><div class="number">${s.total_books ?? '-'}</div></div>
+                        <div class="stat-card"><h3>Processed</h3><div class="number">${s.processed_books ?? '-'}</div></div>
+                        <div class="stat-card"><h3>Discovered</h3><div class="number">${s.discovered_books ?? '-'}</div></div>
+                        <div class="stat-card"><h3>Failed</h3><div class="number">${s.failed_books ?? '-'}</div></div>
+                        <div class="stat-card"><h3>Pending URLs</h3><div class="number">${s.pending_urls ?? '-'}</div></div>
+                        <div class="stat-card"><h3>Completed URLs</h3><div class="number">${s.completed_urls ?? '-'}</div></div>
+                    `;
+                } else {
+                    el.innerHTML = `<div class="error">${data.error?.message || 'Failed to load status'}</div>`;
+                }
+            } catch (err) {
+                console.error('Crawler status:', err);
+                el.innerHTML = '<div class="error">Failed to load crawler status</div>';
+            }
+        }
+
+        async function loadCrawlerConfig() {
+            try {
+                const res = await fetch(`${API_BASE}/crawler/config`);
+                const data = await res.json();
+                if (data.success && data.data) {
+                    const c = data.data;
+                    const modeEl = document.getElementById('crawlerMode');
+                    if (modeEl) modeEl.value = c.mode || 'full';
+                    const testLimitEl = document.getElementById('crawlerTestLimit');
+                    if (testLimitEl) testLimitEl.value = c.testLimit != null ? c.testLimit : '';
+                    const updateLimitEl = document.getElementById('crawlerUpdateLimit');
+                    if (updateLimitEl) updateLimitEl.value = c.updateLimit != null ? c.updateLimit : '';
+                    const delayEl = document.getElementById('crawlerDelayMs');
+                    if (delayEl) delayEl.value = c.delayBetweenRequests != null ? c.delayBetweenRequests : '';
+                    const timeoutEl = document.getElementById('crawlerTimeout');
+                    if (timeoutEl) timeoutEl.value = c.timeout != null ? c.timeout : '';
+                    const dbPathEl = document.getElementById('crawlerDbPathDisplay');
+                    if (dbPathEl) dbPathEl.textContent = c.dbPath || '—';
+                }
+            } catch (err) {
+                console.error('Crawler config:', err);
+            }
+        }
+
+        async function saveCrawlerConfig() {
+            const payload = {
+                mode: document.getElementById('crawlerMode').value,
+                testLimit: parseInt(document.getElementById('crawlerTestLimit').value, 10) || undefined,
+                updateLimit: (function(){ const v = document.getElementById('crawlerUpdateLimit').value; if (v === '') return null; const n = parseInt(v, 10); return Number.isNaN(n) ? undefined : n; })(),
+                delayBetweenRequests: parseInt(document.getElementById('crawlerDelayMs').value, 10) || undefined,
+                timeout: parseInt(document.getElementById('crawlerTimeout').value, 10) || undefined
+            };
+            try {
+                const res = await fetch(`${API_BASE}/crawler/config`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                const data = await res.json();
+                if (data.success) {
+                    loadCrawlerConfig();
+                    alert('Config saved. Changes apply to the next crawler run.');
+                } else {
+                    alert(data.error?.message || 'Failed to save config');
+                }
+            } catch (err) {
+                alert('Error: ' + err.message);
+            }
+        }
+
+        async function startCrawler() {
+            try {
+                const res = await fetch(`${API_BASE}/crawler/start`, { method: 'POST' });
+                const data = await res.json();
+                if (data.success) {
+                    loadCrawlerStatus();
+                    loadCrawlerLogs();
+                } else {
+                    alert(data.error?.message || 'Failed to start');
+                }
+            } catch (err) {
+                alert('Error: ' + err.message);
+            }
+        }
+
+        async function stopCrawler() {
+            try {
+                const res = await fetch(`${API_BASE}/crawler/stop`, { method: 'POST' });
+                const data = await res.json();
+                if (data.success) {
+                    loadCrawlerStatus();
+                    loadCrawlerLogs();
+                }
+            } catch (err) {
+                alert('Error: ' + err.message);
+            }
+        }
+
+        async function loadCrawlerLogs() {
+            const el = document.getElementById('crawlerLogsList');
+            el.innerHTML = '<div class="loading">Loading logs...</div>';
+            try {
+                const res = await fetch(`${API_BASE}/crawler/logs?limit=50`);
+                const data = await res.json();
+                if (data.success && data.data.logs) {
+                    el.innerHTML = data.data.logs.map(function(log) {
+                        const ts = log.created_at ? new Date(log.created_at).toLocaleString() : '';
+                        return '<div class="log-entry">[' + ts + '] ' + (log.level || 'info') + ' – ' + (log.message || log.message_text || '-') + '</div>';
+                    }).join('') || '<div class="loading">No logs</div>';
+                } else {
+                    el.innerHTML = '<div class="loading">No logs</div>';
+                }
+            } catch (err) {
+                console.error('Crawler logs:', err);
+                el.innerHTML = '<div class="error">Failed to load logs</div>';
+            }
+        }
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', function() {
+            loadStats();
+            loadBooks();
+            loadCategories();
+            setupModal();
+
+            document.getElementById('loadBooksBtn').addEventListener('click', function() {
+                loadBooks(1);
+            });
+            document.getElementById('searchBooksBtn').addEventListener('click', function() {
+                loadBooks(1);
+            });
+            document.getElementById('searchQuery').addEventListener('keydown', function(e) {
+                if (e.key === 'Enter') loadBooks(1);
+            });
+
+            document.querySelectorAll('.nav-tab').forEach(function(tab) {
+                tab.addEventListener('click', function() {
+                    showView(this.getAttribute('data-view'));
+                });
+            });
+
+            document.getElementById('refreshCrawlerBtn').addEventListener('click', function() {
+                loadCrawlerStatus();
+                loadCrawlerLogs();
+            });
+            document.getElementById('crawlerStartBtn').addEventListener('click', startCrawler);
+            document.getElementById('crawlerStopBtn').addEventListener('click', stopCrawler);
+            document.getElementById('crawlerSaveConfigBtn').addEventListener('click', saveCrawlerConfig);
+            document.getElementById('refreshDatabasesBtn').addEventListener('click', function() {
+                loadDatabases();
+            });
+        });
+    </script>
+</body>
+</html>
