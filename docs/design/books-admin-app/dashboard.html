@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dashboard — Books Admin Mock</title>
+  <link rel="stylesheet" href="shared.css">
+</head>
+<body>
+  <div class="app-shell">
+    <aside class="sidebar">
+      <div class="sidebar-brand">
+        <h1>📚 Books Admin</h1>
+        <p>Grqaser · Local</p>
+      </div>
+      <nav class="sidebar-nav">
+        <a href="../index.html">Design hub</a>
+        <a href="dashboard.html" class="active">Dashboard</a>
+        <a href="books.html">Books</a>
+        <a href="crawler.html">Crawler</a>
+        <a href="databases.html">Databases</a>
+      </nav>
+    </aside>
+    <main class="main">
+      <h1 class="page-title">Dashboard</h1>
+      <div class="stats-grid">
+        <div class="stat-card"><h3>Total Books</h3><div class="number">142</div></div>
+        <div class="stat-card"><h3>Discovered</h3><div class="number">12</div></div>
+        <div class="stat-card"><h3>Processed</h3><div class="number">125</div></div>
+        <div class="stat-card"><h3>Failed</h3><div class="number">5</div></div>
+      </div>
+      <p style="color: var(--text-muted); font-size: 0.875rem;">From active database · GET /api/v1/stats/overview</p>
+    </main>
+  </div>
+</body>
+</html>

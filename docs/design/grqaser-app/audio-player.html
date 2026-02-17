@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>Audio player — GrqaserApp Mock</title>
+  <link rel="stylesheet" href="shared.css">
+</head>
+<body>
+  <div class="mobile-frame">
+    <header class="top-bar">
+      <a href="book-detail.html" class="back-link">← Back</a>
+    </header>
+    <p style="padding: 0 1.25rem;"><a href="../index.html" class="back-link">Design hub</a></p>
+    <div class="player-screen content">
+      <div class="player-art">
+        <div class="book-cover player-cover">
+          <img src="https://picsum.photos/seed/ktak1/440/660" alt="" style="border-radius: var(--radius);" loading="lazy" onerror="this.style.display='none'">
+        </div>
+        <h2 class="player-title">Կտակ</h2>
+        <p class="player-author">Վրթանես Փափազյան</p>
+      </div>
+      <div class="player-control-block">
+        <div class="player-progress">
+          <div class="player-progress-track">
+            <div class="player-progress-fill">
+              <span class="player-progress-thumb"></span>
+            </div>
+          </div>
+          <div class="player-progress-times">
+            <span>0:15</span>
+            <span>0:51</span>
+          </div>
+        </div>
+        <div class="player-controls-row">
+          <button type="button" class="player-skip-btn" aria-label="Rewind 15s">−15</button>
+          <button type="button" class="player-play-btn paused" aria-label="Play">
+            <span class="icon">▶</span>
+          </button>
+          <button type="button" class="player-skip-btn" aria-label="Forward 15s">+15</button>
+        </div>
+        <div class="speed-controls">
+          <button type="button" class="speed-btn">0.5×</button>
+          <button type="button" class="speed-btn">0.75×</button>
+          <button type="button" class="speed-btn active">1×</button>
+          <button type="button" class="speed-btn">1.25×</button>
+          <button type="button" class="speed-btn">1.5×</button>
+          <button type="button" class="speed-btn">2×</button>
+        </div>
+      </div>
+    </div>
+    <nav class="bottom-nav">
+      <a href="home.html" class="nav-item"><span class="nav-icon">🏠</span>Home</a>
+      <a href="library.html" class="nav-item"><span class="nav-icon">📚</span>Library</a>
+      <a href="audio-player.html" class="nav-item active"><span class="nav-icon">🎧</span>Player</a>
+      <a href="profile.html" class="nav-item"><span class="nav-icon">👤</span>Profile</a>
+    </nav>
+  </div>
+  <style>
+    .player-screen {
+      display: flex;
+      flex-direction: column;
+      min-height: calc(100vh - 8rem);
+      text-align: center;
+      padding: 0 1.25rem;
+      padding-bottom: 7.5rem;
+      background: linear-gradient(180deg, rgba(204, 251, 241, 0.25) 0%, transparent 40%);
+    }
+    .player-art {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 1rem 0 1.5rem;
+      min-height: 0;
+    }
+    .player-cover {
+      width: min(220px, 58vw);
+      aspect-ratio: 2/3;
+      margin: 0 auto 1rem;
+      border-radius: var(--radius);
+      box-shadow: var(--shadow-lg);
+      flex-shrink: 0;
+    }
+    .player-cover img { border-radius: var(--radius); }
+    .player-title { font-size: 1.25rem; font-weight: 800; margin-bottom: 0.25rem; letter-spacing: -0.02em; }
+    .player-author { color: var(--text-muted); font-size: 0.875rem; }
+    .player-control-block {
+      flex-shrink: 0;
+      margin-top: auto;
+      padding: 1rem 1rem 0.75rem;
+      background: var(--card);
+      border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+      border: 1px solid var(--border-muted);
+      border-bottom: none;
+      box-shadow: 0 -2px 12px rgba(15, 23, 42, 0.06);
+    }
+    .player-progress { margin-bottom: 0.75rem; padding: 0 0.25rem; }
+    .player-controls-row {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 1.5rem;
+      margin-bottom: 0.5rem;
+    }
+    .player-play-btn { width: 72px; height: 72px; }
+    .player-play-btn .icon { font-size: 1.75rem; margin-left: 4px; }
+    .player-play-btn.paused .icon { margin-left: 0; font-size: 1.65rem; }
+  </style>
+</body>
+</html>

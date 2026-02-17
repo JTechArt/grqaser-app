@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>Library — GrqaserApp Mock</title>
+  <link rel="stylesheet" href="shared.css">
+</head>
+<body>
+  <div class="mobile-frame">
+    <header class="hero-header">
+      <h1>Library</h1>
+      <span class="subtitle">Your reading & listening</span>
+    </header>
+    <p style="padding: 0.5rem 1.25rem 0;"><a href="../index.html" class="back-link">← Design hub</a></p>
+    <div class="category-pills" style="padding-top: 0.5rem;">
+      <button type="button" class="pill active">In progress</button>
+      <button type="button" class="pill">Favorites</button>
+      <button type="button" class="pill">Downloaded</button>
+    </div>
+    <p class="section-title">In progress</p>
+    <div class="library-list content">
+      <a href="book-detail.html" class="library-card">
+        <div class="book-cover library-cover">
+          <img src="https://picsum.photos/seed/ktak1/160/220" alt="" loading="lazy" onerror="this.style.display='none'">
+        </div>
+        <div class="book-info">
+          <div class="book-title">Կտակ</div>
+          <div class="book-author">Վրթանես Փափազյան</div>
+          <div class="book-duration">0ժ 51ր · 15%</div>
+        </div>
+      </a>
+    </div>
+    <nav class="bottom-nav">
+      <a href="home.html" class="nav-item"><span class="nav-icon">🏠</span>Home</a>
+      <a href="library.html" class="nav-item active"><span class="nav-icon">📚</span>Library</a>
+      <a href="audio-player.html" class="nav-item"><span class="nav-icon">🎧</span>Player</a>
+      <a href="profile.html" class="nav-item"><span class="nav-icon">👤</span>Profile</a>
+    </nav>
+  </div>
+  <style>
+    .library-list { padding: 0 1.25rem 2rem; }
+    .library-card {
+      display: flex;
+      flex-direction: row;
+      gap: 1rem;
+      padding: 0.75rem;
+      background: var(--card);
+      border-radius: var(--radius-lg);
+      border: 1px solid var(--border-muted);
+      text-decoration: none;
+      color: inherit;
+      margin-bottom: 0.75rem;
+      box-shadow: var(--shadow);
+      transition: box-shadow 0.2s;
+    }
+    .library-card:hover { box-shadow: var(--shadow-md); }
+    .library-cover { width: 80px; height: 110px; flex-shrink: 0; border-radius: var(--radius-sm); }
+    .library-cover img { border-radius: var(--radius-sm); }
+    .library-card .book-info { flex: 1; text-align: left; padding: 0; display: flex; flex-direction: column; justify-content: center; }
+  </style>
+</body>
+</html>

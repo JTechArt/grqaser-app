@@ -98,6 +98,15 @@ Requires **Node 22+** (see `engines` in package.json and `.nvmrc`). If sqlite3 n
 npm test
 ```
 
+## UI/UX mockups (Epic 7)
+
+Design mockups live in the **main docs folder** and use the same design system as GrqaserApp (slate + teal, Plus Jakarta Sans):
+
+- **Design hub:** [docs/design/index.html](../docs/design/index.html) — entry to all mockups (Books Admin App and GrqaserApp).
+- **Books Admin App mockups:** [docs/design/books-admin-app/](../docs/design/books-admin-app/) — Dashboard, Books, Crawler, Databases, Book detail & edit.
+
+Full UI/UX spec: [docs/books-admin-app-ui-ux-mockups.md](../docs/books-admin-app-ui-ux-mockups.md).
+
 ## Integration
 
 See [INTEGRATION.md](./INTEGRATION.md) for how crawler and viewer are merged (single process, crawler as in-process library).

@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Books — Books Admin Mock</title>
+  <link rel="stylesheet" href="shared.css">
+</head>
+<body>
+  <div class="app-shell">
+    <aside class="sidebar">
+      <div class="sidebar-brand"><h1>📚 Books Admin</h1><p>Grqaser · Local</p></div>
+      <nav class="sidebar-nav">
+        <a href="../index.html">Design hub</a>
+        <a href="dashboard.html">Dashboard</a>
+        <a href="books.html" class="active">Books</a>
+        <a href="crawler.html">Crawler</a>
+        <a href="databases.html">Databases</a>
+      </nav>
+    </aside>
+    <main class="main">
+      <h1 class="page-title">Books</h1>
+      <div class="controls">
+        <h2>Filters</h2>
+        <div class="filters">
+          <div class="filter-group"><label for="search">Search</label><input type="text" id="search" placeholder="Title or author..."></div>
+          <div class="filter-group"><label for="author">Author</label><input type="text" id="author" placeholder="Author"></div>
+          <div class="filter-group"><label for="category">Category</label><select id="category"><option value="">All</option><option>Fiction</option></select></div>
+          <div class="filter-group"><label for="status">Status</label><select id="status"><option value="">All</option><option>completed</option></select></div>
+          <div class="filter-group"><label for="sort">Sort</label><select id="sort"><option>Date Created</option><option>Title</option></select></div>
+        </div>
+        <button type="button" class="btn">Load Books</button>
+        <button type="button" class="btn btn-secondary">Search</button>
+      </div>
+      <div class="books-container">
+        <div class="books-header"><h2>Books List</h2><span>42 books</span></div>
+        <div class="book-item" style="cursor: pointer;" onclick="window.location='book-detail.html';">
+          <div class="book-cover"></div>
+          <div>
+            <div class="book-title">Sample Book Title (ID: 123) · <a href="#" style="color: var(--accent); text-decoration: none;">View on Grqaser.org</a></div>
+            <div class="book-meta">by Author · 🎧 Audio · 1h 20m · Category · completed</div>
+          </div>
+        </div>
+        <div class="book-item">
+          <div class="book-cover"></div>
+          <div>
+            <div class="book-title">Another Book (ID: 124)</div>
+            <div class="book-meta">by Other Author · 📖 E-Book · Fiction · discovered</div>
+          </div>
+        </div>
+        <div class="pagination"><a href="#" class="current">1</a><a href="#">2</a><a href="#">Next →</a></div>
+      </div>
+    </main>
+  </div>
+</body>
+</html>
