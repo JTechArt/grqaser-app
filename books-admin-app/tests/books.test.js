@@ -87,3 +87,54 @@ describe('GET /api/v1/books/search', () => {
     expect(res.body.data.pagination).toBeDefined();
   });
 });
+
+describe('PATCH /api/v1/books/:id', () => {
+  it('returns 200 and updated book (in-place UPDATE)', async () => {
+    const res = await request(app)
+      .patch('/api/v1/books/1')
+      .send({ title: 'First Audiobook', author: 'Author Alpha Updated' })
+      .expect(200);
+    expect(res.body.success).toBe(true);
+    expect(res.body.data.id).toBe(1);
+    expect(res.body.data.title).toBe('First Audiobook');
+    expect(res.body.data.author).toBe('Author Alpha Updated');
+    expect(res.body.data.last_edited_at).toBeDefined();
+    const getRes = await request(app).get('/api/v1/books/1').expect(200);
+    expect(getRes.body.data.author).toBe('Author Alpha Updated');
+    expect(getRes.body.data.last_edited_at).toBeDefined();
+  });
+
+  it('returns 400 when title is empty', async () => {
+    const res = await request(app)
+      .patch('/api/v1/books/1')
+      .send({ title: '  ' })
+      .expect(400);
+    expect(res.body.success).toBe(false);
+    expect(res.body.error.code).toBe('VALIDATION_ERROR');
+  });
+
+  it('returns 400 when rating out of range', async () => {
+    const res = await request(app)
+      .patch('/api/v1/books/1')
+      .send({ title: 'Ok', rating: 10 })
+      .expect(400);
+    expect(res.body.success).toBe(false);
+  });
+
+  it('returns 404 when book not found', async () => {
+    const res = await request(app)
+      .patch('/api/v1/books/99999')
+      .send({ title: 'No Such Book' })
+      .expect(404);
+    expect(res.body.success).toBe(false);
+    expect(res.body.error.code).toBe('BOOK_NOT_FOUND');
+  });
+
+  it('returns 400 when id is not a number', async () => {
+    const res = await request(app)
+      .patch('/api/v1/books/abc')
+      .send({ title: 'Test' })
+      .expect(400);
+    expect(res.body.success).toBe(false);
+  });
+});

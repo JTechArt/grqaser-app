@@ -43,6 +43,7 @@ Same as database-viewer:
 - `GET /api/v1/books` — list books (pagination, filters)
 - `GET /api/v1/books/search?q=...` — search
 - `GET /api/v1/books/:id` — book by ID
+- `PATCH /api/v1/books/:id` — update a book (editable fields; in-place UPDATE; sets `last_edited_at`)
 - `GET /api/v1/stats/overview` — overview stats
 - `GET /api/v1/stats/authors` — authors stats
 - `GET /api/v1/stats/categories` — categories stats
@@ -78,6 +79,16 @@ You can **start** and **stop** the crawler from the app (Crawler tab or API). Th
 - **Status and logs:** Crawler status (running/stopped, last run, book counts) and logs remain available; refresh to see updates.
 
 To run the crawler manually from the repo (e.g. for debugging), set `CRAWLER_DB_PATH` or `DB_PATH` to the active path so writes go to the same DB the viewer reads.
+
+## Data management (view and edit)
+
+The data view (list, detail, search, filters) reads from the **active database** (Story 6.2). You can **edit** any book from the detail modal.
+
+- **View:** Books tab shows the list; click a book to open the detail modal. All data comes from the active DB.
+- **Edit:** In the book detail modal, click **Edit book** to switch to the edit form. Change title, author, description, category, language, type, duration, rating, cover/audio/download URLs; click **Save** to persist. Changes are applied in place (UPDATE by id); the modal and list refresh with the updated data. No duplicate records are created.
+- **Manual edit indicator:** When a book has been manually edited, the detail view shows **Last edited (manual)** in the Timestamps section (`last_edited_at`). Local-only; no authentication.
+
+Validation: title required and non-empty; URLs must be http/https if present; duration ≥ 0; rating 0–5; language max length 10.
 
 ## Tests
 

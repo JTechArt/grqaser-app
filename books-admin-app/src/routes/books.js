@@ -90,6 +90,46 @@ function createBooksRouter(dbHolder) {
     }
   });
 
+  router.patch('/:id', async (req, res) => {
+    const db = dbHolder.getDb();
+    try {
+      const id = parseInt(req.params.id, 10);
+      if (Number.isNaN(id)) {
+        return res.status(400).json({
+          success: false,
+          error: { code: 'INVALID_ID', message: 'Book id must be a number' }
+        });
+      }
+      const existing = await db.getBookById(id);
+      if (!existing) {
+        return res.status(404).json({
+          success: false,
+          error: { code: 'BOOK_NOT_FOUND', message: `Book with ID ${id} not found`, details: { book_id: id } }
+        });
+      }
+      const updated = await db.updateBook(id, req.body || {});
+      if (!updated) {
+        return res.status(404).json({
+          success: false,
+          error: { code: 'BOOK_NOT_FOUND', message: `Book with ID ${id} not found` }
+        });
+      }
+      res.json({ success: true, data: updated });
+    } catch (error) {
+      if (error.message && error.message.includes(';')) {
+        return res.status(400).json({
+          success: false,
+          error: { code: 'VALIDATION_ERROR', message: error.message, details: error.message.split('; ') }
+        });
+      }
+      console.error('Error updating book:', error);
+      res.status(500).json({
+        success: false,
+        error: { code: 'DATABASE_ERROR', message: 'Failed to update book', details: error.message }
+      });
+    }
+  });
+
   return router;
 }
 

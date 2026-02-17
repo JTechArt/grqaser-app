@@ -594,6 +594,29 @@
             <div class="book-detail" id="bookDetail">
                 <div class="loading">Loading book details...</div>
             </div>
+            <div id="bookDetailEditForm" class="book-detail" style="display: none;">
+                <div class="error" id="bookEditError" style="display: none;"></div>
+                <form id="bookEditForm" class="book-detail-section">
+                    <h3>Edit book</h3>
+                    <div class="book-detail-grid" style="grid-template-columns: 1fr 1fr;">
+                        <div class="filter-group"><label for="editTitle">Title *</label><input type="text" id="editTitle" required></div>
+                        <div class="filter-group"><label for="editAuthor">Author</label><input type="text" id="editAuthor"></div>
+                        <div class="filter-group" style="grid-column: 1 / -1;"><label for="editDescription">Description</label><textarea id="editDescription" rows="4" style="width:100%; padding:0.5rem; border:1px solid #ddd; border-radius:5px;"></textarea></div>
+                        <div class="filter-group"><label for="editCategory">Category</label><input type="text" id="editCategory"></div>
+                        <div class="filter-group"><label for="editLanguage">Language (max 10)</label><input type="text" id="editLanguage" maxlength="10"></div>
+                        <div class="filter-group"><label for="editType">Type</label><input type="text" id="editType" placeholder="e.g. audiobook"></div>
+                        <div class="filter-group"><label for="editDuration">Duration (seconds, ≥0)</label><input type="number" id="editDuration" min="0" step="1"></div>
+                        <div class="filter-group"><label for="editRating">Rating (0–5)</label><input type="number" id="editRating" min="0" max="5" step="0.1"></div>
+                        <div class="filter-group" style="grid-column: 1 / -1;"><label for="editCoverImageUrl">Cover image URL</label><input type="url" id="editCoverImageUrl" placeholder="https://"></div>
+                        <div class="filter-group" style="grid-column: 1 / -1;"><label for="editMainAudioUrl">Main audio URL</label><input type="url" id="editMainAudioUrl" placeholder="https://"></div>
+                        <div class="filter-group" style="grid-column: 1 / -1;"><label for="editDownloadUrl">Download URL</label><input type="url" id="editDownloadUrl" placeholder="https://"></div>
+                    </div>
+                    <div style="margin-top: 1rem; display: flex; gap: 0.5rem;">
+                        <button type="submit" class="btn">Save</button>
+                        <button type="button" class="btn btn-secondary" id="bookEditCancelBtn">Cancel</button>
+                    </div>
+                </form>
+            </div>
         </div>
     </div>
 
@@ -907,11 +930,20 @@
                                     <div class="detail-label">Updated</div>
                                     <div class="detail-value">${new Date(book.updated_at).toLocaleString()}</div>
                                 </div>
+                                ${book.last_edited_at ? `
+                                <div class="detail-item">
+                                    <div class="detail-label">Last edited (manual)</div>
+                                    <div class="detail-value">${new Date(book.last_edited_at).toLocaleString()}</div>
+                                </div>
+                                ` : ''}
                                 <div class="detail-item">
                                     <div class="detail-label">Published</div>
                                     <div class="detail-value">${book.published_at ? new Date(book.published_at).toLocaleString() : 'Unknown'}</div>
                                 </div>
                             </div>
+                        </div>
+                        <div style="margin-top: 1rem;">
+                            <button type="button" class="btn" id="bookDetailEditBtn">✏️ Edit book</button>
                         </div>
                     `;
                 } else {
@@ -921,7 +953,86 @@
                 console.error('Error loading book details:', error);
                 bookDetail.innerHTML = '<div class="error">Failed to load book details</div>';
             }
+
+            currentModalBookId = bookId;
+            const editBtn = document.getElementById('bookDetailEditBtn');
+            if (editBtn) {
+                editBtn.onclick = function() { showBookEditForm(data.data); };
+            }
         }
+
+        let currentModalBookId = null;
+
+        function showBookEditForm(book) {
+            document.getElementById('bookDetail').style.display = 'none';
+            const formWrap = document.getElementById('bookDetailEditForm');
+            formWrap.style.display = 'block';
+            document.getElementById('bookEditError').style.display = 'none';
+            document.getElementById('editTitle').value = book.title || '';
+            document.getElementById('editAuthor').value = book.author || '';
+            document.getElementById('editDescription').value = book.description || '';
+            document.getElementById('editCategory').value = book.category || '';
+            document.getElementById('editLanguage').value = book.language || '';
+            document.getElementById('editType').value = book.type || '';
+            document.getElementById('editDuration').value = book.duration !== undefined && book.duration !== null ? book.duration : '';
+            document.getElementById('editRating').value = book.rating !== undefined && book.rating !== null ? book.rating : '';
+            document.getElementById('editCoverImageUrl').value = book.cover_image_url || '';
+            document.getElementById('editMainAudioUrl').value = book.main_audio_url || '';
+            document.getElementById('editDownloadUrl').value = book.download_url || '';
+        }
+
+        function hideBookEditForm() {
+            document.getElementById('bookDetailEditForm').style.display = 'none';
+            document.getElementById('bookDetail').style.display = 'block';
+        }
+
+        document.getElementById('bookEditForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            if (!currentModalBookId) return;
+            const errEl = document.getElementById('bookEditError');
+            errEl.style.display = 'none';
+            const payload = {
+                title: document.getElementById('editTitle').value.trim(),
+                author: document.getElementById('editAuthor').value.trim() || null,
+                description: document.getElementById('editDescription').value.trim() || null,
+                category: document.getElementById('editCategory').value.trim() || null,
+                language: document.getElementById('editLanguage').value.trim() || null,
+                type: document.getElementById('editType').value.trim() || null,
+                duration: document.getElementById('editDuration').value === '' ? null : parseInt(document.getElementById('editDuration').value, 10),
+                rating: document.getElementById('editRating').value === '' ? null : parseFloat(document.getElementById('editRating').value),
+                cover_image_url: document.getElementById('editCoverImageUrl').value.trim() || null,
+                main_audio_url: document.getElementById('editMainAudioUrl').value.trim() || null,
+                download_url: document.getElementById('editDownloadUrl').value.trim() || null
+            };
+            if (!payload.title) {
+                errEl.textContent = 'Title is required.';
+                errEl.style.display = 'block';
+                return;
+            }
+            try {
+                const res = await fetch(`${API_BASE}/books/${currentModalBookId}`, {
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                const data = await res.json();
+                if (data.success) {
+                    hideBookEditForm();
+                    showBookDetail(currentModalBookId);
+                    loadBooks(currentPage);
+                } else {
+                    errEl.textContent = data.error?.message || 'Failed to save';
+                    errEl.style.display = 'block';
+                }
+            } catch (err) {
+                errEl.textContent = 'Error: ' + err.message;
+                errEl.style.display = 'block';
+            }
+        });
+
+        document.getElementById('bookEditCancelBtn').addEventListener('click', function() {
+            hideBookEditForm();
+        });
 
         // Update pagination
         function updatePagination() {
