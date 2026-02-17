@@ -1,0 +1,52 @@
+# Quality Gate: 6.2 database versioning and active backup
+schema: 1
+story: "6.2"
+story_title: "database versioning and active backup"
+gate: PASS
+status_reason: "All acceptance criteria met. DB registry (db.v*, active/backup), API and UI for list/set-active/delete, dbHolder for live switch; one bug fixed (duplicate const in PUT /active)."
+reviewer: "Quinn (Test Architect)"
+updated: "2026-02-17T00:00:00Z"
+
+waiver: { active: false }
+
+top_issues: []
+
+risk_summary:
+  totals: { critical: 0, high: 0, medium: 0, low: 0 }
+  recommendations:
+    must_fix: []
+    monitor: []
+
+evidence:
+  tests_reviewed: 2
+  risks_identified: 0
+  trace:
+    ac_covered: [1, 2, 3, 4, 5]
+    ac_gaps: []
+
+nfr_validation:
+  security:
+    status: PASS
+    notes: "Local-only; no new auth; delete only backups, active protected."
+  performance:
+    status: PASS
+    notes: "Discovery and registry I/O lightweight; no bottlenecks."
+  reliability:
+    status: PASS
+    notes: "Graceful DB swap on set active; registry persisted to disk."
+  maintainability:
+    status: PASS
+    notes: "Unit tests (db-registry) and API tests (databases-api); README and API docs updated."
+
+quality_score: 100
+recommendations:
+  immediate: []
+  future: []
+
+history:
+  - at: "2026-02-17T00:00:00Z"
+    gate: PASS
+    note: "Initial review; fixed duplicate const in databases.js PUT /active."
+  - at: "2026-02-17T00:00:00Z"
+    gate: PASS
+    note: "Re-review after dev fixes; implementation confirmed."

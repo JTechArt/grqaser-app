@@ -4,10 +4,11 @@
 
 const express = require('express');
 
-function createCrawlerRouter(db) {
+function createCrawlerRouter(dbHolder) {
   const router = express.Router();
 
   router.get('/status', async (req, res) => {
+    const db = dbHolder.getDb();
     try {
       const stats = await db.getCrawlStats();
       const urlQueue = await db.getUrlQueueStatus();
@@ -36,6 +37,7 @@ function createCrawlerRouter(db) {
   });
 
   router.get('/urls', async (req, res) => {
+    const db = dbHolder.getDb();
     try {
       const { status } = req.query;
       const urlQueue = await db.getUrlQueueStatus();
@@ -59,6 +61,7 @@ function createCrawlerRouter(db) {
   });
 
   router.get('/logs', async (req, res) => {
+    const db = dbHolder.getDb();
     try {
       const { page = 1, limit = 20, level, book_id } = req.query;
 

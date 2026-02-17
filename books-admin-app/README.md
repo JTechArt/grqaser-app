@@ -24,8 +24,9 @@ Externalized via environment variables (and defaults in `src/config/config.js`):
 |----------|-------------|---------|
 | `PORT` | HTTP port | 3001 |
 | `HOST` | Bind host | localhost |
-| `DB_PATH` | SQLite database path (viewer API; Story 6.2 will add versioning) | `./data/grqaser.db` |
-| `CRAWLER_DB_PATH` | DB path used when running crawler from this app | same as `DB_PATH` if set |
+| `DB_PATH` | Override active DB path (e.g. tests); otherwise active path comes from registry | `./data/grqaser.db` |
+| `DB_DATA_ROOT` | Directory scanned for `db.v*` and default `grqaser.db` | `./data` |
+| `CRAWLER_DB_PATH` | DB path used when running crawler; set to active path when crawler is started from app | same as active DB |
 | `LOG_LEVEL` | Logging level | info |
 | `NODE_ENV` | development / production | development |
 
@@ -49,6 +50,19 @@ Same as database-viewer:
 - `GET /api/v1/crawler/urls` — URL queue
 - `GET /api/v1/crawler/logs` — crawl logs
 - `GET /api/v1/health` — health (and DB connectivity)
+- `GET /api/v1/databases` — list known DBs (active + backups)
+- `PUT /api/v1/databases/active` — set active DB (body: `{ "id": "db.v1" }` or `{ "path": "/abs/path" }`)
+- `DELETE /api/v1/databases/:id` — delete a backup DB (cannot delete active)
+
+## Database versioning
+
+One database is **active** at a time; all others are **backups**. The crawler writes to the active DB; the data view and API read from it.
+
+- **Paths:** Use versioned paths such as `db.v1`, `db.v2` under the data root. Place each DB as `data/db.v1/grqaser.db`, or use a single default `data/grqaser.db` (id `default`).
+- **Add a DB:** Create a directory `data/db.v2/` and put `grqaser.db` inside (e.g. copy from another version or run crawler with that path). The app discovers it on next list.
+- **Set active:** In the UI (Databases tab) click **Set active** for a backup, or call `PUT /api/v1/databases/active` with `{ "id": "db.v2" }`. The server reconnects to the new DB; subsequent crawler runs and data view use it.
+- **Delete backup:** In the UI click **Delete backup** for a non-active DB, or `DELETE /api/v1/databases/db.v2`. The active DB cannot be deleted.
+- **Registry:** The active path is stored in `data/db-registry.json` and survives restarts.
 
 ## Crawler
 
@@ -60,7 +74,7 @@ cd crawler
 CRAWLER_MODE=test node src/crawler.js --limit=2
 ```
 
-Or set `DB_PATH` / `CRAWLER_DB_PATH` so crawler and viewer use the same DB when you run the crawler from `crawler/`. Story 6.2 will address DB path and versioning.
+When running the crawler from this app (or from `crawler/`), set `CRAWLER_DB_PATH` (or `DB_PATH`) to the **active** DB path so writes go to the same DB the viewer reads. The app uses the active path from the DB registry when the crawler is started via the app.
 
 ## Tests
 

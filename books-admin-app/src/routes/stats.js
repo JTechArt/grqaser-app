@@ -4,10 +4,11 @@
 
 const express = require('express');
 
-function createStatsRouter(db) {
+function createStatsRouter(dbHolder) {
   const router = express.Router();
 
   router.get('/overview', async (req, res) => {
+    const db = dbHolder.getDb();
     try {
       const stats = await db.getCrawlStats();
       res.json({ success: true, data: stats });
@@ -21,6 +22,7 @@ function createStatsRouter(db) {
   });
 
   router.get('/authors', async (req, res) => {
+    const db = dbHolder.getDb();
     try {
       const authors = await db.getAuthorsStats();
       res.json({ success: true, data: { authors } });
@@ -34,6 +36,7 @@ function createStatsRouter(db) {
   });
 
   router.get('/categories', async (req, res) => {
+    const db = dbHolder.getDb();
     try {
       const categories = await db.all(`
         SELECT category, COUNT(*) as book_count, SUM(duration) as total_duration
