@@ -1,7 +1,8 @@
 /**
  * Create test SQLite DB with minimal schema for API tests.
+ * Uses better-sqlite3 to avoid native sqlite3 bindings (same as app).
  */
-const sqlite3 = require('sqlite3').verbose();
+const Database = require('better-sqlite3');
 const path = require('path');
 const fs = require('fs');
 const os = require('os');
@@ -49,19 +50,15 @@ const MINIMAL_CRAWL_LOGS = `
 `.trim();
 
 function runSql(db, sql) {
-  return new Promise((resolve, reject) => {
-    db.run(sql, (err) => (err ? reject(err) : resolve()));
-  });
+  db.exec(sql);
 }
 
 async function createTestDb(dbPath) {
-  const db = new sqlite3.Database(dbPath);
-  await runSql(db, MINIMAL_BOOKS);
-  await runSql(db, MINIMAL_URL_QUEUE);
-  await runSql(db, MINIMAL_CRAWL_LOGS);
-  return new Promise((resolve, reject) => {
-    db.close((err) => (err ? reject(err) : resolve()));
-  });
+  const db = new Database(dbPath);
+  runSql(db, MINIMAL_BOOKS);
+  runSql(db, MINIMAL_URL_QUEUE);
+  runSql(db, MINIMAL_CRAWL_LOGS);
+  db.close();
 }
 
 function getTestDbPath() {

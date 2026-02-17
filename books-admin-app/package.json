@@ -11,14 +11,14 @@
     "lint": "eslint src/"
   },
   "dependencies": {
+    "better-sqlite3": "^11.6.0",
     "compression": "^1.7.4",
     "cors": "^2.8.5",
     "express": "^4.18.2",
     "express-rate-limit": "^6.10.0",
-    "grqaser-crawler": "file:../crawler",
+    "grqaser-crawler": "file:../archive/crawler",
     "helmet": "^7.0.0",
-    "morgan": "^1.10.0",
-    "sqlite3": "^5.1.7"
+    "morgan": "^1.10.0"
   },
   "devDependencies": {
     "eslint": "^8.0.0",

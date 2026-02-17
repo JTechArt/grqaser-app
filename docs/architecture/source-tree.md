@@ -33,7 +33,7 @@ grqaser/
 └── README.md
 ```
 
-**Optional (per team policy):** `archive/crawler/` and `archive/database-viewer/` if legacy code is retained for reference; otherwise those directories are removed. No active development in crawler or database-viewer as standalone apps.
+**Legacy (Story 7.2):** Standalone `crawler/` and `database-viewer/` have been moved to `archive/crawler/` and `archive/database-viewer/`. books-admin-app depends on the crawler via `grqaser-crawler` (file link to `archive/crawler`). No runbooks for running crawler or database-viewer as separate apps.
 
 ## Books-admin-app (`books-admin-app/`) — single admin application (Epic 6–7)
 
