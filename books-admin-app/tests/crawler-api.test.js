@@ -87,3 +87,71 @@ describe('GET /api/v1/crawler/logs', () => {
     expect(res.body.data.pagination.limit).toBe(5);
   });
 });
+
+describe('GET /api/v1/crawler/config', () => {
+  it('returns 200 and config with mode and dbPath', async () => {
+    const res = await request(app)
+      .get('/api/v1/crawler/config')
+      .expect(200);
+    expect(res.body.success).toBe(true);
+    expect(res.body.data).toBeDefined();
+    expect(['full', 'update', 'fix-download-all', 'full-database', 'test']).toContain(res.body.data.mode);
+    expect(res.body.data.dbPath).toBeDefined();
+  });
+});
+
+describe('PUT /api/v1/crawler/config', () => {
+  it('accepts valid config and returns 200', async () => {
+    const res = await request(app)
+      .put('/api/v1/crawler/config')
+      .set('Content-Type', 'application/json')
+      .send({ mode: 'update', testLimit: 5 })
+      .expect(200);
+    expect(res.body.success).toBe(true);
+    expect(res.body.data.mode).toBe('update');
+    expect(res.body.data.testLimit).toBe(5);
+  });
+
+  it('returns 400 for invalid mode', async () => {
+    const res = await request(app)
+      .put('/api/v1/crawler/config')
+      .set('Content-Type', 'application/json')
+      .send({ mode: 'invalid-mode' })
+      .expect(400);
+    expect(res.body.success).toBe(false);
+    expect(res.body.error.code).toBe('VALIDATION_ERROR');
+  });
+});
+
+describe('POST /api/v1/crawler/start and /stop', () => {
+  it('POST /stop returns 200 when not running', async () => {
+    const res = await request(app)
+      .post('/api/v1/crawler/stop')
+      .expect(200);
+    expect(res.body.success).toBe(true);
+    expect(res.body.data.stopped).toBe(false);
+  });
+
+  it('POST /start returns 200 and starts crawler (then stop to clean up)', async () => {
+    const startRes = await request(app)
+      .post('/api/v1/crawler/start')
+      .expect(200);
+    expect(startRes.body.success).toBe(true);
+    expect(startRes.body.data.started).toBe(true);
+    const stopRes = await request(app)
+      .post('/api/v1/crawler/stop')
+      .expect(200);
+    expect(stopRes.body.success).toBe(true);
+    expect(stopRes.body.data.stopped).toBe(true);
+  }, 15000);
+
+  it('POST /start when already running returns 409', async () => {
+    await request(app).post('/api/v1/crawler/start').expect(200);
+    const res = await request(app)
+      .post('/api/v1/crawler/start')
+      .expect(409);
+    expect(res.body.success).toBe(false);
+    expect(res.body.error.code).toBe('CRAWLER_ALREADY_RUNNING');
+    await request(app).post('/api/v1/crawler/stop').expect(200);
+  }, 5000);
+});

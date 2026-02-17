@@ -48,7 +48,7 @@ app.use(express.static(path.join(__dirname, '../public')));
 
 app.use(`${config.api.basePath}/books`, createBooksRouter(dbHolder));
 app.use(`${config.api.basePath}/stats`, createStatsRouter(dbHolder));
-app.use(`${config.api.basePath}/crawler`, createCrawlerRouter(dbHolder));
+app.use(`${config.api.basePath}/crawler`, createCrawlerRouter(dbHolder, dbRegistry));
 app.use(`${config.api.basePath}/databases`, createDatabasesRouter(dbHolder, dbRegistry));
 
 app.get(`${config.api.basePath}/health`, async (req, res) => {

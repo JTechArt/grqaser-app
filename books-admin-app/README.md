@@ -46,7 +46,11 @@ Same as database-viewer:
 - `GET /api/v1/stats/overview` — overview stats
 - `GET /api/v1/stats/authors` — authors stats
 - `GET /api/v1/stats/categories` — categories stats
-- `GET /api/v1/crawler/status` — crawler status
+- `GET /api/v1/crawler/status` — crawler status (includes `is_running`, `last_run_started_at`)
+- `POST /api/v1/crawler/start` — start crawler (uses active DB path and stored config)
+- `POST /api/v1/crawler/stop` — stop running crawler
+- `GET /api/v1/crawler/config` — get crawler config (mode, limits, delays; `dbPath` is current active path)
+- `PUT /api/v1/crawler/config` — save crawler config (applies to next run)
 - `GET /api/v1/crawler/urls` — URL queue
 - `GET /api/v1/crawler/logs` — crawl logs
 - `GET /api/v1/health` — health (and DB connectivity)
@@ -64,17 +68,16 @@ One database is **active** at a time; all others are **backups**. The crawler wr
 - **Delete backup:** In the UI click **Delete backup** for a non-active DB, or `DELETE /api/v1/databases/db.v2`. The active DB cannot be deleted.
 - **Registry:** The active path is stored in `data/db-registry.json` and survives restarts.
 
-## Crawler
+## Crawler control and config (Story 6.3)
 
-Crawler is integrated as a **library** (dependency `grqaser-crawler` from `../crawler`). To run a crawl (e.g. test mode) use the crawler directly from the repo:
+You can **start** and **stop** the crawler from the app (Crawler tab or API). The crawler runs as a **subprocess**; only one run at a time.
 
-```bash
-# From repo root
-cd crawler
-CRAWLER_MODE=test node src/crawler.js --limit=2
-```
+- **Start:** `POST /api/v1/crawler/start` or the **Start crawler** button. Uses the **active DB path** (from Database versioning) and the stored crawler config (mode, test limit, update limit, etc.).
+- **Stop:** `POST /api/v1/crawler/stop` or **Stop crawler**. Sends SIGTERM to the crawler process.
+- **Config:** View or edit via `GET /api/v1/crawler/config` and `PUT /api/v1/crawler/config`, or the form on the Crawler tab. Config is stored in `data/crawler-config.json`; `dbPath` is always the current active path at run time (not persisted in the file). Valid mode: `full`, `update`, `fix-download-all`, `full-database`, `test`.
+- **Status and logs:** Crawler status (running/stopped, last run, book counts) and logs remain available; refresh to see updates.
 
-When running the crawler from this app (or from `crawler/`), set `CRAWLER_DB_PATH` (or `DB_PATH`) to the **active** DB path so writes go to the same DB the viewer reads. The app uses the active path from the DB registry when the crawler is started via the app.
+To run the crawler manually from the repo (e.g. for debugging), set `CRAWLER_DB_PATH` or `DB_PATH` to the active path so writes go to the same DB the viewer reads.
 
 ## Tests
 
