@@ -1,7 +1,7 @@
 /**
- * Maps database-viewer API book shape (snake_case, duration in minutes)
+ * Maps books-admin-app API book shape (snake_case, duration in minutes)
  * to app Book type (camelCase, duration in seconds).
- * Aligns with docs/architecture/data-models-and-schema.md.
+ * Same data contract as former database-viewer. See docs/architecture/data-models-and-schema.md.
  */
 import {Book} from '../types/book';
 

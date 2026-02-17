@@ -24,6 +24,8 @@ This document is the single source of truth for the Grqaser ecosystem. **After E
 
 **Design system:** Colors (slate + teal), typography (Plus Jakarta Sans), and mockups for books-admin-app and GrqaserApp are in `docs/design/` (see [Epic 7](../prd/epic-7.md) Stories 7.3–7.5).
 
+**Post–Story 7.2:** Standalone crawler and database-viewer are under `archive/`; books-admin-app is the only admin entrypoint. Runbooks and verification refer to books-admin-app only (see [parity doc](../parity-books-admin-app.md)).
+
 ## Change log
 
 | Date       | Version | Description                    | Author     |

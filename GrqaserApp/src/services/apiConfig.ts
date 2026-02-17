@@ -1,7 +1,7 @@
 /**
- * API base URL for database-viewer (or agreed data source).
- * Set API_BASE_URL in .env (react-native-config). Must include /api/v1 for database-viewer.
- * Default: local database-viewer at port 3001 per docs/architecture.
+ * API base URL for books-admin-app (single admin API; replaces former database-viewer).
+ * Set API_BASE_URL in .env (react-native-config). Must include /api/v1.
+ * Default: local books-admin-app at port 3001 per docs/architecture.
  */
 const DEFAULT_BASE_URL = 'http://localhost:3001/api/v1';
 

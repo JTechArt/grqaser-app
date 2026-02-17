@@ -1,9 +1,10 @@
 /**
  * Database model for books-admin-app (read-only API).
  * Same interface as database-viewer; uses app config for DB path.
+ * Uses better-sqlite3 (synchronous API wrapped in promises for compatibility).
  */
 
-const sqlite3 = require('sqlite3').verbose();
+const DatabaseNative = require('better-sqlite3');
 const path = require('path');
 
 // Config is loaded at runtime (server passes or we require here)
@@ -24,56 +25,43 @@ class Database {
   }
 
   async connect() {
-    return new Promise((resolve, reject) => {
-      this.db = new sqlite3.Database(this.dbPath, (err) => {
-        if (err) {
-          console.error('❌ Database connection failed:', err);
-          reject(err);
-          return;
-        }
-        resolve();
-      });
-    });
+    try {
+      this.db = new DatabaseNative(this.dbPath);
+      return Promise.resolve();
+    } catch (err) {
+      console.error('❌ Database connection failed:', err);
+      return Promise.reject(err);
+    }
   }
 
   async close() {
-    return new Promise((resolve, reject) => {
-      if (this.db) {
-        this.db.close((err) => {
-          if (err) reject(err);
-          else resolve();
-        });
-      } else {
-        resolve();
+    if (this.db) {
+      try {
+        this.db.close();
+      } catch (err) {
+        return Promise.reject(err);
       }
-    });
+      this.db = null;
+    }
+    return Promise.resolve();
   }
 
   async run(sql, params = []) {
-    return new Promise((resolve, reject) => {
-      this.db.run(sql, params, function (err) {
-        if (err) reject(err);
-        else resolve({ id: this.lastID, changes: this.changes });
-      });
-    });
+    const stmt = this.db.prepare(sql);
+    const result = stmt.run(...params);
+    return Promise.resolve({ id: result.lastInsertRowid, changes: result.changes });
   }
 
   async get(sql, params = []) {
-    return new Promise((resolve, reject) => {
-      this.db.get(sql, params, (err, row) => {
-        if (err) reject(err);
-        else resolve(row);
-      });
-    });
+    const stmt = this.db.prepare(sql);
+    const row = stmt.get(...params);
+    return Promise.resolve(row);
   }
 
   async all(sql, params = []) {
-    return new Promise((resolve, reject) => {
-      this.db.all(sql, params, (err, rows) => {
-        if (err) reject(err);
-        else resolve(rows);
-      });
-    });
+    const stmt = this.db.prepare(sql);
+    const rows = stmt.all(...params);
+    return Promise.resolve(rows);
   }
 
   static get ALLOWED_SORT_COLUMNS() {

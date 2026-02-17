@@ -116,16 +116,19 @@ function createBooksRouter(dbHolder) {
       }
       res.json({ success: true, data: updated });
     } catch (error) {
-      if (error.message && error.message.includes(';')) {
+      const msg = error.message || '';
+      const isValidation = msg.includes(';') || /must be|required|between|max length|non-empty|valid URL/.test(msg);
+      if (isValidation) {
+        const details = msg.includes(';') ? msg.split('; ') : [msg];
         return res.status(400).json({
           success: false,
-          error: { code: 'VALIDATION_ERROR', message: error.message, details: error.message.split('; ') }
+          error: { code: 'VALIDATION_ERROR', message: msg, details }
         });
       }
       console.error('Error updating book:', error);
       res.status(500).json({
         success: false,
-        error: { code: 'DATABASE_ERROR', message: 'Failed to update book', details: error.message }
+        error: { code: 'DATABASE_ERROR', message: 'Failed to update book', details: msg }
       });
     }
   });
