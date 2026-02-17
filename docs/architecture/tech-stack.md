@@ -1,34 +1,14 @@
 # Tech stack
 
-Definitive technology selection per application. All development must use these choices; see [delivery order](./delivery-order-and-application-boundaries.md) for phase sequence.
+Definitive technology selection per application. **After Epic 7:** the only admin app is **books-admin-app**; standalone crawler and database-viewer are removed or archived. See [delivery order](./delivery-order-and-application-boundaries.md).
 
 ## Application-specific stack
 
-### Phase 1: Data crawler
+### Phase 1 & 2 (delivered via books-admin-app)
 
-| Category       | Technology | Version / notes | Purpose |
-|----------------|------------|-----------------|---------|
-| Runtime        | Node.js    | LTS (e.g. 18+)  | CLI crawler execution |
-| Browser automation | Puppeteer | Latest stable    | Page load, listing/detail extraction |
-| Database        | SQLite     | 3.x             | Canonical store (`grqaser.db`) |
-| Config          | JS/JSON    | —               | `src/config/crawler-config.js`; merged with `environments[NODE_ENV]` |
-| Logging         | Custom / file | —             | Optional file logging under `logs/`; all modes use crawl_logs |
-| Lint            | ESLint     | —               | Project-aligned or minimal executable config (Story 1.6) |
-| Testing         | Jest       | —               | Unit (parsing/normalization), integration (DB writes) |
+Crawler and database-viewer behavior are implemented inside **books-admin-app**; standalone Phase 1 and Phase 2 apps are removed or archived (Epic 7.2). Technology for that behavior is as in the books-admin-app row below.
 
-### Phase 2: Database-viewer
-
-| Category       | Technology | Version / notes | Purpose |
-|----------------|------------|-----------------|---------|
-| Runtime        | Node.js    | LTS             | Express server |
-| Backend        | Express    | 4.x             | REST API and static web UI |
-| Database access| SQLite     | Same DB as crawler | Read-only; path configurable |
-| API style      | REST       | —               | `/api/v1/books`, `/api/v1/stats`, `/api/v1/crawler`, `/api/v1/health` |
-| Frontend       | Vanilla JS / HTML/CSS | —      | Single-page admin UI in `public/` |
-| Config         | Env + JS   | —               | Port, DB path, CORS, rate limit, logging |
-| Testing        | Jest / Supertest or similar | — | API and optional UI tests |
-
-### Epic 6: Books-admin-app (merged crawler + database-viewer)
+### Books-admin-app (single admin app — Epic 6–7)
 
 | Category       | Technology | Version / notes | Purpose |
 |----------------|------------|-----------------|---------|
@@ -37,11 +17,12 @@ Definitive technology selection per application. All development must use these 
 | Browser automation | Puppeteer | Latest stable    | Crawler (same as Phase 1) |
 | Database       | SQLite     | 3.x             | Active/backup DB versioning; read + write (crawler + manual edits) |
 | API style      | REST       | —               | Same as database-viewer + extensions for DBs, crawler start/stop/config, PATCH books |
-| Frontend       | Vanilla JS / HTML/CSS | —  | Admin UI: dashboard, books, crawler, DB versioning, edit forms |
+| Frontend       | Vanilla JS / HTML/CSS | —  | Admin UI: dashboard, books, crawler, DB versioning, edit forms; follow `docs/design/` (Epic 7) |
+| Design system  | docs/design/README.md | —  | Slate + teal, Plus Jakarta Sans; mockups in `docs/design/books-admin-app/` (Stories 7.3–7.4) |
 | Config         | Env + JS   | —               | Port, active DB path, crawler config (mode, rate limits, etc.) |
 | Testing        | Jest / Supertest or similar | — | API and integration tests for merged app |
 
-### Phase 3: GrqaserApp (mobile)
+### GrqaserApp (mobile — Phase 3)
 
 | Category       | Technology | Version / notes | Purpose |
 |----------------|------------|-----------------|---------|
@@ -50,18 +31,19 @@ Definitive technology selection per application. All development must use these 
 | State          | Redux Toolkit | —            | Books, audio, user, search |
 | Navigation     | React Navigation | —           | Tabs + stack |
 | Audio playback | react-native-track-player (or equivalent) | — | Streaming, background, lock-screen |
-| Data source    | REST API   | —               | Database-viewer API or agreed export |
+| Data source    | REST API   | —               | **books-admin-app API** (or agreed export) |
 | Storage         | AsyncStorage / local | —           | Favorites, progress, theme |
 | Testing        | Jest, React Native Testing Library | — | Unit/integration; E2E for critical flows |
 | Lint/format    | ESLint, Prettier | —            | Per project config |
 
 ## Shared
 
-- **Data contract:** Single SQLite schema and documented types; crawler writes, database-viewer and GrqaserApp read.
-- **Monorepo:** Single repo with `crawler/`, `database-viewer/`, `books-admin-app/` (Epic 6), `GrqaserApp/`; shared types/schema can live in a shared folder or be documented in one place (e.g. [Data models and schema](./data-models-and-schema.md)).
+- **Data contract:** Single SQLite schema and documented types; books-admin-app (crawler) writes and (viewer) serves API; GrqaserApp reads via API.
+- **Monorepo (post–Epic 7):** `books-admin-app/`, `GrqaserApp/`, `docs/design/`; crawler and database-viewer as standalone dirs are removed or archived. Shared types/schema: [Data models and schema](./data-models-and-schema.md).
+- **Design system (Epic 7):** Colors (slate + teal), typography (Plus Jakarta Sans); documented in `docs/design/README.md`; mockups in `docs/design/books-admin-app/` and `docs/design/grqaser-app/`. Both books-admin-app and GrqaserApp UIs follow this system.
 
 ## Constraints
 
-- Crawler and database-viewer may run on the same machine or different; DB path and CORS must be configurable.
-- GrqaserApp targets iOS and Android only; no web app in MVP.
-- No phase 2 or 3 work that depends on crawler output should start before the relevant phase gate is met (see [delivery order](./delivery-order-and-application-boundaries.md)).
+- books-admin-app is the single admin entrypoint; DB path and CORS configurable there.
+- GrqaserApp targets iOS and Android only; no web app in MVP; consumes books-admin-app API.
+- No Phase 3 work that depends on crawler output should start before Phase 1/2 are verified via books-admin-app (see [delivery order](./delivery-order-and-application-boundaries.md)).
