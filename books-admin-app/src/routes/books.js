@@ -23,17 +23,19 @@ function createBooksRouter(dbHolder) {
         sort_order = 'DESC'
       } = req.query;
 
+      const so = typeof sort_order === 'string' ? sort_order.trim() : '';
+      const sortOrderNorm = /^(ASC|DESC)$/i.test(so) ? so.toUpperCase() : 'DESC';
       const options = {
         page: parseInt(page),
         limit: Math.min(parseInt(limit), 100),
         author,
         category,
         crawlStatus: crawl_status,
-        type,
+        type: typeof type === 'string' && type.trim() ? type.trim() : undefined,
         durationMin: duration_min ? parseInt(duration_min) : null,
         durationMax: duration_max ? parseInt(duration_max) : null,
-        sortBy: sort_by,
-        sortOrder: sort_order.toUpperCase()
+        sortBy: typeof sort_by === 'string' && sort_by.trim() ? sort_by.trim() : 'created_at',
+        sortOrder: sortOrderNorm
       };
 
       const result = await db.getBooks(options);
@@ -126,9 +128,13 @@ function createBooksRouter(dbHolder) {
         });
       }
       console.error('Error updating book:', error);
+      const isReadOnly = /readonly|read-only|read only/i.test(msg);
+      const details = isReadOnly
+        ? `${msg}. Ensure the database file and directory are writable (e.g. chmod 644 for the .db file and 755 for the data directory), or use a writable DB path.`
+        : msg;
       res.status(500).json({
         success: false,
-        error: { code: 'DATABASE_ERROR', message: 'Failed to update book', details: msg }
+        error: { code: 'DATABASE_ERROR', message: 'Failed to update book', details }
       });
     }
   });

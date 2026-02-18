@@ -166,6 +166,15 @@
         .detail-item { display: flex; flex-direction: column; }
         .detail-label { font-weight: 500; color: var(--text-muted); font-size: 0.8125rem; }
         .detail-value { color: var(--text); margin-top: 0.25rem; }
+        .detail-url-link {
+            display: flex; align-items: center; gap: 0.5rem; margin-top: 0.25rem;
+            max-width: 320px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+        }
+        .detail-url-link a {
+            color: var(--accent); text-decoration: none; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+        }
+        .detail-url-link a:hover { text-decoration: underline; }
+        .detail-url-link .url-icon { flex-shrink: 0; font-size: 1rem; }
         .view-panel { min-height: 200px; }
         .view-panel.hidden { display: none; }
         .btn-secondary { background: var(--bg-card); color: var(--text); border: 1px solid var(--border); margin-left: 0.5rem; }
@@ -467,28 +476,43 @@
                 }
 
                 const response = await fetch(url);
+                if (!response.ok) {
+                    booksList.innerHTML = `<div class="error">Failed to load books (${response.status})</div>`;
+                    return;
+                }
                 const data = await response.json();
 
-                if (data.success) {
+                if (!data || typeof data.success === 'undefined') {
+                    booksList.innerHTML = '<div class="error">Invalid response from server</div>';
+                    return;
+                }
+                if (data.success && data.data) {
                     displayBooks(data.data);
                     currentPage = page;
-                    totalPages = data.data.pagination.pages;
+                    totalPages = (data.data.pagination && data.data.pagination.pages) || 1;
                     updatePagination();
+                } else if (!data.success && data.error) {
+                    booksList.innerHTML = `<div class="error">Error: ${(data.error.message || data.error.code || 'Unknown error')}</div>`;
                 } else {
-                    booksList.innerHTML = `<div class="error">Error: ${data.error.message}</div>`;
+                    booksList.innerHTML = '<div class="error">Failed to load books</div>';
                 }
             } catch (error) {
                 console.error('Error loading books:', error);
-                booksList.innerHTML = '<div class="error">Failed to load books</div>';
+                booksList.innerHTML = `<div class="error">Failed to load books. ${error.message || 'See console.'}</div>`;
             }
         }
 
-        // Display books
+        // Display books (data.data from API: { books, pagination }; duration may be number from DB)
         function displayBooks(data) {
             const booksList = document.getElementById('booksList');
             const booksCount = document.getElementById('booksCount');
 
-            booksCount.textContent = `${data.pagination.total} books`;
+            if (!data || !Array.isArray(data.books)) {
+                booksList.innerHTML = '<div class="error">Invalid book list data</div>';
+                return;
+            }
+            const total = (data.pagination && data.pagination.total) != null ? data.pagination.total : data.books.length;
+            booksCount.textContent = `${total} books`;
 
             if (data.books.length === 0) {
                 booksList.innerHTML = '<div class="loading">No books found</div>';
@@ -496,35 +520,35 @@
             }
 
             const booksHtml = data.books.map(book => {
-                // Determine book type based on audio URL or duration
-                // If book has duration, it's likely an audio book even if audio URL is missing
-                const hasAudioUrl = book.main_audio_url && book.main_audio_url.trim() !== '';
-                const hasDuration = book.duration && book.duration.trim() !== '';
+                const hasAudioUrl = book.main_audio_url != null && String(book.main_audio_url).trim() !== '';
+                const hasDuration = book.duration != null && String(book.duration).trim() !== '';
                 const bookType = (hasAudioUrl || hasDuration) ? 'audiobook' : 'ebook';
                 const typeIcon = bookType === 'audiobook' ? '🎧' : '📖';
                 const typeLabel = bookType === 'audiobook' ? 'Audio Book' : 'E-Book';
-                
+                const durationStr = book.duration_formatted != null ? String(book.duration_formatted) : '';
+                const createdStr = book.created_at ? (new Date(book.created_at).toLocaleDateString()) : '—';
+
                 return `
                     <div class="book-item" data-book-id="${book.id}">
                         <img class="book-cover" src="${book.cover_image_url || 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iODAiIHZpZXdCb3g9IjAgMCA2MCA4MCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjYwIiBoZWlnaHQ9IjgwIiBmaWxsPSIjRjVGNUY1Ii8+CjxwYXRoIGQ9Ik0xNSAyMEg0NVY2MEgxNVYyMFoiIGZpbGw9IiNEN0Q3RDciLz4KPHBhdGggZD0iTTIwIDI1SDQwVjU1SDIwVjI1WiIgZmlsbD0iI0M5QzlDOSIvPgo8cGF0aCBkPSJNMjUgMzBIMzVWNTBIMjVWMzBaIiBmaWxsPSIjQjVCNUI1Ii8+Cjwvc3ZnPgo='}" alt="Book cover" onerror="this.src='data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iODAiIHZpZXdCb3g9IjAgMCA2MCA4MCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjYwIiBoZWlnaHQ9IjgwIiBmaWxsPSIjRjVGNUY1Ii8+CjxwYXRoIGQ9Ik0xNSAyMEg0NVY2MEgxNVYyMFoiIGZpbGw9IiNEN0Q3RDciLz4KPHBhdGggZD0iTTIwIDI1SDQwVjU1SDIwVjI1WiIgZmlsbD0iI0M5QzlDOSIvPgo8cGF0aCBkPSJNMjUgMzBIMzVWNTBIMjVWMzBaIiBmaWxsPSIjQjVCNUI1Ii8+Cjwvc3ZnPgo='">
                         <div class="book-content">
                             <div class="book-title">
-                                ${escapeHtml(book.title)}
+                                ${escapeHtml(book.title || '')}
                                 <span style="font-size: 0.8rem; color: var(--text-muted); font-weight: normal;">(ID: ${book.id})</span>
                                 <a href="https://grqaser.org/books/${book.id}" target="_blank" style="font-size: 0.8rem; color: var(--accent); text-decoration: none; margin-left: 10px;">
                                     🔗 View on Grqaser.org
                                 </a>
                             </div>
-                            <div class="book-author">by ${escapeHtml(book.author)}</div>
+                            <div class="book-author">by ${escapeHtml(book.author || '')}</div>
                                             <div class="book-meta">
                     <span style="font-weight: bold; color: var(--accent);">
                         ${typeIcon} ${typeLabel}
                     </span>
-                    <span>⏱️ ${escapeHtml(book.duration_formatted)}</span>
-                    <span>🎧 ${book.chapter_count || 0} MP3s</span>
+                    <span>⏱️ ${escapeHtml(durationStr)}</span>
+                    <span>🎧 ${book.chapter_count != null ? book.chapter_count : 0} MP3s</span>
                     <span>📂 ${escapeHtml(book.category || 'No category')}</span>
-                    <span>🔄 ${escapeHtml(book.crawl_status)}</span>
-                    <span>📅 ${new Date(book.created_at).toLocaleDateString()}</span>
+                    <span>🔄 ${escapeHtml(book.crawl_status || '')}</span>
+                    <span>📅 ${createdStr}</span>
                 </div>
                         </div>
                     </div>
@@ -551,35 +575,43 @@
             modal.style.display = 'block';
             bookDetail.innerHTML = '<div class="loading">Loading book details...</div>';
             document.getElementById('closeModal').focus();
+            currentModalBookId = bookId;
+            currentModalBook = null;
 
             try {
                 const response = await fetch(`${API_BASE}/books/${bookId}`);
                 const data = await response.json();
 
-                if (data.success) {
+                if (data.success && data.data) {
                     const book = data.data;
-                    modalTitle.textContent = book.title;
+                    currentModalBook = book;
+                    modalTitle.textContent = book.title || 'Book details';
 
-                    // Determine book type for detail view
-                    const hasAudioUrl = book.main_audio_url && book.main_audio_url.trim() !== '';
-                    const hasDuration = book.duration && book.duration.trim() !== '';
+                    const hasAudioUrl = book.main_audio_url != null && String(book.main_audio_url).trim() !== '';
+                    const hasDuration = book.duration != null && String(book.duration).trim() !== '';
                     const bookType = (hasAudioUrl || hasDuration) ? 'audiobook' : 'ebook';
                     const typeIcon = bookType === 'audiobook' ? '🎧' : '📖';
                     const typeLabel = bookType === 'audiobook' ? 'Audio Book' : 'E-Book';
+                    const durationStr = book.duration_formatted != null ? String(book.duration_formatted) : '—';
+                    const grqaserUrl = `https://grqaser.org/books/${book.id}`;
+                    const mainAudioUrl = book.main_audio_url != null ? String(book.main_audio_url).trim() : '';
+                    const mainAudioIsLink = mainAudioUrl && (mainAudioUrl.startsWith('http://') || mainAudioUrl.startsWith('https://'));
+                    const downloadUrlVal = book.download_url != null ? String(book.download_url).trim() : '';
+                    const downloadIsLink = downloadUrlVal && (downloadUrlVal.startsWith('http://') || downloadUrlVal.startsWith('https://'));
 
                     bookDetail.innerHTML = `
                         <div class="book-detail-section">
                             <div style="display: flex; gap: 2rem; align-items: flex-start; margin-bottom: 1rem;">
                                 <img src="${book.cover_image_url || 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTIwIiBoZWlnaHQ9IjE2MCIgdmlld0JveD0iMCAwIDEyMCAxNjAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSIxMjAiIGhlaWdodD0iMTYwIiBmaWxsPSIjRjVGNUY1Ii8+CjxwYXRoIGQ9Ik0zMCA0MEg5MFYxMjBIMzBWNDBaIiBmaWxsPSIjRDdEN0Q3Ii8+CjxwYXRoIGQ9Ik00MCA1MEg4MFYxMTBINDBWNTBaIiBmaWxsPSIjQzlDOUM5Ii8+CjxwYXRoIGQ9Ik01MCA2MEg3MFYxMDBINTBWNjBaIiBmaWxsPSIjQjVCNUI1Ii8+Cjwvc3ZnPgo='}" alt="Book cover" style="width: 120px; height: 160px; object-fit: cover; border-radius: 8px; box-shadow: 0 4px 8px rgba(0,0,0,0.1);" onerror="this.src='data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTIwIiBoZWlnaHQ9IjE2MCIgdmlld0JveD0iMCAwIDEyMCAxNjAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSIxMjAiIGhlaWdodD0iMTYwIiBmaWxsPSIjRjVGNUY1Ii8+CjxwYXRoIGQ9Ik0zMCA0MEg5MFYxMjBIMzBWNDBaIiBmaWxsPSIjRDdEN0Q3Ii8+CjxwYXRoIGQ9Ik00MCA1MEg4MFYxMTBINDBWNTBaIiBmaWxsPSIjQzlDOUM5Ii8+CjxwYXRoIGQ9Ik01MCA2MEg3MFYxMDBINTBWNjBaIiBmaWxsPSIjQjVCNUI1Ii8+Cjwvc3ZnPgo='">
                                 <div style="flex: 1;">
-                                    <h2 style="margin: 0 0 0.5rem 0; color: var(--text);">${escapeHtml(book.title)}</h2>
-                                    <p style="margin: 0 0 1rem 0; color: var(--text-muted); font-size: 1.1rem;">by ${escapeHtml(book.author)}</p>
+                                    <h2 style="margin: 0 0 0.5rem 0; color: var(--text);">${escapeHtml(book.title || '')}</h2>
+                                    <p style="margin: 0 0 1rem 0; color: var(--text-muted); font-size: 1.1rem;">by ${escapeHtml(book.author || '')}</p>
                                     <div style="display: flex; gap: 1rem; flex-wrap: wrap;">
                                         <span style="background: var(--accent); color: white; padding: 0.25rem 0.75rem; border-radius: 999px; font-size: 0.8125rem; font-weight: 600;">
                                             ${typeIcon} ${typeLabel}
                                         </span>
                                         <span style="background: var(--border-muted); color: var(--text-muted); padding: 0.25rem 0.75rem; border-radius: 999px; font-size: 0.8125rem;">
-                                            ⏱️ ${book.duration_formatted}
+                                            ⏱️ ${escapeHtml(durationStr)}
                                         </span>
                                     </div>
                                 </div>
@@ -588,11 +620,11 @@
                             <div class="book-detail-grid">
                                 <div class="detail-item">
                                     <div class="detail-label">Title</div>
-                                    <div class="detail-value">${escapeHtml(book.title)}</div>
+                                    <div class="detail-value">${escapeHtml(book.title || '')}</div>
                                 </div>
                                 <div class="detail-item">
                                     <div class="detail-label">Author</div>
-                                    <div class="detail-value">${escapeHtml(book.author)}</div>
+                                    <div class="detail-value">${escapeHtml(book.author || '')}</div>
                                 </div>
                                 <div class="detail-item">
                                     <div class="detail-label">Category</div>
@@ -600,15 +632,15 @@
                                 </div>
                                 <div class="detail-item">
                                     <div class="detail-label">Language</div>
-                                    <div class="detail-value">${escapeHtml(book.language)}</div>
+                                    <div class="detail-value">${escapeHtml(book.language || '')}</div>
                                 </div>
                                 <div class="detail-item">
                                     <div class="detail-label">Type</div>
-                                    <div class="detail-value">${escapeHtml(book.type)}</div>
+                                    <div class="detail-value">${escapeHtml(book.type || '')}</div>
                                 </div>
                                 <div class="detail-item">
                                     <div class="detail-label">Duration</div>
-                                    <div class="detail-value">${escapeHtml(book.duration_formatted)}</div>
+                                    <div class="detail-value">${escapeHtml(durationStr)}</div>
                                 </div>
                             </div>
                         </div>
@@ -624,32 +656,43 @@
                                 <div class="detail-item">
                                     <div class="detail-label">Grqaser.org URL</div>
                                     <div class="detail-value">
-                                        <a href="https://grqaser.org/books/${book.id}" target="_blank" style="color: var(--accent); text-decoration: none;">
-                                            https://grqaser.org/books/${book.id}
-                                        </a>
+                                        <div class="detail-url-link" title="${escapeHtml(grqaserUrl)}">
+                                            <span class="url-icon" aria-hidden="true">🔗</span>
+                                            <a href="${escapeHtml(grqaserUrl)}" target="_blank" rel="noopener">${escapeHtml(grqaserUrl)}</a>
+                                        </div>
                                     </div>
                                 </div>
                                 <div class="detail-item">
                                     <div class="detail-label">MP3 Chapters</div>
-                                    <div class="detail-value">${book.chapter_count || 0} files</div>
+                                    <div class="detail-value">${book.chapter_count != null ? book.chapter_count : 0} files</div>
                                 </div>
                                 <div class="detail-item">
                                     <div class="detail-label">Main Audio</div>
-                                    <div class="detail-value">${escapeHtml(book.main_audio_url || 'No audio URL')}</div>
+                                    <div class="detail-value">
+                                        <div class="detail-url-link" title="${mainAudioIsLink ? escapeHtml(mainAudioUrl) : ''}">
+                                            <span class="url-icon" aria-hidden="true">🎧</span>
+                                            ${mainAudioIsLink ? `<a href="${escapeHtml(mainAudioUrl)}" target="_blank" rel="noopener">${escapeHtml(mainAudioUrl)}</a>` : `<span>${escapeHtml(mainAudioUrl || 'No audio URL')}</span>`}
+                                        </div>
+                                    </div>
                                 </div>
                                 <div class="detail-item">
                                     <div class="detail-label">Download URL</div>
-                                    <div class="detail-value">${escapeHtml(book.download_url || 'No download URL')}</div>
+                                    <div class="detail-value">
+                                        <div class="detail-url-link" title="${downloadIsLink ? escapeHtml(downloadUrlVal) : ''}">
+                                            <span class="url-icon" aria-hidden="true">⬇️</span>
+                                            ${downloadIsLink ? `<a href="${escapeHtml(downloadUrlVal)}" target="_blank" rel="noopener">${escapeHtml(downloadUrlVal)}</a>` : `<span>${escapeHtml(downloadUrlVal || 'No download URL')}</span>`}
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
                         </div>
                         
-                        ${book.chapter_urls && book.chapter_urls.length > 0 ? `
+                        ${Array.isArray(book.chapter_urls) && book.chapter_urls.length > 0 ? `
                         <div class="book-detail-section">
                             <h3>🎧 Individual MP3 Files (${book.chapter_urls.length} files)</h3>
                                 <div style="max-height: 300px; overflow-y: auto; border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 1rem;">
                                 ${book.chapter_urls.map((url, index) => {
-                                    const u = (url && String(url)).trim();
+                                    const u = (url != null && String(url)).trim();
                                     const safeHref = (u.startsWith('http://') || u.startsWith('https://')) ? u : '#';
                                     const displayText = escapeHtml(u.split('/').pop() || u);
                                     return `
@@ -667,11 +710,11 @@
                             <div class="book-detail-grid">
                                 <div class="detail-item">
                                     <div class="detail-label">Status</div>
-                                    <div class="detail-value">${escapeHtml(book.crawl_status)}</div>
+                                    <div class="detail-value">${escapeHtml(book.crawl_status || '')}</div>
                                 </div>
                                 <div class="detail-item">
                                     <div class="detail-label">Attempts</div>
-                                    <div class="detail-value">${book.crawl_attempts}</div>
+                                    <div class="detail-value">${book.crawl_attempts != null ? book.crawl_attempts : '—'}</div>
                                 </div>
                                 <div class="detail-item">
                                     <div class="detail-label">Last Attempt</div>
@@ -683,7 +726,7 @@
                                 </div>
                                 <div class="detail-item">
                                     <div class="detail-label">Chapter Count</div>
-                                    <div class="detail-value">${book.chapter_count}</div>
+                                    <div class="detail-value">${book.chapter_count != null ? book.chapter_count : '—'}</div>
                                 </div>
                                 <div class="detail-item">
                                     <div class="detail-label">File Size</div>
@@ -702,11 +745,11 @@
                             <div class="book-detail-grid">
                                 <div class="detail-item">
                                     <div class="detail-label">Created</div>
-                                    <div class="detail-value">${new Date(book.created_at).toLocaleString()}</div>
+                                    <div class="detail-value">${book.created_at ? new Date(book.created_at).toLocaleString() : '—'}</div>
                                 </div>
                                 <div class="detail-item">
                                     <div class="detail-label">Updated</div>
-                                    <div class="detail-value">${new Date(book.updated_at).toLocaleString()}</div>
+                                    <div class="detail-value">${book.updated_at ? new Date(book.updated_at).toLocaleString() : '—'}</div>
                                 </div>
                                 ${book.last_edited_at ? `
                                 <div class="detail-item">
@@ -724,22 +767,23 @@
                             <button type="button" class="btn" id="bookDetailEditBtn">✏️ Edit book</button>
                         </div>
                     `;
+                } else if (data && data.error) {
+                    bookDetail.innerHTML = `<div class="error">Error: ${escapeHtml(data.error.message || data.error.code || 'Unknown error')}</div>`;
+                    currentModalBook = null;
                 } else {
-                    bookDetail.innerHTML = `<div class="error">Error: ${escapeHtml(data.error.message)}</div>`;
+                    bookDetail.innerHTML = '<div class="error">Failed to load book details</div>';
+                    currentModalBook = null;
                 }
             } catch (error) {
                 console.error('Error loading book details:', error);
-                bookDetail.innerHTML = '<div class="error">Failed to load book details</div>';
+                bookDetail.innerHTML = `<div class="error">Failed to load book details. ${escapeHtml(error.message || 'See console.')}</div>`;
+                currentModalBook = null;
             }
-
-            currentModalBookId = bookId;
-            const editBtn = document.getElementById('bookDetailEditBtn');
-            if (editBtn) {
-                editBtn.onclick = function() { showBookEditForm(data.data); };
-            }
+            // Edit button is handled by setupModal() via event delegation
         }
 
         let currentModalBookId = null;
+        let currentModalBook = null;
 
         function showBookEditForm(book) {
             document.getElementById('bookDetail').style.display = 'none';
@@ -883,7 +927,7 @@
             }
         }
 
-        // Modal close functionality
+        // Modal close functionality and edit button (delegation so dynamic button works)
         function setupModal() {
             const modal = document.getElementById('bookModal');
             const closeBtn = document.getElementById('closeModal');
@@ -895,6 +939,13 @@
             window.addEventListener('click', function(event) {
                 if (event.target === modal) {
                     modal.style.display = 'none';
+                }
+            });
+
+            modal.addEventListener('click', function(event) {
+                if (event.target.id === 'bookDetailEditBtn' && currentModalBook) {
+                    event.stopPropagation();
+                    showBookEditForm(currentModalBook);
                 }
             });
         }
