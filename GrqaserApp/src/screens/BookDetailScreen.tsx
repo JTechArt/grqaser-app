@@ -71,17 +71,18 @@ const BookDetailScreen: React.FC<Props> = ({route}) => {
   const canPlay =
     book.type === 'audiobook' && (!!book.audioUrl?.trim() || isDownloaded);
 
-  const onPlayPress = () => {
+  const onPlayPress = async () => {
     if (!canPlay) {
       return;
     }
-    playBook(book).then(() => {
+    const started = await playBook(book);
+    if (started) {
       (
         navigation as unknown as {
           navigate: (a: string, b?: {screen: string}) => void;
         }
       ).navigate('MainTabs', {screen: 'Player'});
-    });
+    }
   };
 
   const ratingChip =

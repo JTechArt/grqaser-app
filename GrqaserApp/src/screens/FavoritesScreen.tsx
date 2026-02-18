@@ -45,8 +45,12 @@ const FavoritesScreen: React.FC = () => {
       contentContainerStyle={styles.content}
       showsVerticalScrollIndicator={false}>
       <View style={styles.grid}>
-        {favoriteBooks.map((book: Book) => (
-          <BookCard key={book.id} book={book} onPress={handleBookPress} />
+        {favoriteBooks.map((book: Book, index) => (
+          <BookCard
+            key={`${book.id}-${index}`}
+            book={book}
+            onPress={handleBookPress}
+          />
         ))}
       </View>
     </ScrollView>

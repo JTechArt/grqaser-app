@@ -80,7 +80,7 @@ const SearchScreen: React.FC = () => {
         ) : (
           <FlatList
             data={filteredBooks}
-            keyExtractor={item => item.id}
+            keyExtractor={(item, index) => `${item.id}-${index}`}
             renderItem={renderBook}
             key={numColumns}
             numColumns={numColumns}

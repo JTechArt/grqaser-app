@@ -1,5 +1,5 @@
 import React, {useEffect, useRef} from 'react';
-import {StatusBar} from 'react-native';
+import {StatusBar, LogBox} from 'react-native';
 import {NavigationContainer} from '@react-navigation/native';
 import {Provider, useDispatch, useSelector} from 'react-redux';
 import {store} from './src/state';
@@ -7,6 +7,7 @@ import type {RootState} from './src/state';
 import {GestureHandlerRootView} from 'react-native-gesture-handler';
 import {SafeAreaProvider} from 'react-native-safe-area-context';
 import {PaperProvider} from 'react-native-paper';
+import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import {getAppTheme} from './src/theme';
 import RootNavigator from './src/navigation/RootNavigator';
 import TrackPlayerProvider from './src/components/TrackPlayerProvider';
@@ -19,6 +20,42 @@ import {
   setThemePreference,
 } from './src/services/preferencesStorage';
 
+LogBox.ignoreLogs(['Required dispatch_sync to load constants']);
+
+const ROOT_STYLE = {flex: 1} as const;
+
+type PaperIconProps = {
+  name: unknown;
+  color?: string;
+  size: number;
+  direction: 'rtl' | 'ltr';
+  testID?: string;
+};
+
+const renderPaperIcon = ({
+  name,
+  color,
+  size,
+  direction,
+  testID,
+}: PaperIconProps) => (
+  <MaterialCommunityIcons
+    allowFontScaling={false}
+    name={
+      typeof name === 'string' && name.trim().length > 0
+        ? name
+        : 'help-circle-outline'
+    }
+    color={color}
+    size={size}
+    testID={testID}
+    style={{
+      transform: [{scaleX: direction === 'rtl' ? -1 : 1}],
+      lineHeight: size,
+    }}
+  />
+);
+
 const AppContent: React.FC = () => {
   const dispatch = useDispatch();
   const themeMode = useSelector((s: RootState) => s.user.preferences.theme);
@@ -27,6 +64,9 @@ const AppContent: React.FC = () => {
   const prevThemeRef = useRef(themeMode);
 
   useEffect(() => {
+    if (typeof MaterialCommunityIcons.loadFont === 'function') {
+      MaterialCommunityIcons.loadFont().catch(() => {});
+    }
     getFavorites().then(ids => dispatch(setFavorites(ids)));
     getThemePreference().then(mode =>
       dispatch(updatePreferences({theme: mode})),
@@ -51,7 +91,11 @@ const AppContent: React.FC = () => {
   const isDark = themeMode === 'dark';
 
   return (
-    <PaperProvider theme={appTheme}>
+    <PaperProvider
+      theme={appTheme}
+      settings={{
+        icon: renderPaperIcon,
+      }}>
       <NavigationContainer>
         <StatusBar
           barStyle={isDark ? 'light-content' : 'dark-content'}
@@ -68,7 +112,7 @@ const AppContent: React.FC = () => {
 const App: React.FC = () => {
   return (
     <Provider store={store}>
-      <GestureHandlerRootView style={{flex: 1}}>
+      <GestureHandlerRootView style={ROOT_STYLE}>
         <SafeAreaProvider>
           <AppContent />
         </SafeAreaProvider>
