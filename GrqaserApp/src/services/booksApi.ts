@@ -46,7 +46,7 @@ function getErrorMessage(error: unknown): string {
 
 export const booksApi = {
   /**
-   * Get all books (database-viewer GET /api/v1/books).
+   * Get all books (books-admin-app GET /api/v1/books).
    */
   async getBooks(page = 1, limit = 100): Promise<Book[]> {
     const response = await api.get<ListResponse>('/books', {
@@ -60,7 +60,7 @@ export const booksApi = {
   },
 
   /**
-   * Get book by ID (database-viewer GET /api/v1/books/:id).
+   * Get book by ID (books-admin-app GET /api/v1/books/:id).
    */
   async getBookById(id: string): Promise<Book> {
     const response = await api.get<SingleBookResponse>(`/books/${id}`);
@@ -72,7 +72,7 @@ export const booksApi = {
   },
 
   /**
-   * Search books (database-viewer GET /api/v1/books/search?q=).
+   * Search books (books-admin-app GET /api/v1/books/search?q=).
    */
   async searchBooks(
     query: string,
@@ -100,8 +100,8 @@ export const booksApi = {
   },
 
   /**
-   * Get categories derived from books (database-viewer has no /categories;
-   * fetch books and aggregate, or use stats if available).
+   * Get categories (books-admin-app has GET /api/v1/stats/categories;
+   * this client fetches books and aggregates, or could use stats endpoint).
    */
   async getCategories(): Promise<BookCategory[]> {
     const books = await this.getBooks(1, 500);

@@ -75,8 +75,7 @@ const BookCard: React.FC<BookCardProps> = ({
   const renderTypeIcon = () => {
     const iconName =
       book.type === 'audiobook' ? 'headphones' : 'book-open-variant';
-    const iconColor =
-      book.type === 'audiobook' ? theme.colors.primary : theme.colors.secondary;
+    const iconColor = theme.colors.primary;
 
     return (
       <View style={[styles.typeIcon, {backgroundColor: iconColor}]}>
@@ -126,7 +125,7 @@ const BookCard: React.FC<BookCardProps> = ({
 
           {book.rating && (
             <View style={styles.ratingContainer}>
-              <Icon name="star" size={12} color={theme.colors.secondary} />
+              <Icon name="star" size={12} color={theme.colors.primary} />
               <Text style={styles.ratingText}>{book.rating.toFixed(1)}</Text>
             </View>
           )}

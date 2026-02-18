@@ -36,7 +36,7 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 if (config.server.env === 'development') {
-  app.use(morgan('dev'));
+  app.use(morgan(':method :url :status :response-time ms - :res[content-length] [:req[content-type]]'));
 } else {
   app.use(morgan('combined'));
 }
@@ -89,6 +89,7 @@ app.get('/', (req, res) => {
 });
 
 app.use('*', (req, res) => {
+  console.debug('[server] 404: %s %s', req.method, req.originalUrl);
   res.status(404).json({
     success: false,
     error: {
@@ -99,7 +100,7 @@ app.use('*', (req, res) => {
 });
 
 app.use((error, req, res, next) => {
-  console.error('Server error:', error);
+  console.error('[server] Unhandled error on %s %s:', req.method, req.originalUrl, error.stack || error);
   res.status(500).json({
     success: false,
     error: {
@@ -128,6 +129,7 @@ async function startServer() {
     if (process.env.NODE_ENV === 'test') {
       return;
     }
+    console.debug('[server] env: %s, db: %s', config.server.env, activePath);
     const server = app.listen(config.server.port, config.server.host, () => {
       console.log(`🚀 Books Admin App running on http://${config.server.host}:${config.server.port}`);
       console.log(`📊 API at http://${config.server.host}:${config.server.port}${config.api.basePath}`);

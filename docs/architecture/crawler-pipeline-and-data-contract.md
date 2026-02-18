@@ -1,6 +1,6 @@
 # Crawler pipeline and data contract
 
-**Phase 1 application.** The data crawler is the single pipeline that updates the project’s canonical data. It must be finalized and validated before any Phase 2 (database-viewer) work. See [delivery order and application boundaries](./delivery-order-and-application-boundaries.md).
+**Superseded by books-admin-app (Epic 6–7).** The standalone **crawler** is **removed or archived** (Epic 7.2). This document describes the crawler behavior (modes, config, validation, schema) that **books-admin-app** preserves — either in-process or as a subprocess. See [Books-admin-app architecture](./books-admin-app-architecture.md) and [delivery order](./delivery-order-and-application-boundaries.md).
 
 ## Role and boundaries
 

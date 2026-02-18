@@ -16,3 +16,5 @@ logs/
 # BMAD (local only)
 .bmad-core/
 .bmad-*/
+books-admin-app/.env
+books-admin-app/data/**

@@ -48,7 +48,7 @@ describe('DELETE /api/v1/databases/:id', () => {
   it('returns 404 or 400 for unknown id', async () => {
     const res = await request(app)
       .delete('/api/v1/databases/nonexistent-id-xyz')
-      .expect((s) => expect([400, 404, 500]).toContain(s));
+      .expect((res) => expect([400, 404, 500]).toContain(res.status));
     expect(res.body.success).toBe(false);
   });
 });

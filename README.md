@@ -16,17 +16,19 @@ Grqaser (meaning "book lover" in Armenian) is a mobile application that brings t
 
 ## 🏗️ Architecture
 
+The repo has **two runnable applications**: **books-admin-app** (single admin app: crawler + API + web UI, SQLite) and **GrqaserApp** (React Native mobile app). The mobile app consumes the books-admin-app API. Standalone crawler and database-viewer are archived; all admin behavior is in books-admin-app. See `docs/architecture/` and `docs/parity-books-admin-app.md`.
+
 ```
-┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
-│   React Native  │    │   Backend API   │    │   Data Crawler  │
-│   Mobile App    │◄──►│   (Optional)    │◄──►│   (Node.js)     │
-└─────────────────┘    └─────────────────┘    └─────────────────┘
-         │                       │                       │
-         ▼                       ▼                       ▼
-┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
-│   Local Storage │    │   Database      │    │   grqaser.org   │
-│   (AsyncStorage)│    │   (MongoDB/PG)  │    │   (Target Site) │
-└─────────────────┘    └─────────────────┘    └─────────────────┘
+┌─────────────────┐         ┌─────────────────────────────┐
+│   GrqaserApp    │         │   books-admin-app           │
+│   (React Native)│◄───────►│   (crawler + API + web UI)   │
+└─────────────────┘   API   └──────────────┬──────────────┘
+         │                                │
+         ▼                                ▼
+┌─────────────────┐              ┌─────────────────┐
+│   Local Storage │              │ SQLite + grqaser │
+│   (AsyncStorage)│              │ .org (crawl)     │
+└─────────────────┘              └─────────────────┘
 ```
 
 ## 🚀 Quick Start
@@ -34,9 +36,8 @@ Grqaser (meaning "book lover" in Armenian) is a mobile application that brings t
 ### Prerequisites
 
 - Node.js (v16 or higher)
-- React Native CLI
-- Android Studio (for Android development)
-- Xcode (for iOS development, macOS only)
+- React Native CLI (for mobile app)
+- Android Studio / Xcode for device builds
 - Git
 
 ### Installation
@@ -47,42 +48,41 @@ Grqaser (meaning "book lover" in Armenian) is a mobile application that brings t
    cd grqaser
    ```
 
-2. **Crawler (optional, for local data)**
+2. **Admin app (crawler + API + web UI)** — single entrypoint for data and API
    ```bash
-   cd crawler && npm install && npm start && cd ..
+   npm run admin:start
+   # or: cd books-admin-app && npm install && npm start
    ```
+   Default: http://localhost:3001. Use the web UI to start/stop crawler, view books, manage DB. See `books-admin-app/README.md`.
 
-3. **Database viewer (optional)**
-   ```bash
-   cd database-viewer && npm install && npm run dev && cd ..
-   ```
-
-4. **Start the React Native app**
+3. **Mobile app**
    ```bash
    cd GrqaserApp
    npm install
    npm start          # Metro bundler
    npm run android    # or npm run ios
    ```
+   GrqaserApp uses the books-admin-app API (default `http://localhost:3001/api/v1`). Set `API_BASE_URL` in `.env` if the admin app runs elsewhere.
 
 ## 📁 Project structure
 
 ```
 grqaser/
-├── crawler/           # Node.js crawler → SQLite (see crawler/README.md)
-├── database-viewer/   # Express API + web UI for the DB (see database-viewer/README.md)
-├── GrqaserApp/       # React Native mobile app (see GrqaserApp/README.md)
-└── docs/
-    └── tasks/        # Task and planning docs
+├── books-admin-app/   # Single admin app — crawler, API, web UI (see books-admin-app/README.md)
+├── GrqaserApp/        # React Native mobile app (see GrqaserApp/README.md)
+├── archive/           # Legacy: crawler, database-viewer (archived; no standalone runbooks)
+│   ├── crawler/
+│   └── database-viewer/
+├── docs/              # Architecture, PRD, stories, design
+└── package.json       # Root scripts: npm run admin:start, admin:test, admin:dev
 ```
 
 ## 🔧 Development
 
-Each app has its own scripts; run them from that directory:
+- **books-admin-app**: From repo root run `npm run admin:start`, `npm run admin:test`, `npm run admin:dev`; or from `books-admin-app/` run `npm start`, `npm test`, `npm run dev`.
+- **GrqaserApp**: From `GrqaserApp/` run `npm start`, `npm run android` / `npm run ios`, `npm test`, `npm run lint`.
 
-- **GrqaserApp**: `npm start`, `npm run android`, `npm run ios`, `npm test`, `npm run lint`
-- **crawler**: `npm start`, `npm test` (see crawler/README.md)
-- **database-viewer**: `npm run dev`, `npm start`, `npm test` (see database-viewer/README.md)
+There are **no runbooks for running crawler or database-viewer as separate apps**; all admin behavior is in books-admin-app.
 
 ### Code Style
 
@@ -136,29 +136,11 @@ interface Book {
 }
 ```
 
-## 🔍 Data Crawling
+## 🔍 Data crawling (books-admin-app)
 
-The crawler extracts data from grqaser.org in a respectful manner:
+Crawler behavior runs **from books-admin-app** (start/stop and config via the app). The crawler extracts data from grqaser.org with rate limiting, clear user-agent, and error handling. Data is written to SQLite; the same app serves the API and web UI.
 
-- **Rate limiting**: 2-second delays between requests
-- **User agent identification**: Clear bot identification
-- **Resource filtering**: Blocks unnecessary resources
-- **Error handling**: Graceful failure handling
-
-### Running the Crawler
-
-```bash
-cd crawler
-npm install
-npm start
-```
-
-The crawler will:
-1. Analyze the website structure
-2. Extract book metadata
-3. Find audio file URLs
-4. Save data to JSON files
-5. Generate a detailed report
+**Run the crawler:** Start books-admin-app (`npm run admin:start`), then use the web UI or `POST /api/v1/crawler/start`. See `books-admin-app/README.md` and `docs/architecture/books-admin-app-architecture.md`.
 
 ## 🧪 Testing
 

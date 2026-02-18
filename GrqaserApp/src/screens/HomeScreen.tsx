@@ -66,7 +66,7 @@ const HomeScreen: React.FC = () => {
 
   const renderHeader = () => (
     <LinearGradient
-      colors={[theme.colors.primary, theme.colors.secondary]}
+      colors={[theme.colors.accentLight, theme.colors.surface]}
       style={styles.header}>
       <View style={styles.headerContent}>
         <Text style={styles.appTitle}>Grqaser</Text>
@@ -242,17 +242,18 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   appTitle: {
-    fontSize: 32,
-    fontWeight: 'bold',
-    color: 'white',
+    fontSize: 24,
+    fontWeight: '800',
+    color: theme.colors.text,
     marginBottom: 5,
   },
   appSubtitle: {
-    fontSize: 16,
-    color: 'rgba(255, 255, 255, 0.8)',
+    fontSize: 14,
+    color: theme.colors.onSurface,
+    marginTop: 4,
   },
   searchBar: {
-    backgroundColor: 'white',
+    backgroundColor: theme.colors.surface,
     borderRadius: 25,
     elevation: 4,
   },
