@@ -28,7 +28,7 @@ function getTabIconName(routeName: string, focused: boolean): string {
     case 'Home':
       return focused ? 'home' : 'home-outline';
     case 'Library':
-      return focused ? 'library' : 'library-outline';
+      return focused ? 'book-open-variant' : 'book-open-outline';
     case 'Player':
       return focused ? 'play-circle' : 'play-circle-outline';
     case 'Favorites':

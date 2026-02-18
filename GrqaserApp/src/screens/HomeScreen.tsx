@@ -128,9 +128,9 @@ const HomeScreen: React.FC = () => {
         </View>
       ) : (
         <View style={styles.booksGrid}>
-          {filteredBooks.slice(0, 6).map(book => (
+          {filteredBooks.slice(0, 6).map((book, index) => (
             <BookCard
-              key={book.id}
+              key={`${book.id}-${index}`}
               book={book}
               onPress={() => handleBookPress(book)}
             />
@@ -163,9 +163,9 @@ const HomeScreen: React.FC = () => {
           horizontal
           showsHorizontalScrollIndicator={false}
           contentContainerStyle={styles.recentBooksContainer}>
-          {recentBooks.map(book => (
+          {recentBooks.map((book, index) => (
             <BookCard
-              key={book.id}
+              key={`${book.id}-${index}`}
               book={book}
               onPress={() => handleBookPress(book)}
               compact
