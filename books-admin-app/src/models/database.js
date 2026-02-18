@@ -26,8 +26,10 @@ class Database {
 
   async connect() {
     try {
-      this.db = new DatabaseNative(this.dbPath);
+      // Open read-write so updates (PATCH) work; default is read-write, explicit for clarity.
+      this.db = new DatabaseNative(this.dbPath, { readonly: false });
       await this.ensureCrawlerTables();
+      await this.ensureBooksFilterColumns();
       return Promise.resolve();
     } catch (err) {
       console.error('❌ Database connection failed:', err);
@@ -68,6 +70,15 @@ class Database {
     await this.run(urlQueueSql);
     await this.run(crawlLogsSql);
     return Promise.resolve();
+  }
+
+  /** Ensure books has type column for list filter. Idempotent. */
+  async ensureBooksFilterColumns() {
+    const tableInfo = await this.all("SELECT name FROM pragma_table_info('books')");
+    const names = (tableInfo || []).map((r) => r.name);
+    if (!names.includes('type')) {
+      await this.run("ALTER TABLE books ADD COLUMN type VARCHAR(50) DEFAULT 'audiobook'");
+    }
   }
 
   async close() {
@@ -119,8 +130,10 @@ class Database {
     } = options;
 
     const allowedColumns = Database.ALLOWED_SORT_COLUMNS;
-    const safeSortBy = typeof sortBy === 'string' && allowedColumns.includes(sortBy) ? sortBy : 'created_at';
-    const safeSortOrder = (typeof sortOrder === 'string' && /^(ASC|DESC)$/i.test(sortOrder)) ? sortOrder.toUpperCase() : 'DESC';
+    const sortByStr = typeof sortBy === 'string' ? sortBy.trim() : '';
+    const safeSortBy = sortByStr && allowedColumns.includes(sortByStr) ? sortByStr : 'created_at';
+    const sortOrderStr = typeof sortOrder === 'string' ? sortOrder.trim() : '';
+    const safeSortOrder = /^(ASC|DESC)$/i.test(sortOrderStr) ? sortOrderStr.toUpperCase() : 'DESC';
 
     const whereConditions = [];
     const params = [];
@@ -137,12 +150,9 @@ class Database {
       whereConditions.push('crawl_status = ?');
       params.push(crawlStatus);
     }
-    if (type) {
-      if (type === 'audiobook') {
-        whereConditions.push('(main_audio_url IS NOT NULL AND main_audio_url != "") OR (duration IS NOT NULL AND duration != "")');
-      } else if (type === 'ebook') {
-        whereConditions.push('(main_audio_url IS NULL OR main_audio_url = "") AND (duration IS NULL OR duration = "")');
-      }
+    if (type && (type === 'audiobook' || type === 'ebook')) {
+      whereConditions.push('"type" = ?');
+      params.push(type);
     }
     if (durationMin !== null) {
       whereConditions.push('duration >= ?');
@@ -172,7 +182,7 @@ class Database {
       duration_formatted: this.formatDuration(book.duration),
       created_at: new Date(book.created_at).toISOString(),
       updated_at: new Date(book.updated_at).toISOString(),
-      chapter_urls: book.chapter_urls ? JSON.parse(book.chapter_urls) : []
+      chapter_urls: this.parseChapterUrls(book.chapter_urls)
     }));
 
     return {
@@ -196,7 +206,7 @@ class Database {
         duration_formatted: this.formatDuration(book.duration),
         created_at: new Date(book.created_at).toISOString(),
         updated_at: new Date(book.updated_at).toISOString(),
-        chapter_urls: book.chapter_urls ? JSON.parse(book.chapter_urls) : []
+        chapter_urls: this.parseChapterUrls(book.chapter_urls)
       };
       if (book.last_edited_at) out.last_edited_at = new Date(book.last_edited_at).toISOString();
       return out;
@@ -228,7 +238,8 @@ class Database {
       ...book,
       duration_formatted: this.formatDuration(book.duration),
       created_at: new Date(book.created_at).toISOString(),
-      updated_at: new Date(book.updated_at).toISOString()
+      updated_at: new Date(book.updated_at).toISOString(),
+      chapter_urls: this.parseChapterUrls(book.chapter_urls)
     }));
 
     return {
@@ -351,6 +362,20 @@ class Database {
       avg_duration: Math.round(author.avg_duration || 0),
       total_duration: author.total_duration || 0
     }));
+  }
+
+  /**
+   * Parse chapter_urls from DB (JSON string). Returns [] for null, empty string, or invalid JSON.
+   */
+  parseChapterUrls(value) {
+    if (value == null || (typeof value === 'string' && value.trim() === '')) return [];
+    if (typeof value !== 'string') return Array.isArray(value) ? value : [];
+    try {
+      const parsed = JSON.parse(value);
+      return Array.isArray(parsed) ? parsed : [];
+    } catch {
+      return [];
+    }
   }
 
   formatDuration(seconds) {
