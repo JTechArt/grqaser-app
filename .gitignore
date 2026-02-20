@@ -18,3 +18,4 @@ logs/
 .bmad-*/
 books-admin-app/.env
 books-admin-app/data/**
+.vscode/settings.json
