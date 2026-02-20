@@ -149,3 +149,13 @@ export interface StorageUsage {
     other: number;
   };
 }
+
+export interface MobileDataUsage {
+  totalBytes: number;
+  period: string;
+  breakdown: {
+    streaming: number;
+    downloads: number;
+    dbUpdates: number;
+  };
+}

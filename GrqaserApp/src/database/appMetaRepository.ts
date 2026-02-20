@@ -225,6 +225,14 @@ export const appMetaRepository = {
     return results.rows.item(0).total;
   },
 
+  async getTotalDatabaseSize(): Promise<number> {
+    const {db} = assertConnected();
+    const [results] = await db.executeSql(
+      'SELECT COALESCE(SUM(file_size_bytes), 0) as total FROM managed_databases',
+    );
+    return results.rows.item(0).total;
+  },
+
   async getDownloadedBookIds(): Promise<string[]> {
     const {db} = assertConnected();
     const [results] = await db.executeSql(
