@@ -98,6 +98,41 @@ export const catalogRepository = {
     return results.rows.item(0).count;
   },
 
+  /**
+   * Get the download-ready audio URLs for a book.
+   * Multi-chapter books: parses `chapter_urls` JSON column.
+   * Single-file books: returns `[main_audio_url]`.
+   */
+  async getAudioUrls(
+    bookId: string | number,
+  ): Promise<{urls: string[]; hasChapters: boolean}> {
+    const {db} = assertConnected();
+    const [results] = await db.executeSql(
+      'SELECT main_audio_url, chapter_urls, has_chapters FROM books WHERE id = ? LIMIT 1',
+      [bookId],
+    );
+    if (results.rows.length === 0) {
+      return {urls: [], hasChapters: false};
+    }
+    const row = results.rows.item(0);
+    const hasChapters = row.has_chapters === 1 || row.has_chapters === true;
+    if (hasChapters && row.chapter_urls) {
+      try {
+        const parsed = JSON.parse(row.chapter_urls as string) as string[];
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          return {urls: parsed, hasChapters: true};
+        }
+      } catch {
+        // fall through to main_audio_url
+      }
+    }
+    const mainUrl = row.main_audio_url as string | null;
+    return {
+      urls: mainUrl ? [mainUrl] : [],
+      hasChapters: false,
+    };
+  },
+
   async getStats(): Promise<{
     totalBooks: number;
     audiobooks: number;

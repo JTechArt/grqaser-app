@@ -1,10 +1,10 @@
 /**
  * Repository for the app-metadata SQLite database (grqaser_app_meta.db).
- * Manages the managed_databases table. Other tables (downloaded_mp3s,
- * library_entries) are stubs for now — implemented in later stories.
+ * Manages the managed_databases and downloaded_mp3s tables.
+ * library_entries table is a stub for now — implemented in Story 8.4.
  */
 import {openDatabase, DatabaseConnection} from './connection';
-import {ManagedDatabase} from '../types/book';
+import {ManagedDatabase, DownloadedMp3} from '../types/book';
 
 let connection: DatabaseConnection | null = null;
 
@@ -20,12 +20,25 @@ const CREATE_MANAGED_DATABASES_TABLE = `
   )
 `;
 
+const CREATE_DOWNLOADED_MP3S_TABLE = `
+  CREATE TABLE IF NOT EXISTS downloaded_mp3s (
+    id TEXT PRIMARY KEY,
+    book_id TEXT NOT NULL,
+    chapter_index INTEGER,
+    file_path TEXT NOT NULL,
+    file_size_bytes INTEGER NOT NULL,
+    downloaded_at TEXT,
+    audio_url TEXT NOT NULL
+  )
+`;
+
 export async function initAppMetaDb(dbPath: string): Promise<void> {
   if (connection) {
     await connection.close();
   }
   connection = await openDatabase(dbPath);
   await connection.db.executeSql(CREATE_MANAGED_DATABASES_TABLE);
+  await connection.db.executeSql(CREATE_DOWNLOADED_MP3S_TABLE);
 }
 
 export async function closeAppMetaDb(): Promise<void> {
@@ -42,6 +55,29 @@ function assertConnected(): DatabaseConnection {
     );
   }
   return connection;
+}
+
+function rowToDownloadedMp3(row: Record<string, unknown>): DownloadedMp3 {
+  return {
+    id: row.id as string,
+    bookId: row.book_id as string,
+    chapterIndex:
+      row.chapter_index != null ? (row.chapter_index as number) : undefined,
+    filePath: row.file_path as string,
+    fileSizeBytes: row.file_size_bytes as number,
+    downloadedAt: (row.downloaded_at as string) ?? '',
+    sourceUrl: row.audio_url as string,
+  };
+}
+
+function rowsToDownloadedMp3Array(results: {
+  rows: {length: number; item(i: number): Record<string, unknown>};
+}): DownloadedMp3[] {
+  const items: DownloadedMp3[] = [];
+  for (let i = 0; i < results.rows.length; i++) {
+    items.push(rowToDownloadedMp3(results.rows.item(i)));
+  }
+  return items;
 }
 
 function rowToManagedDatabase(row: Record<string, unknown>): ManagedDatabase {
@@ -124,5 +160,72 @@ export const appMetaRepository = {
       return null;
     }
     return rowToManagedDatabase(results.rows.item(0));
+  },
+
+  // --- downloaded_mp3s CRUD ---
+
+  async insertDownloadedMp3(entry: DownloadedMp3): Promise<void> {
+    const {db} = assertConnected();
+    await db.executeSql(
+      'INSERT OR REPLACE INTO downloaded_mp3s (id, book_id, chapter_index, file_path, file_size_bytes, downloaded_at, audio_url) VALUES (?, ?, ?, ?, ?, ?, ?)',
+      [
+        entry.id,
+        entry.bookId,
+        entry.chapterIndex ?? null,
+        entry.filePath,
+        entry.fileSizeBytes,
+        entry.downloadedAt,
+        entry.sourceUrl,
+      ],
+    );
+  },
+
+  async getDownloadsByBookId(bookId: string): Promise<DownloadedMp3[]> {
+    const {db} = assertConnected();
+    const [results] = await db.executeSql(
+      'SELECT * FROM downloaded_mp3s WHERE book_id = ? ORDER BY chapter_index ASC',
+      [bookId],
+    );
+    return rowsToDownloadedMp3Array(results);
+  },
+
+  async getAllDownloads(): Promise<DownloadedMp3[]> {
+    const {db} = assertConnected();
+    const [results] = await db.executeSql(
+      'SELECT * FROM downloaded_mp3s ORDER BY downloaded_at DESC',
+    );
+    return rowsToDownloadedMp3Array(results);
+  },
+
+  async deleteDownloadsByBookId(bookId: string): Promise<void> {
+    const {db} = assertConnected();
+    await db.executeSql('DELETE FROM downloaded_mp3s WHERE book_id = ?', [
+      bookId,
+    ]);
+  },
+
+  async deleteAllDownloadRecords(): Promise<void> {
+    const {db} = assertConnected();
+    await db.executeSql('DELETE FROM downloaded_mp3s');
+  },
+
+  async getTotalDownloadSize(): Promise<number> {
+    const {db} = assertConnected();
+    const [results] = await db.executeSql(
+      'SELECT COALESCE(SUM(file_size_bytes), 0) as total FROM downloaded_mp3s',
+    );
+    return results.rows.item(0).total;
+  },
+
+  async getDownloadedBookIds(): Promise<string[]> {
+    const {db} = assertConnected();
+    const [results] = await db.executeSql(
+      'SELECT DISTINCT book_id FROM downloaded_mp3s',
+    );
+    const ids: string[] = [];
+    for (let i = 0; i < results.rows.length; i++) {
+      ids.push(results.rows.item(i).book_id as string);
+    }
+    return ids;
   },
 };
