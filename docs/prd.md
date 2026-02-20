@@ -150,6 +150,7 @@ Grqaser (“book lover” in Armenian) is an ecosystem of three applications aro
 5. **Epic 5: Quality, release, and operations** — Testing, build, and deployment for **books-admin-app** and GrqaserApp. Books-admin-app is the single admin application (merge of crawler and database-viewer); verification and runbooks target books-admin-app. Can be planned per application; phase order: verify books-admin-app first, then GrqaserApp.
 6. **Epic 6: Books Admin App** — Merge crawler and database-viewer into books-admin-app, add DB versioning, crawler control/config, and data view/edit. See docs/prd/epic-6.md.
 7. **Epic 7: Remove crawler and database-viewer** — After books-admin-app parity is verified (Epic 5 / Story 7.1), remove standalone crawler and database-viewer; update docs and CI. Optional: books-admin-app UI/UX polish. See docs/prd/epic-7.md.
+8. **Epic 8: GrqaserApp local data, offline playback, and settings** — Mobile catalog from local SQLite (no API); MP3 download/offline and cleanup; load DB from internet (GitHub), manage/refresh/remove DBs; remove categories; Library auto-add; Settings storage and data usage. See docs/prd/epic-8.md.
 
 ---
 

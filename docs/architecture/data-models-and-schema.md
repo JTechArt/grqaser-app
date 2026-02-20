@@ -72,14 +72,68 @@ Current canonical schema:
 - All three applications must use the same schema; any change is made in the crawler first, then reflected in viewer and app consumption.
 - Required fields and types must be validated before write in the crawler; invalid rows logged/skipped.
 
+## GrqaserApp mobile-specific schemas (Epic 8)
+
+**After Epic 8:** GrqaserApp reads catalog data from a **local SQLite database** (same books table schema as the canonical crawler output). The following additional tables are **mobile-only** — they exist in the app's local storage (separate from the catalog DB or in a dedicated app metadata DB) and are never synced to the server.
+
+### managed_databases
+
+Tracks catalog database files loaded into the app. One row per downloaded DB version.
+
+| Column | Type | Constraints | Notes |
+|--------|------|-------------|-------|
+| id | TEXT | PRIMARY KEY | UUID or slug (e.g. `db-v1-20260215`). |
+| display_name | TEXT | NOT NULL | User-visible label (e.g. "Catalog v1 — Feb 2026"). |
+| source_url | TEXT | NOT NULL | Public URL the DB was downloaded from. |
+| file_path | TEXT | NOT NULL | Local file system path to the `.db` file. |
+| file_size_bytes | INTEGER | NOT NULL | Size of the DB file on disk. |
+| downloaded_at | TEXT | NOT NULL | ISO-8601 timestamp of download. |
+| is_active | INTEGER | DEFAULT 0 | 1 = this DB is the active catalog; only one row should be 1 at a time. |
+
+**Rules:** Only the active DB is used for catalog reads. Refresh downloads a new copy alongside the existing one (does not overwrite). The active DB cannot be removed until another DB is set active.
+
+### downloaded_mp3s
+
+Tracks MP3 files downloaded for offline playback, per book.
+
+| Column | Type | Constraints | Notes |
+|--------|------|-------------|-------|
+| id | TEXT | PRIMARY KEY | UUID or `{book_id}_{chapter_index}`. |
+| book_id | TEXT | NOT NULL | References the book ID in the active catalog DB. |
+| chapter_index | INTEGER | | Chapter index (NULL for single-file books). |
+| file_path | TEXT | NOT NULL | Local file system path to the downloaded MP3. |
+| file_size_bytes | INTEGER | NOT NULL | Size of the MP3 file on disk. |
+| downloaded_at | TEXT | NOT NULL | ISO-8601 timestamp. |
+| audio_url | TEXT | NOT NULL | Original streaming URL (for re-download or fallback reference). |
+
+**Cleanup:** "Clean all" deletes all rows and files; "clean per book" deletes rows and files for chosen `book_id`(s). After cleanup, playback falls back to streaming (online) or shows offline message.
+
+### library_entries
+
+Tracks books auto-added to the Library when the user opens them.
+
+| Column | Type | Constraints | Notes |
+|--------|------|-------------|-------|
+| book_id | TEXT | PRIMARY KEY | References the book ID in the active catalog DB. |
+| added_at | TEXT | NOT NULL | ISO-8601 timestamp of when the book was first opened. |
+| last_opened_at | TEXT | NOT NULL | ISO-8601 timestamp of the most recent open. |
+
+**Rules:** Auto-added on book open (detail or playback); manual remove deletes the row. Re-opening a removed book re-inserts a new row.
+
+### Notes on mobile schema management
+
+- These tables can live in a **dedicated app metadata SQLite database** (e.g. `grqaser_app_meta.db`) separate from the catalog databases, so that catalog DB swaps do not affect download tracking, library entries, or DB management metadata.
+- Storage and mobile data usage (Story 8.5) are computed at runtime from `downloaded_mp3s` (sum of `file_size_bytes`), `managed_databases` (sum of `file_size_bytes`), and platform APIs for mobile data consumption. No separate table is required.
+
 ## TypeScript / client types
 
 - GrqaserApp and database-viewer API responses should align with this schema. Shared types (e.g. `Book`, duration shape) can be defined in a shared location or duplicated per app and kept in sync with this document.
 - Duration: structured (e.g. hours, minutes) and/or formatted string (e.g. "0ժ 51ր") per PRD/Story 1.1.
+- **Epic 8 types:** `ManagedDatabase`, `DownloadedMp3`, `LibraryEntry`, `StorageUsage` (computed) should be defined in `GrqaserApp/src/types/` and align with the mobile-specific schemas above.
 
 ## References
 
-- PRD FR1–FR5 (crawler), FR6–FR7 (database-viewer), FR8–FR13 (GrqaserApp).
+- PRD FR1–FR5 (crawler), FR6–FR7 (database-viewer), FR8–FR13 (GrqaserApp), **Epic 8** (local data, offline, settings).
 - [Crawler pipeline and data contract](./crawler-pipeline-and-data-contract.md) — How the crawler fills this schema.
 - [Database-viewer API and deployment](./database-viewer-api-and-deployment.md) — How the viewer exposes books/stats/crawler.
-- [GrqaserApp data integration and audio](./grqaserapp-data-integration-and-audio.md) — How the app consumes this data.
+- [GrqaserApp data integration and audio](./grqaserapp-data-integration-and-audio.md) — How the app consumes this data (local SQLite after Epic 8).

@@ -34,3 +34,17 @@ Mockups are static HTML/CSS only; no backend. Use them as the reference when imp
 ## Epic 7
 
 UI/UX improvements for both applications are covered in Epic 7. Stories reference these mockups and the design system; implementation must follow the same structure, colors, and patterns.
+
+## Epic 8
+
+GrqaserApp mockups updated to reflect Epic 8 UI/UX changes (local data, offline playback, settings):
+
+- **Book detail** (`grqaser-app/book-detail.html`): Added download button for offline MP3 playback (Story 8.2).
+- **Library** (`grqaser-app/library.html`): Added remove button on library items for manual removal (Story 8.4); downloaded-badge indicator on books available offline (Story 8.2).
+- **Profile / Settings** (`grqaser-app/profile.html`): Major expansion with three new sections:
+  - **Storage Usage** — allocated vs used with percentage bar and breakdown by MP3s, databases, other (Story 8.5).
+  - **Mobile Data Usage** — monthly data with streaming/downloads/DB update breakdown (Story 8.5).
+  - **Downloads** — per-book cleanup and "Clean All" action (Story 8.2).
+  - **Catalog Databases** — list loaded DBs (size, date, active badge), refresh/set-active/remove actions, and "Load New Database from URL" (Story 8.3).
+- **Story 8.1** (remove categories): No mockup change needed; current mockups already have no categories section.
+- **Story 8.4** (Library auto-add): Auto-add is a behavioral change; no new UI elements beyond the remove button already added.
