@@ -10,13 +10,12 @@ import {RootStackParamList} from '../navigation/types';
 import {RootState, AppDispatch} from '../state';
 import {
   fetchBooks,
-  fetchCategories,
   setSearchQuery,
   clearError,
 } from '../state/slices/booksSlice';
-import {Book, BookCategory} from '../types/book';
+import {initializeDatabases} from '../state/slices/databaseSlice';
+import {Book} from '../types/book';
 import BookCard from '../components/BookCard';
-import CategoryCard from '../components/CategoryCard';
 import MiniPlayer from '../components/MiniPlayer';
 import {theme} from '../theme';
 
@@ -28,23 +27,34 @@ type HomeScreenNavigationProp = StackNavigationProp<
 const HomeScreen: React.FC = () => {
   const navigation = useNavigation<HomeScreenNavigationProp>();
   const dispatch = useDispatch<AppDispatch>();
-  // theme from '../theme' used for consistency; useTheme() would shadow import
   const [refreshing, setRefreshing] = useState(false);
-  const [_searchVisible, _setSearchVisible] = useState(false);
 
-  const {books, filteredBooks, categories, loading, error, searchQuery} =
-    useSelector((state: RootState) => state.books);
-
+  const {books, filteredBooks, loading, error, searchQuery} = useSelector(
+    (state: RootState) => state.books,
+  );
   const {currentBook} = useSelector((state: RootState) => state.player);
+  const {initialized: dbInitialized, error: dbError} = useSelector(
+    (state: RootState) => state.database,
+  );
+  const favoritesCount = useSelector(
+    (state: RootState) => state.books.favorites.length,
+  );
 
   useEffect(() => {
-    dispatch(fetchBooks());
-    dispatch(fetchCategories());
-  }, [dispatch]);
+    if (!dbInitialized) {
+      dispatch(initializeDatabases()).then(action => {
+        if (action.meta.requestStatus === 'fulfilled') {
+          dispatch(fetchBooks());
+        }
+      });
+    } else {
+      dispatch(fetchBooks());
+    }
+  }, [dispatch, dbInitialized]);
 
   const onRefresh = async () => {
     setRefreshing(true);
-    await Promise.all([dispatch(fetchBooks()), dispatch(fetchCategories())]);
+    await dispatch(fetchBooks());
     setRefreshing(false);
   };
 
@@ -56,13 +66,11 @@ const HomeScreen: React.FC = () => {
     navigation.navigate('BookDetail', {book});
   };
 
-  const handleCategoryPress = (category: BookCategory) => {
-    navigation.navigate('Category', {category});
-  };
-
   const handleSearchPress = () => {
     navigation.navigate('Search', {initialQuery: searchQuery});
   };
+
+  const displayError = dbError || error;
 
   const renderHeader = () => (
     <LinearGradient
@@ -85,45 +93,23 @@ const HomeScreen: React.FC = () => {
     </LinearGradient>
   );
 
+  const audiobookCount = books.filter(b => b.type === 'audiobook').length;
+  const ebookCount = books.filter(b => b.type === 'ebook').length;
+
   const renderStats = () => (
     <View style={styles.statsContainer}>
       <View style={styles.statItem}>
-        <Text style={styles.statNumber}>{books.length}</Text>
-        <Text style={styles.statLabel}>Total Books</Text>
-      </View>
-      <View style={styles.statItem}>
-        <Text style={styles.statNumber}>
-          {books.filter(book => book.type === 'audiobook').length}
-        </Text>
+        <Text style={styles.statNumber}>{audiobookCount}</Text>
         <Text style={styles.statLabel}>Audiobooks</Text>
       </View>
       <View style={styles.statItem}>
-        <Text style={styles.statNumber}>
-          {books.filter(book => book.type === 'ebook').length}
-        </Text>
+        <Text style={styles.statNumber}>{ebookCount}</Text>
         <Text style={styles.statLabel}>E-books</Text>
       </View>
-    </View>
-  );
-
-  const renderCategories = () => (
-    <View style={styles.section}>
-      <View style={styles.sectionHeader}>
-        <Text style={styles.sectionTitle}>Categories</Text>
-        <Text style={styles.seeAllText}>See All</Text>
+      <View style={styles.statItem}>
+        <Text style={styles.statNumber}>{favoritesCount}</Text>
+        <Text style={styles.statLabel}>Favorites</Text>
       </View>
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        contentContainerStyle={styles.categoriesContainer}>
-        {categories.slice(0, 6).map(category => (
-          <CategoryCard
-            key={category.id}
-            category={category}
-            onPress={() => handleCategoryPress(category)}
-          />
-        ))}
-      </ScrollView>
     </View>
   );
 
@@ -131,7 +117,6 @@ const HomeScreen: React.FC = () => {
     <View style={styles.section}>
       <View style={styles.sectionHeader}>
         <Text style={styles.sectionTitle}>Featured Books</Text>
-        <Text style={styles.seeAllText}>See All</Text>
       </View>
       {loading ? (
         <ActivityIndicator size="large" color={theme.colors.primary} />
@@ -173,7 +158,6 @@ const HomeScreen: React.FC = () => {
       <View style={styles.section}>
         <View style={styles.sectionHeader}>
           <Text style={styles.sectionTitle}>Recently Played</Text>
-          <Text style={styles.seeAllText}>See All</Text>
         </View>
         <ScrollView
           horizontal
@@ -194,9 +178,9 @@ const HomeScreen: React.FC = () => {
 
   return (
     <View style={styles.container}>
-      {error ? (
+      {displayError ? (
         <Banner
-          visible={!!error}
+          visible={!!displayError}
           actions={[
             {
               label: 'Dismiss',
@@ -204,7 +188,7 @@ const HomeScreen: React.FC = () => {
             },
           ]}
           icon="alert">
-          {error}
+          {displayError}
         </Banner>
       ) : null}
       <ScrollView
@@ -215,7 +199,6 @@ const HomeScreen: React.FC = () => {
         showsVerticalScrollIndicator={false}>
         {renderHeader()}
         {renderStats()}
-        {renderCategories()}
         {renderRecentBooks()}
         {renderBooks()}
       </ScrollView>
@@ -295,13 +278,6 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontWeight: '600',
     color: theme.colors.text,
-  },
-  seeAllText: {
-    fontSize: 14,
-    color: theme.colors.primary,
-  },
-  categoriesContainer: {
-    paddingHorizontal: 20,
   },
   booksGrid: {
     flexDirection: 'row',

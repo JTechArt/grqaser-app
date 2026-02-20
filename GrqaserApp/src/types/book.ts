@@ -34,15 +34,6 @@ export interface Chapter {
   progress?: number; // 0-100
 }
 
-export interface BookCategory {
-  id: string;
-  name: string;
-  description?: string;
-  icon?: string;
-  bookCount: number;
-  color?: string;
-}
-
 export interface BookFilter {
   category: string;
   type: 'all' | 'audiobook' | 'ebook';
@@ -116,4 +107,45 @@ export interface BookStatistics {
     author: string;
     count: number;
   }>;
+}
+
+// Epic 8 types — aligned with mobile-specific schemas
+
+export interface ManagedDatabase {
+  id: string;
+  displayName: string;
+  sourceUrl: string;
+  filePath: string;
+  fileSizeBytes: number;
+  downloadedAt?: string; // ISO-8601
+  isActive: boolean;
+}
+
+export interface DownloadedMp3 {
+  id: string;
+  bookId: string;
+  chapterIndex?: number;
+  filePath: string;
+  fileSizeBytes: number;
+  downloadedAt: string; // ISO-8601
+  sourceUrl: string;
+}
+
+export interface LibraryEntry {
+  id: string;
+  bookId: string;
+  addedAt: string; // ISO-8601
+  lastOpenedAt?: string; // ISO-8601
+  source: 'auto' | 'manual';
+}
+
+export interface StorageUsage {
+  allocatedBytes: number;
+  usedBytes: number;
+  percentage: number;
+  breakdown: {
+    databases: number;
+    mp3s: number;
+    other: number;
+  };
 }
