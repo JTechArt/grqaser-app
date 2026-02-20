@@ -4,6 +4,7 @@
  */
 import RNFS from 'react-native-fs';
 import {DownloadedMp3} from '../types/book';
+import {storageService} from './storageService';
 
 const MP3_DIR = `${RNFS.DocumentDirectoryPath}/mp3downloads`;
 
@@ -99,6 +100,8 @@ export const downloadManager = {
           downloadedAt: now,
           sourceUrl: url,
         });
+
+        storageService.trackDataUsage('downloads', fileSize).catch(() => {});
       }
     } catch (err) {
       const dirExists = await RNFS.exists(dir);

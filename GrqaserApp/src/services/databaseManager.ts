@@ -7,6 +7,7 @@
 import RNFS from 'react-native-fs';
 import {ManagedDatabase} from '../types/book';
 import {appMetaRepository} from '../database/appMetaRepository';
+import {storageService} from './storageService';
 
 const DB_DIR = `${RNFS.DocumentDirectoryPath}/databases`;
 
@@ -100,6 +101,10 @@ export const databaseManager = {
     if (isFirst) {
       await appMetaRepository.setActiveDatabase(dbId);
     }
+
+    storageService
+      .trackDataUsage('dbUpdates', entry.fileSizeBytes)
+      .catch(() => {});
 
     return entry;
   },

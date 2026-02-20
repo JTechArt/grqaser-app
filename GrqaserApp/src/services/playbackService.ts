@@ -6,9 +6,16 @@ import TrackPlayer, {Event} from 'react-native-track-player';
 import {store} from '../state';
 import {setError, setPlaying} from '../state/slices/playerSlice';
 import {savePlaybackPosition} from './preferencesStorage';
+import {storageService} from './storageService';
 
 const POSITION_SAVE_INTERVAL_MS = 10000;
+const ESTIMATED_BITRATE_BYTES_PER_SEC = 16000; // ~128kbps MP3
 let lastPositionSaveAt = 0;
+let lastStreamingPosition = 0;
+
+export function resetStreamingPosition(): void {
+  lastStreamingPosition = 0;
+}
 
 export async function PlaybackService(): Promise<void> {
   TrackPlayer.addEventListener(Event.RemotePlay, () => {
@@ -45,7 +52,7 @@ export async function PlaybackService(): Promise<void> {
     }
   });
 
-  // Persist playback position per book (throttled)
+  // Persist playback position per book (throttled) and track streaming data
   TrackPlayer.addEventListener(Event.PlaybackProgressUpdated, async ev => {
     const now = Date.now();
     if (now - lastPositionSaveAt < POSITION_SAVE_INTERVAL_MS) {
@@ -56,6 +63,19 @@ export async function PlaybackService(): Promise<void> {
     if (bookId && typeof ev.position === 'number') {
       lastPositionSaveAt = now;
       savePlaybackPosition(bookId, ev.position).catch(() => {});
+
+      const url = track?.url as string | undefined;
+      const isStreaming = url != null && !url.startsWith('file://');
+      if (isStreaming && ev.position > lastStreamingPosition) {
+        const delta = ev.position - lastStreamingPosition;
+        const estimatedBytes = Math.round(
+          delta * ESTIMATED_BITRATE_BYTES_PER_SEC,
+        );
+        storageService
+          .trackDataUsage('streaming', estimatedBytes)
+          .catch(() => {});
+      }
+      lastStreamingPosition = ev.position;
     }
   });
 }

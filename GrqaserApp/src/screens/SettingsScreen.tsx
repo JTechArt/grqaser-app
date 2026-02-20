@@ -4,6 +4,7 @@ import {
   StyleSheet,
   Alert,
   TextStyle,
+  ViewStyle,
   Modal,
   TextInput,
   ScrollView,
@@ -34,24 +35,17 @@ import {
   switchActiveDb,
   removeDb,
 } from '../state/slices/databaseSlice';
+import {storageService} from '../services/storageService';
+import type {StorageUsage, MobileDataUsage} from '../types/book';
 import type {ThemeMode} from '../theme';
 import {theme as appTheme} from '../theme';
+import {formatFileSize} from '../utils/formatters';
 
 const THEME_OPTIONS: {value: ThemeMode; label: string}[] = [
   {value: 'light', label: 'Light'},
   {value: 'dark', label: 'Dark'},
   {value: 'auto', label: 'System (auto)'},
 ];
-
-function formatBytes(bytes: number): string {
-  if (bytes === 0) {
-    return '0 B';
-  }
-  const k = 1024;
-  const sizes = ['B', 'KB', 'MB', 'GB'];
-  const i = Math.floor(Math.log(bytes) / Math.log(k));
-  return `${(bytes / Math.pow(k, i)).toFixed(1)} ${sizes[i]}`;
-}
 
 function formatDate(iso: string | undefined): string {
   if (!iso) {
@@ -81,6 +75,24 @@ function formatDate(iso: string | undefined): string {
   }
 }
 
+const TEAL_DOT = appTheme.colors.primary;
+const INDIGO_DOT = '#6366f1';
+const MUTED_DOT = appTheme.colors.onSurface;
+
+interface BreakdownItemProps {
+  color: string;
+  label: string;
+  value: string;
+}
+
+const BreakdownItem: React.FC<BreakdownItemProps> = ({color, label, value}) => (
+  <View style={styles.breakdownRow}>
+    <View style={[styles.breakdownDot, {backgroundColor: color}]} />
+    <Text style={styles.breakdownLabel}>{label}</Text>
+    <Text style={styles.breakdownValue}>{value}</Text>
+  </View>
+);
+
 const SettingsScreen: React.FC = () => {
   const theme = useTheme();
   const dispatch = useDispatch<AppDispatch>();
@@ -106,10 +118,27 @@ const SettingsScreen: React.FC = () => {
   const [urlModalVisible, setUrlModalVisible] = useState(false);
   const [urlInput, setUrlInput] = useState('');
 
+  const [storageUsage, setStorageUsage] = useState<StorageUsage | null>(null);
+  const [dataUsage, setDataUsage] = useState<MobileDataUsage | null>(null);
+
+  const loadUsageMetrics = useCallback(async () => {
+    try {
+      const [su, du] = await Promise.all([
+        storageService.getStorageUsage(),
+        storageService.getMobileDataUsage(),
+      ]);
+      setStorageUsage(su);
+      setDataUsage(du);
+    } catch {
+      // metrics are best-effort
+    }
+  }, []);
+
   useEffect(() => {
     dispatch(loadDownloadState());
     dispatch(fetchManagedDatabases());
-  }, [dispatch]);
+    loadUsageMetrics();
+  }, [dispatch, loadUsageMetrics]);
 
   const downloadedBooks = useMemo(
     () => books.filter(b => downloadedBookIds.includes(b.id)),
@@ -130,7 +159,9 @@ const SettingsScreen: React.FC = () => {
         {
           text: 'Remove',
           style: 'destructive',
-          onPress: () => dispatch(cleanupBook(bookId)),
+          onPress: () => {
+            dispatch(cleanupBook(bookId)).then(() => loadUsageMetrics());
+          },
         },
       ],
     );
@@ -145,7 +176,9 @@ const SettingsScreen: React.FC = () => {
         {
           text: 'Remove All',
           style: 'destructive',
-          onPress: () => dispatch(cleanupAll()),
+          onPress: () => {
+            dispatch(cleanupAll()).then(() => loadUsageMetrics());
+          },
         },
       ],
     );
@@ -165,14 +198,14 @@ const SettingsScreen: React.FC = () => {
     }
     setUrlModalVisible(false);
     setUrlInput('');
-    dispatch(loadNewDatabase(trimmed));
-  }, [urlInput, dispatch]);
+    dispatch(loadNewDatabase(trimmed)).then(() => loadUsageMetrics());
+  }, [urlInput, dispatch, loadUsageMetrics]);
 
   const handleRefresh = useCallback(
     (dbId: string) => {
-      dispatch(refreshDb(dbId));
+      dispatch(refreshDb(dbId)).then(() => loadUsageMetrics());
     },
-    [dispatch],
+    [dispatch, loadUsageMetrics],
   );
 
   const handleSetActive = useCallback(
@@ -192,17 +225,157 @@ const SettingsScreen: React.FC = () => {
           {
             text: 'Remove',
             style: 'destructive',
-            onPress: () => dispatch(removeDb(dbId)),
+            onPress: () => {
+              dispatch(removeDb(dbId)).then(() => loadUsageMetrics());
+            },
           },
         ],
       );
     },
-    [dispatch],
+    [dispatch, loadUsageMetrics],
   );
+
+  const storageBarWidth =
+    storageUsage && storageUsage.percentage > 0
+      ? `${Math.min(storageUsage.percentage, 100)}%`
+      : '0%';
 
   return (
     <ScrollView
       style={[styles.container, {backgroundColor: theme.colors.background}]}>
+      {/* Storage Usage Section */}
+      <List.Section>
+        <List.Subheader>STORAGE USAGE</List.Subheader>
+        <View style={styles.usageCard}>
+          <View style={styles.usageHeader}>
+            <Text style={styles.usageLabel}>App Storage</Text>
+            <Text style={styles.usageValue}>
+              {storageUsage
+                ? `${formatFileSize(storageUsage.usedBytes)} / ${formatFileSize(
+                    storageUsage.allocatedBytes,
+                  )}`
+                : '—'}
+            </Text>
+          </View>
+          <View style={styles.progressTrack}>
+            <View
+              style={
+                [styles.progressFill, {width: storageBarWidth}] as ViewStyle[]
+              }
+            />
+          </View>
+          <Text style={styles.percentageText}>
+            {storageUsage ? `${storageUsage.percentage}% used` : '—'}
+          </Text>
+          {storageUsage && (
+            <View style={styles.breakdownContainer}>
+              <BreakdownItem
+                color={TEAL_DOT}
+                label="Downloaded MP3s"
+                value={formatFileSize(storageUsage.breakdown.mp3s)}
+              />
+              <BreakdownItem
+                color={INDIGO_DOT}
+                label="Databases"
+                value={formatFileSize(storageUsage.breakdown.databases)}
+              />
+              <BreakdownItem
+                color={MUTED_DOT}
+                label="Other"
+                value={formatFileSize(storageUsage.breakdown.other)}
+              />
+            </View>
+          )}
+        </View>
+      </List.Section>
+
+      {/* Mobile Data Usage Section */}
+      <List.Section>
+        <List.Subheader>MOBILE DATA USAGE</List.Subheader>
+        <View style={styles.usageCard}>
+          <View style={styles.usageHeader}>
+            <Text style={styles.usageLabel}>
+              {dataUsage?.period ?? 'This Month'}
+            </Text>
+            <Text style={styles.usageValue}>
+              {dataUsage ? formatFileSize(dataUsage.totalBytes) : '—'}
+            </Text>
+          </View>
+          {dataUsage && (
+            <View style={styles.breakdownContainer}>
+              <BreakdownItem
+                color={TEAL_DOT}
+                label="Streaming"
+                value={formatFileSize(dataUsage.breakdown.streaming)}
+              />
+              <BreakdownItem
+                color={INDIGO_DOT}
+                label="Downloads"
+                value={formatFileSize(dataUsage.breakdown.downloads)}
+              />
+              <BreakdownItem
+                color={MUTED_DOT}
+                label="DB Updates"
+                value={formatFileSize(dataUsage.breakdown.dbUpdates)}
+              />
+            </View>
+          )}
+        </View>
+      </List.Section>
+
+      {/* Downloads Section */}
+      <List.Section>
+        <List.Subheader>Downloads</List.Subheader>
+        {downloadedBooks.length === 0 ? (
+          <View style={styles.emptyDownloads}>
+            <Text style={styles.hintText}>No downloaded MP3s</Text>
+          </View>
+        ) : (
+          <>
+            {downloadedBooks.map(book => (
+              <View key={book.id} style={styles.downloadItem}>
+                <View style={styles.downloadInfo}>
+                  <Text style={styles.downloadTitle} numberOfLines={1}>
+                    {book.title}
+                  </Text>
+                  <Text style={styles.downloadSize}>{book.author}</Text>
+                </View>
+                <Button
+                  mode="outlined"
+                  compact
+                  onPress={() => handleCleanBook(book.id, book.title)}
+                  textColor={appTheme.colors.error}
+                  style={styles.cleanBtn}>
+                  Clean
+                </Button>
+              </View>
+            ))}
+            <View style={styles.storageRow}>
+              <Icon
+                name="harddisk"
+                size={16}
+                color={appTheme.colors.onSurface}
+              />
+              <Text style={styles.storageText}>
+                Total: {formatFileSize(totalStorageUsed)}
+              </Text>
+            </View>
+            <Button
+              mode="outlined"
+              onPress={handleCleanAll}
+              textColor={appTheme.colors.error}
+              style={styles.cleanAllBtn}
+              icon="delete-outline">
+              Clean All Downloads
+            </Button>
+          </>
+        )}
+        <Text style={styles.hintText}>
+          Remove downloaded MP3s to free storage. Playback falls back to
+          streaming when online.
+        </Text>
+      </List.Section>
+
       {/* Catalog Databases Section */}
       <List.Section>
         <List.Subheader>CATALOG DATABASES</List.Subheader>
@@ -228,7 +401,7 @@ const SettingsScreen: React.FC = () => {
                   )}
                 </View>
                 <Text style={styles.dbMeta}>
-                  {formatBytes(db.fileSizeBytes)}
+                  {formatFileSize(db.fileSizeBytes)}
                   {db.downloadedAt ? ` · ${formatDate(db.downloadedAt)}` : ''}
                 </Text>
               </View>
@@ -306,62 +479,9 @@ const SettingsScreen: React.FC = () => {
         </Text>
       </List.Section>
 
-      {/* Downloads Section */}
+      {/* General Settings */}
       <List.Section>
-        <List.Subheader>Downloads</List.Subheader>
-        {downloadedBooks.length === 0 ? (
-          <View style={styles.emptyDownloads}>
-            <Text style={styles.hintText}>No downloaded MP3s</Text>
-          </View>
-        ) : (
-          <>
-            {downloadedBooks.map(book => (
-              <View key={book.id} style={styles.downloadItem}>
-                <View style={styles.downloadInfo}>
-                  <Text style={styles.downloadTitle} numberOfLines={1}>
-                    {book.title}
-                  </Text>
-                  <Text style={styles.downloadSize}>{book.author}</Text>
-                </View>
-                <Button
-                  mode="outlined"
-                  compact
-                  onPress={() => handleCleanBook(book.id, book.title)}
-                  textColor={appTheme.colors.error}
-                  style={styles.cleanBtn}>
-                  Clean
-                </Button>
-              </View>
-            ))}
-            <View style={styles.storageRow}>
-              <Icon
-                name="harddisk"
-                size={16}
-                color={appTheme.colors.onSurface}
-              />
-              <Text style={styles.storageText}>
-                Total: {formatBytes(totalStorageUsed)}
-              </Text>
-            </View>
-            <Button
-              mode="outlined"
-              onPress={handleCleanAll}
-              textColor={appTheme.colors.error}
-              style={styles.cleanAllBtn}
-              icon="delete-outline">
-              Clean All Downloads
-            </Button>
-          </>
-        )}
-        <Text style={styles.hintText}>
-          Remove downloaded MP3s to free storage. Playback falls back to
-          streaming when online.
-        </Text>
-      </List.Section>
-
-      {/* Appearance Section */}
-      <List.Section>
-        <List.Subheader>Appearance</List.Subheader>
+        <List.Subheader>GENERAL SETTINGS</List.Subheader>
         <RadioButton.Group
           onValueChange={v => handleThemeChange(v as ThemeMode)}
           value={themeMode}>
@@ -439,6 +559,73 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 8,
   },
+
+  // Usage card styles (shared by storage & data usage)
+  usageCard: {
+    marginHorizontal: 16,
+    borderWidth: 1,
+    borderColor: appTheme.colors.outline,
+    borderRadius: 12,
+    padding: 16,
+    ...appTheme.shadows.small,
+    backgroundColor: appTheme.colors.surface,
+  },
+  usageHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 10,
+  },
+  usageLabel: {
+    ...appTheme.typography.body2,
+    color: appTheme.colors.text,
+    fontWeight: '600',
+  } as TextStyle,
+  usageValue: {
+    ...appTheme.typography.body2,
+    color: appTheme.colors.primary,
+    fontWeight: '700',
+  } as TextStyle,
+  progressTrack: {
+    height: 8,
+    backgroundColor: appTheme.colors.outline,
+    borderRadius: 4,
+    overflow: 'hidden' as const,
+  },
+  progressFill: {
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: appTheme.colors.primary,
+  },
+  percentageText: {
+    ...appTheme.typography.caption,
+    color: appTheme.colors.onSurface,
+    marginTop: 6,
+  } as TextStyle,
+  breakdownContainer: {
+    marginTop: 12,
+    gap: 6,
+  },
+  breakdownRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  breakdownDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    marginRight: 8,
+  },
+  breakdownLabel: {
+    ...appTheme.typography.caption,
+    color: appTheme.colors.text,
+    flex: 1,
+  } as TextStyle,
+  breakdownValue: {
+    ...appTheme.typography.caption,
+    color: appTheme.colors.onSurface,
+    fontWeight: '600',
+  } as TextStyle,
 
   // Database management styles
   dbItem: {

@@ -1,0 +1,62 @@
+schema: 1
+story: '8.5'
+story_title: 'Settings — storage usage and mobile data usage'
+gate: PASS
+status_reason: 'All acceptance criteria met. Previous CONCERNS (streaming tracking, "Other" storage, missing tests) fully resolved. 132 tests pass, 0 lint errors.'
+reviewer: 'Quinn (Test Architect)'
+updated: '2026-02-21T20:00:00Z'
+
+top_issues:
+  - id: 'PERF-001'
+    severity: low
+    finding: 'Streaming data usage uses a fixed 128kbps bitrate estimate rather than actual bytes transferred. Accuracy depends on actual audio bitrate.'
+    suggested_action: 'If higher accuracy is needed in future, query TrackPlayer for actual bitrate or use a network metering layer.'
+    suggested_owner: dev
+  - id: 'PERF-002'
+    severity: low
+    finding: 'getDocumentDirSize scans only top-level items (not recursive), so "Other" may undercount for non-tracked nested subdirectories.'
+    suggested_action: 'Acceptable for best-effort metric. Consider recursive scan if users report inaccurate "Other" values.'
+    suggested_owner: dev
+
+waiver: { active: false }
+
+quality_score: 90
+expires: '2026-03-07T20:00:00Z'
+
+evidence:
+  tests_reviewed: 28
+  risks_identified: 0
+  trace:
+    ac_covered: [1, 2, 3, 4]
+    ac_gaps: []
+
+nfr_validation:
+  _assessed: [security, performance, reliability, maintainability]
+  security:
+    status: PASS
+    notes: 'Local data only. AsyncStorage key namespaced. No sensitive data exposed.'
+  performance:
+    status: PASS
+    notes: 'Parallel async fetching with Promise.all (4 concurrent ops). Streaming tracking throttled to 10s intervals. Metrics best-effort, do not block UI.'
+  reliability:
+    status: PASS
+    notes: 'All error paths gracefully handled with silent catch. Monthly auto-reset for data usage. Minor theoretical race condition in trackDataUsage but low practical risk.'
+  maintainability:
+    status: PASS
+    notes: 'Clean separation (storageService → SettingsScreen). Shared formatFileSize utility eliminates duplication. Reusable BreakdownItem component. Comprehensive test coverage (12 unit + 7 component + 9 formatter tests). ESLint clean.'
+
+history:
+  - at: '2026-02-21T18:00:00Z'
+    gate: CONCERNS
+    note: 'Initial review — streaming tracking not instrumented, "Other" hardcoded to 0, missing tests for resetDataUsage/formatFileSize'
+  - at: '2026-02-21T20:00:00Z'
+    gate: PASS
+    note: 'Re-review — all issues resolved: streaming tracking via bitrate estimation, dynamic "Other" computation, 13 new tests added, formatFileSize bug fixed'
+
+recommendations:
+  immediate: []
+  future:
+    - action: 'Consider querying actual audio bitrate for more accurate streaming data estimates'
+      refs: ['GrqaserApp/src/services/playbackService.ts:12']
+    - action: 'Consider recursive directory scan for "Other" if user feedback indicates inaccuracy'
+      refs: ['GrqaserApp/src/services/storageService.ts:51-62']

@@ -15,6 +15,7 @@ import {
 import {addBookToLibrary} from '../state/slices/librarySlice';
 import {getPlaybackPositions} from './preferencesStorage';
 import {downloadManager} from './downloadManager';
+import {resetStreamingPosition} from './playbackService';
 import type {Book} from '../types/book';
 
 /**
@@ -60,6 +61,7 @@ export async function playBook(book: Book): Promise<void> {
     const positions = await getPlaybackPositions();
     const savedPosition = positions[book.id] ?? 0;
     await TrackPlayer.reset();
+    resetStreamingPosition();
     await TrackPlayer.add(track);
     if (savedPosition > 0) {
       await TrackPlayer.seekTo(savedPosition);
