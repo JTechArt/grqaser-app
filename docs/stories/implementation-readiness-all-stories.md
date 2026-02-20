@@ -1,11 +1,11 @@
 # Implementation Readiness: All Stories
 
 **Checked by:** Architect (Winston)  
-**Date:** 2025-02-17 (Epic 7 added)
+**Date:** 2026-02-19 (Epic 8 added)
 
 This document assesses implementation readiness for every story in the Grqaser backlog. Each story is checked for architecture reference integrity, file/path alignment, phase dependencies, and any blocking gaps.
 
-**Per-story documents:** [1.1](1.1-implementation-readiness.md) · [1.2](1.2-implementation-readiness.md) · [1.3](1.3-implementation-readiness.md) · [1.4](1.4-implementation-readiness.md) · [2.1](2.1-implementation-readiness.md) · [2.2](2.2-implementation-readiness.md) · [2.3](2.3-implementation-readiness.md) · [3.1](3.1-implementation-readiness.md) · [3.2](3.2-implementation-readiness.md) · [3.3](3.3-implementation-readiness.md) · [3.4](3.4-implementation-readiness.md) · [4.1](4.1-implementation-readiness.md) · [4.2](4.2-implementation-readiness.md) · [4.3](4.3-implementation-readiness.md) · [5.1](5.1-implementation-readiness.md) · [5.2](5.2-implementation-readiness.md) · [5.3](5.3-implementation-readiness.md) · [6.1](6.1-implementation-readiness.md) · [6.2](6.2-implementation-readiness.md) · [6.3](6.3-implementation-readiness.md) · [6.4](6.4-implementation-readiness.md) · [7.1](7.1-implementation-readiness.md) · [7.2](7.2-implementation-readiness.md) · [7.3](7.3-implementation-readiness.md) · [7.4](7.4-implementation-readiness.md) · [7.5](7.5-implementation-readiness.md)
+**Per-story documents:** [1.1](1.1-implementation-readiness.md) · [1.2](1.2-implementation-readiness.md) · [1.3](1.3-implementation-readiness.md) · [1.4](1.4-implementation-readiness.md) · [2.1](2.1-implementation-readiness.md) · [2.2](2.2-implementation-readiness.md) · [2.3](2.3-implementation-readiness.md) · [3.1](3.1-implementation-readiness.md) · [3.2](3.2-implementation-readiness.md) · [3.3](3.3-implementation-readiness.md) · [3.4](3.4-implementation-readiness.md) · [4.1](4.1-implementation-readiness.md) · [4.2](4.2-implementation-readiness.md) · [4.3](4.3-implementation-readiness.md) · [5.1](5.1-implementation-readiness.md) · [5.2](5.2-implementation-readiness.md) · [5.3](5.3-implementation-readiness.md) · [6.1](6.1-implementation-readiness.md) · [6.2](6.2-implementation-readiness.md) · [6.3](6.3-implementation-readiness.md) · [6.4](6.4-implementation-readiness.md) · [7.1](7.1-implementation-readiness.md) · [7.2](7.2-implementation-readiness.md) · [7.3](7.3-implementation-readiness.md) · [7.4](7.4-implementation-readiness.md) · [7.5](7.5-implementation-readiness.md) · [8.1](8.1-implementation-readiness.md) · [8.2](8.2-implementation-readiness.md) · [8.3](8.3-implementation-readiness.md) · [8.4](8.4-implementation-readiness.md) · [8.5](8.5-implementation-readiness.md)
 
 ---
 
@@ -20,10 +20,11 @@ This document assesses implementation readiness for every story in the Grqaser b
 | 5 | Testing & deployment | 5.1–5.3 | **Ready** (5.3 references existing troubleshooting doc) |
 | 6 | Books-admin-app | 6.1–6.4 | **Ready** (brownfield merge; implement in story order) |
 | 7 | Remove crawler/viewer; design system & UI/UX | 7.1–7.5 | **Ready** (7.1 before 7.2; 7.3 can parallel; 7.4/7.5 after 7.3) |
+| 8 | GrqaserApp local data, offline, settings | 8.1–8.5 | **Ready** (8.1 first; 8.2/8.3 can parallel after 8.1; 8.4/8.5 after 8.1, recommended after 8.2/8.3) |
 
-**Delivery order:** Stories must be implemented in phase order. Epic 2 starts only after Epic 1 is complete; Epic 3 only after Epic 2; Epics 4–5 follow accordingly. **Epic 7:** 7.1 (parity) before or in tandem with Epic 5 verification; 7.2 (removal) after 7.1 sign-off; 7.3 (design system and mockups) can run in parallel; 7.4 and 7.5 (UI/UX implementation) after or alongside 7.3.
+**Delivery order:** Stories must be implemented in phase order. Epic 2 starts only after Epic 1 is complete; Epic 3 only after Epic 2; Epics 4–5 follow accordingly. **Epic 7:** 7.1 (parity) before or in tandem with Epic 5 verification; 7.2 (removal) after 7.1 sign-off; 7.3 (design system and mockups) can run in parallel; 7.4 and 7.5 (UI/UX implementation) after or alongside 7.3. **Epic 8:** 8.1 (local SQLite + remove categories) first; 8.2 (MP3 download/offline) and 8.3 (DB management) can run in parallel after 8.1; 8.4 (Library auto-add) and 8.5 (Settings metrics) after 8.1, recommended after 8.2/8.3 for full data availability.
 
-**Cross-cutting:** All cited architecture docs exist. Post–Epic 7 architecture states books-admin-app as single admin app; crawler and database-viewer removed or archived. GrqaserApp uses `store/` (Redux) rather than `state/` in the tree—acceptable; stories say "state" and architecture allows equivalent. docs/design/ exists with README, hub, and mockup folders for Epic 7.
+**Cross-cutting:** All cited architecture docs exist. Post–Epic 7 architecture states books-admin-app as single admin app; crawler and database-viewer removed or archived. **Post–Epic 8** architecture states GrqaserApp reads catalog from local SQLite (no API); categories removed; Library auto-add; offline playback via downloaded MP3s. GrqaserApp uses `store/` (Redux) rather than `state/` in the tree—acceptable; stories say "state" and architecture allows equivalent. docs/design/ exists with README, hub, and mockup folders for Epics 7–8.
 
 ---
 
@@ -231,6 +232,47 @@ This document assesses implementation readiness for every story in the Grqaser b
 
 ---
 
+## Epic 8: GrqaserApp local data, offline playback, and settings
+
+### 8.1 — Local SQLite catalog and remove categories  
+**Verdict: READY**  
+- **Refs:** grqaserapp-data-integration-and-audio, data-models-and-schema, source-tree, tech-stack, coding-standards, testing-and-deployment-strategy — all exist and updated for Epic 8.  
+- **Paths:** New `src/database/` (connection.ts, catalogRepository.ts, appMetaRepository.ts); existing screens, services, slices, types — all verified.  
+- **Dependency:** Epics 3–4, 7 complete (GrqaserApp exists with design system). Foundational — all other Epic 8 stories depend on 8.1.  
+- **Detail:** See `8.1-implementation-readiness.md`.
+
+### 8.2 — MP3 download storage and offline playback cleanup  
+**Verdict: READY**  
+- **Refs:** grqaserapp-data-integration-and-audio (MP3 download), data-models-and-schema (downloaded_mp3s), source-tree, tech-stack, testing-and-deployment-strategy — all exist.  
+- **Paths:** New `downloadManager.ts`, `downloadSlice.ts`; modified appMetaRepository, playerService, BookDetailScreen, LibraryScreen, SettingsScreen — all verified.  
+- **Dependency:** Story 8.1 complete. Can run in parallel with 8.3.  
+- **Minor note:** Network state detection library (`@react-native-community/netinfo`) not in tech-stack; dev should add.  
+- **Detail:** See `8.2-implementation-readiness.md`.
+
+### 8.3 — Database management from internet  
+**Verdict: READY**  
+- **Refs:** grqaserapp-data-integration-and-audio (DB management), data-models-and-schema (managed_databases), source-tree, tech-stack, coding-standards — all exist.  
+- **Paths:** New `databaseManager.ts`; modified connection.ts, catalogRepository.ts, appMetaRepository.ts, databaseSlice.ts, SettingsScreen — all verified.  
+- **Dependency:** Story 8.1 complete. Can run in parallel with 8.2.  
+- **Detail:** See `8.3-implementation-readiness.md`.
+
+### 8.4 — Library: auto-add on open, manual remove  
+**Verdict: READY**  
+- **Refs:** grqaserapp-data-integration-and-audio (Library behavior), data-models-and-schema (library_entries), source-tree, testing-and-deployment-strategy — all exist.  
+- **Paths:** New `librarySlice.ts`; modified appMetaRepository, BookDetailScreen, LibraryScreen — all verified.  
+- **Dependency:** Story 8.1 complete. 8.2 recommended for "Downloaded" filter pill but not required.  
+- **Detail:** See `8.4-implementation-readiness.md`.
+
+### 8.5 — Settings: storage usage and mobile data usage  
+**Verdict: READY (with minor platform note)**  
+- **Refs:** grqaserapp-data-integration-and-audio (Settings enrichment), data-models-and-schema (Notes on mobile schema), source-tree, tech-stack — all exist.  
+- **Paths:** New `storageService.ts` (or extend downloadManager); modified SettingsScreen — all verified.  
+- **Dependency:** Story 8.1 complete; 8.2 and 8.3 recommended for real data.  
+- **Minor note:** Mobile data usage tracking is platform-dependent; story provides both platform API and manual tracking approaches.  
+- **Detail:** See `8.5-implementation-readiness.md`.
+
+---
+
 ## Summary table
 
 | Story | Title (short) | Verdict | Notes |
@@ -261,6 +303,11 @@ This document assesses implementation readiness for every story in the Grqaser b
 | 7.3 | Design system and UI/UX mockups | Ready | docs/design/ structure exists |
 | 7.4 | Books-admin-app UI/UX from mockups | Ready | After 7.3 |
 | 7.5 | GrqaserApp UI/UX from mockups | Ready | After 7.3 |
+| 8.1 | Local SQLite catalog + remove categories | Ready | Foundational; all 8.x depend on this |
+| 8.2 | MP3 download and offline playback | Ready | After 8.1; parallel with 8.3; minor: add netinfo lib |
+| 8.3 | Database management from internet | Ready | After 8.1; parallel with 8.2 |
+| 8.4 | Library auto-add, manual remove | Ready | After 8.1; 8.2 recommended for "Downloaded" filter |
+| 8.5 | Settings storage and data usage | Ready (note) | After 8.1; 8.2/8.3 recommended; mobile data platform-dependent |
 
 ---
 
@@ -272,3 +319,4 @@ This document assesses implementation readiness for every story in the Grqaser b
 4. **Single readiness reference:** For per-story detail on 1.1, continue to use `1.1-implementation-readiness.md`. This document is the single place for all-stories readiness.
 5. **Epic 6:** Implement in order: 6.1 (merge and run) → 6.2 (DB versioning) → 6.3 (crawler control and config) → 6.4 (data view and edit). Each story depends on the previous; architecture is in [books-admin-app-architecture.md](../architecture/books-admin-app-architecture.md).
 6. **Epic 7:** 7.1 (parity verification) before 7.2 (removal). 7.3 (design system and mockups) can run in parallel with 7.1; 7.4 and 7.5 (UI/UX implementation) require 7.3 complete. Architecture for post–Epic 7 (single admin app, docs/design/) is in [delivery-order-and-application-boundaries.md](../architecture/delivery-order-and-application-boundaries.md) and [source-tree.md](../architecture/source-tree.md).
+7. **Epic 8:** 8.1 (local SQLite + remove categories) is the foundation — implement first. 8.2 (MP3 download/offline) and 8.3 (DB management from internet) can run in parallel after 8.1. 8.4 (Library auto-add) and 8.5 (Settings metrics) can start after 8.1 but benefit from 8.2/8.3 being complete. Dev should add `@react-native-community/netinfo` for offline detection (8.2). Mobile data usage tracking (8.5) is platform-dependent — dev chooses and documents approach. Architecture updated for Epic 8 in [grqaserapp-data-integration-and-audio.md](../architecture/grqaserapp-data-integration-and-audio.md), [data-models-and-schema.md](../architecture/data-models-and-schema.md), [source-tree.md](../architecture/source-tree.md), and [tech-stack.md](../architecture/tech-stack.md).
