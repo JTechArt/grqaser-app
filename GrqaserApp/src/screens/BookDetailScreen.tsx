@@ -1,4 +1,4 @@
-import React from 'react';
+import React, {useEffect} from 'react';
 import {
   View,
   Text,
@@ -16,6 +16,7 @@ import {Button, IconButton} from 'react-native-paper';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import {toggleFavorite} from '../state/slices/booksSlice';
 import {downloadBook} from '../state/slices/downloadSlice';
+import {addBookToLibrary} from '../state/slices/librarySlice';
 import {RootStackParamList} from '../navigation/types';
 import {theme} from '../theme';
 import {formatDuration} from '../utils/formatters';
@@ -47,6 +48,13 @@ const BookDetailScreen: React.FC<Props> = ({route}) => {
   const isDownloading = book ? !!downloadingBooks[book.id] : false;
   const isDownloaded = book ? downloadedBookIds.includes(book.id) : false;
   const downloadProgress = book ? downloadingBooks[book.id] : undefined;
+
+  const bookId = book?.id;
+  useEffect(() => {
+    if (bookId) {
+      dispatch(addBookToLibrary(bookId));
+    }
+  }, [bookId, dispatch]);
 
   if (!book) {
     return (

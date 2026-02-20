@@ -1,10 +1,9 @@
 /**
  * Repository for the app-metadata SQLite database (grqaser_app_meta.db).
- * Manages the managed_databases and downloaded_mp3s tables.
- * library_entries table is a stub for now — implemented in Story 8.4.
+ * Manages the managed_databases, downloaded_mp3s, and library_entries tables.
  */
 import {openDatabase, DatabaseConnection} from './connection';
-import {ManagedDatabase, DownloadedMp3} from '../types/book';
+import {ManagedDatabase, DownloadedMp3, LibraryEntry} from '../types/book';
 
 let connection: DatabaseConnection | null = null;
 
@@ -32,6 +31,14 @@ const CREATE_DOWNLOADED_MP3S_TABLE = `
   )
 `;
 
+const CREATE_LIBRARY_ENTRIES_TABLE = `
+  CREATE TABLE IF NOT EXISTS library_entries (
+    book_id TEXT PRIMARY KEY,
+    added_at TEXT NOT NULL,
+    last_opened_at TEXT NOT NULL
+  )
+`;
+
 export async function initAppMetaDb(dbPath: string): Promise<void> {
   if (connection) {
     await connection.close();
@@ -39,6 +46,7 @@ export async function initAppMetaDb(dbPath: string): Promise<void> {
   connection = await openDatabase(dbPath);
   await connection.db.executeSql(CREATE_MANAGED_DATABASES_TABLE);
   await connection.db.executeSql(CREATE_DOWNLOADED_MP3S_TABLE);
+  await connection.db.executeSql(CREATE_LIBRARY_ENTRIES_TABLE);
 }
 
 export async function closeAppMetaDb(): Promise<void> {
@@ -227,5 +235,53 @@ export const appMetaRepository = {
       ids.push(results.rows.item(i).book_id as string);
     }
     return ids;
+  },
+
+  // --- library_entries CRUD ---
+
+  async addToLibrary(bookId: string): Promise<void> {
+    const {db} = assertConnected();
+    const now = new Date().toISOString();
+    await db.executeSql(
+      `INSERT INTO library_entries (book_id, added_at, last_opened_at)
+       VALUES (?, ?, ?)
+       ON CONFLICT(book_id) DO UPDATE SET last_opened_at = excluded.last_opened_at`,
+      [bookId, now, now],
+    );
+  },
+
+  async removeFromLibrary(bookId: string): Promise<void> {
+    const {db} = assertConnected();
+    await db.executeSql('DELETE FROM library_entries WHERE book_id = ?', [
+      bookId,
+    ]);
+  },
+
+  async getLibraryEntries(): Promise<LibraryEntry[]> {
+    const {db} = assertConnected();
+    const [results] = await db.executeSql(
+      'SELECT * FROM library_entries ORDER BY last_opened_at DESC',
+    );
+    const entries: LibraryEntry[] = [];
+    for (let i = 0; i < results.rows.length; i++) {
+      const row = results.rows.item(i);
+      entries.push({
+        id: row.book_id as string,
+        bookId: row.book_id as string,
+        addedAt: row.added_at as string,
+        lastOpenedAt: row.last_opened_at as string,
+        source: 'auto',
+      });
+    }
+    return entries;
+  },
+
+  async isInLibrary(bookId: string): Promise<boolean> {
+    const {db} = assertConnected();
+    const [results] = await db.executeSql(
+      'SELECT 1 FROM library_entries WHERE book_id = ? LIMIT 1',
+      [bookId],
+    );
+    return results.rows.length > 0;
   },
 };

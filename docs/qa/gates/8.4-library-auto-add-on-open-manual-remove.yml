@@ -1,0 +1,47 @@
+schema: 1
+story: '8.4'
+story_title: 'Library auto-add on open, manual remove'
+gate: PASS
+status_reason: 'All acceptance criteria met with solid test coverage. Dev addressed all issues from initial CONCERNS review: error/loading UI added, integration test added, type inconsistency fixed.'
+reviewer: 'Quinn (Test Architect)'
+updated: '2026-02-21T14:00:00Z'
+
+top_issues:
+  - id: 'TEST-002'
+    severity: low
+    finding: 'One component rendering test remains unchecked (library list with metadata from local DB). Requires RNTL infrastructure not yet available.'
+    suggested_action: 'Set up RNTL and add component test in a future infrastructure story.'
+    suggested_owner: dev
+
+waiver: { active: false }
+
+quality_score: 90
+expires: '2026-03-07T14:00:00Z'
+
+evidence:
+  tests_reviewed: 105
+  risks_identified: 0
+  trace:
+    ac_covered: [1, 2, 3, 4]
+    ac_gaps: []
+
+nfr_validation:
+  _assessed: [security, performance, reliability, maintainability]
+  security:
+    status: PASS
+    notes: 'Library data is local-only, no network sync, no sensitive data exposed. Input is book IDs from existing catalog.'
+  performance:
+    status: PASS
+    notes: 'Upsert prevents duplicate inserts. useEffect dependency fixed to prevent unnecessary dispatches. Re-fetch after add acceptable for expected library sizes.'
+  reliability:
+    status: PASS
+    notes: 'Error banner with retry button added in LibraryScreen. Loading spinner for initial load. Graceful handling of DB failures.'
+  maintainability:
+    status: PASS
+    notes: 'Clean Redux Toolkit patterns, proper separation (repository → slice → screen). Unit + integration test coverage thorough. ESLint clean. Type now matches DB schema.'
+
+recommendations:
+  immediate: []
+  future:
+    - action: 'Set up RNTL test infrastructure and add component rendering test for library list'
+      refs: ['GrqaserApp/__tests__/']
