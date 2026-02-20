@@ -14,7 +14,6 @@ import FavoritesScreen from '../screens/FavoritesScreen';
 import ProfileScreen from '../screens/ProfileScreen';
 import BookDetailScreen from '../screens/BookDetailScreen';
 import SearchScreen from '../screens/SearchScreen';
-import CategoryScreen from '../screens/CategoryScreen';
 import SettingsScreen from '../screens/SettingsScreen';
 import MiniPlayer from '../components/MiniPlayer';
 
@@ -164,14 +163,6 @@ const RootNavigator: React.FC = () => {
           title: 'Search Books',
           headerBackTitle: 'Back',
         }}
-      />
-      <Stack.Screen
-        name="Category"
-        component={CategoryScreen}
-        options={({route}) => ({
-          title: route.params?.category?.name || 'Category',
-          headerBackTitle: 'Back',
-        })}
       />
       <Stack.Screen
         name="Settings"

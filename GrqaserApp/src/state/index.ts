@@ -2,12 +2,14 @@ import {configureStore} from '@reduxjs/toolkit';
 import booksReducer from './slices/booksSlice';
 import playerReducer from './slices/playerSlice';
 import userReducer from './slices/userSlice';
+import databaseReducer from './slices/databaseSlice';
 
 export const store = configureStore({
   reducer: {
     books: booksReducer,
     player: playerReducer,
     user: userReducer,
+    database: databaseReducer,
   },
   middleware: getDefaultMiddleware =>
     getDefaultMiddleware({
