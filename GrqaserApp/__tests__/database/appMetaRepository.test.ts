@@ -52,6 +52,7 @@ beforeEach(() => {
 async function initDb() {
   mockExecuteSql
     .mockResolvedValueOnce([{rows: {length: 0}}])
+    .mockResolvedValueOnce([{rows: {length: 0}}])
     .mockResolvedValueOnce([{rows: {length: 0}}]);
   await initAppMetaDb('meta.db');
 }
@@ -68,7 +69,7 @@ const sampleMp3Row = {
 
 describe('appMetaRepository', () => {
   describe('initAppMetaDb', () => {
-    it('opens database and creates both tables', async () => {
+    it('opens database and creates all three tables', async () => {
       await initDb();
       expect(mockOpenDatabase).toHaveBeenCalledWith(
         expect.objectContaining({name: 'meta.db'}),
@@ -78,6 +79,9 @@ describe('appMetaRepository', () => {
       );
       expect(mockExecuteSql).toHaveBeenCalledWith(
         expect.stringContaining('CREATE TABLE IF NOT EXISTS downloaded_mp3s'),
+      );
+      expect(mockExecuteSql).toHaveBeenCalledWith(
+        expect.stringContaining('CREATE TABLE IF NOT EXISTS library_entries'),
       );
     });
   });
@@ -203,7 +207,15 @@ describe('appMetaRepository', () => {
 
       expect(mockExecuteSql).toHaveBeenCalledWith(
         expect.stringContaining('INSERT OR REPLACE INTO downloaded_mp3s'),
-        ['book-1', 'book-1', null, '/data/mp3/book-1/book-1.mp3', 5000, '2026-02-20T10:00:00Z', 'https://example.com/book-1.mp3'],
+        [
+          'book-1',
+          'book-1',
+          null,
+          '/data/mp3/book-1/book-1.mp3',
+          5000,
+          '2026-02-20T10:00:00Z',
+          'https://example.com/book-1.mp3',
+        ],
       );
     });
   });
@@ -223,7 +235,12 @@ describe('appMetaRepository', () => {
   describe('getAllDownloads', () => {
     it('returns all download records', async () => {
       await initDb();
-      mockExecuteSql.mockResolvedValueOnce(makeRows([sampleMp3Row, {...sampleMp3Row, id: 'book-2', book_id: 'book-2'}]));
+      mockExecuteSql.mockResolvedValueOnce(
+        makeRows([
+          sampleMp3Row,
+          {...sampleMp3Row, id: 'book-2', book_id: 'book-2'},
+        ]),
+      );
 
       const downloads = await appMetaRepository.getAllDownloads();
       expect(downloads).toHaveLength(2);
@@ -276,6 +293,134 @@ describe('appMetaRepository', () => {
 
       const ids = await appMetaRepository.getDownloadedBookIds();
       expect(ids).toEqual(['book-1', 'book-2']);
+    });
+  });
+
+  // --- library_entries CRUD tests ---
+
+  describe('addToLibrary', () => {
+    it('inserts a library entry with upsert', async () => {
+      await initDb();
+      mockExecuteSql.mockResolvedValueOnce([{rows: {length: 0}}]);
+
+      await appMetaRepository.addToLibrary('book-1');
+
+      expect(mockExecuteSql).toHaveBeenCalledWith(
+        expect.stringContaining('INSERT INTO library_entries'),
+        expect.arrayContaining(['book-1']),
+      );
+    });
+  });
+
+  describe('removeFromLibrary', () => {
+    it('deletes a library entry', async () => {
+      await initDb();
+      mockExecuteSql.mockResolvedValueOnce([{rows: {length: 0}}]);
+
+      await appMetaRepository.removeFromLibrary('book-1');
+
+      expect(mockExecuteSql).toHaveBeenCalledWith(
+        expect.stringContaining('DELETE FROM library_entries'),
+        ['book-1'],
+      );
+    });
+  });
+
+  describe('getLibraryEntries', () => {
+    it('returns all library entries ordered by last_opened_at desc', async () => {
+      await initDb();
+      mockExecuteSql.mockResolvedValueOnce(
+        makeRows([
+          {
+            book_id: 'book-2',
+            added_at: '2026-02-20T12:00:00Z',
+            last_opened_at: '2026-02-21T10:00:00Z',
+          },
+          {
+            book_id: 'book-1',
+            added_at: '2026-02-19T10:00:00Z',
+            last_opened_at: '2026-02-20T10:00:00Z',
+          },
+        ]),
+      );
+
+      const entries = await appMetaRepository.getLibraryEntries();
+      expect(entries).toHaveLength(2);
+      expect(entries[0].bookId).toBe('book-2');
+      expect(entries[0].id).toBe('book-2');
+      expect(entries[0].source).toBe('auto');
+      expect(entries[1].bookId).toBe('book-1');
+    });
+
+    it('returns empty array when no entries', async () => {
+      await initDb();
+      mockExecuteSql.mockResolvedValueOnce(makeRows([]));
+
+      const entries = await appMetaRepository.getLibraryEntries();
+      expect(entries).toEqual([]);
+    });
+  });
+
+  describe('isInLibrary', () => {
+    it('returns true when book exists in library', async () => {
+      await initDb();
+      mockExecuteSql.mockResolvedValueOnce(makeRows([{1: 1}]));
+
+      const result = await appMetaRepository.isInLibrary('book-1');
+      expect(result).toBe(true);
+    });
+
+    it('returns false when book is not in library', async () => {
+      await initDb();
+      mockExecuteSql.mockResolvedValueOnce(makeRows([]));
+
+      const result = await appMetaRepository.isInLibrary('book-99');
+      expect(result).toBe(false);
+    });
+  });
+
+  describe('library auto-add → remove → re-add integration flow', () => {
+    it('adds book, verifies presence, removes, verifies absence, re-adds', async () => {
+      await initDb();
+
+      // 1. Add to library
+      mockExecuteSql.mockResolvedValueOnce([{rows: {length: 0}}]);
+      await appMetaRepository.addToLibrary('book-1');
+      expect(mockExecuteSql).toHaveBeenCalledWith(
+        expect.stringContaining('INSERT INTO library_entries'),
+        expect.arrayContaining(['book-1']),
+      );
+
+      // 2. Verify presence
+      mockExecuteSql.mockResolvedValueOnce(makeRows([{1: 1}]));
+      const isPresent = await appMetaRepository.isInLibrary('book-1');
+      expect(isPresent).toBe(true);
+
+      // 3. Remove from library
+      mockExecuteSql.mockResolvedValueOnce([{rows: {length: 0}}]);
+      await appMetaRepository.removeFromLibrary('book-1');
+      expect(mockExecuteSql).toHaveBeenCalledWith(
+        expect.stringContaining('DELETE FROM library_entries'),
+        ['book-1'],
+      );
+
+      // 4. Verify absence
+      mockExecuteSql.mockResolvedValueOnce(makeRows([]));
+      const isAbsent = await appMetaRepository.isInLibrary('book-1');
+      expect(isAbsent).toBe(false);
+
+      // 5. Re-add (upsert)
+      mockExecuteSql.mockResolvedValueOnce([{rows: {length: 0}}]);
+      await appMetaRepository.addToLibrary('book-1');
+      expect(mockExecuteSql).toHaveBeenCalledWith(
+        expect.stringContaining('INSERT INTO library_entries'),
+        expect.arrayContaining(['book-1']),
+      );
+
+      // 6. Verify re-added
+      mockExecuteSql.mockResolvedValueOnce(makeRows([{1: 1}]));
+      const isBack = await appMetaRepository.isInLibrary('book-1');
+      expect(isBack).toBe(true);
     });
   });
 

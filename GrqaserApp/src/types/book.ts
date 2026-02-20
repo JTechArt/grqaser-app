@@ -135,7 +135,7 @@ export interface LibraryEntry {
   id: string;
   bookId: string;
   addedAt: string; // ISO-8601
-  lastOpenedAt?: string; // ISO-8601
+  lastOpenedAt: string; // ISO-8601, NOT NULL in DB
   source: 'auto' | 'manual';
 }
 

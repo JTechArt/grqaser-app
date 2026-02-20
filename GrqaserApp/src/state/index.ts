@@ -4,6 +4,7 @@ import playerReducer from './slices/playerSlice';
 import userReducer from './slices/userSlice';
 import databaseReducer from './slices/databaseSlice';
 import downloadReducer from './slices/downloadSlice';
+import libraryReducer from './slices/librarySlice';
 
 export const store = configureStore({
   reducer: {
@@ -12,6 +13,7 @@ export const store = configureStore({
     user: userReducer,
     database: databaseReducer,
     download: downloadReducer,
+    library: libraryReducer,
   },
   middleware: getDefaultMiddleware =>
     getDefaultMiddleware({

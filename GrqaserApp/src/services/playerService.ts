@@ -12,6 +12,7 @@ import {
   clearError,
   setPlaying,
 } from '../state/slices/playerSlice';
+import {addBookToLibrary} from '../state/slices/librarySlice';
 import {getPlaybackPositions} from './preferencesStorage';
 import {downloadManager} from './downloadManager';
 import type {Book} from '../types/book';
@@ -35,6 +36,7 @@ async function resolveAudioUrl(book: Book): Promise<string | null> {
  */
 export async function playBook(book: Book): Promise<void> {
   store.dispatch(clearError());
+  store.dispatch(addBookToLibrary(book.id));
   try {
     const url = await resolveAudioUrl(book);
     if (!url) {
