@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-  <title>Profile — GrqaserApp Mock</title>
+  <title>Profile &amp; Settings — GrqaserApp Mock</title>
   <link rel="stylesheet" href="shared.css">
 </head>
 <body>
@@ -11,29 +11,358 @@
     <header class="top-bar">
       <h1>Profile</h1>
     </header>
-    <p style="padding: 0.5rem 1.25rem 0;"><a href="../index.html" class="back-link">← Design hub</a></p>
-    <div style="padding: 1.5rem 1.25rem; border-bottom: 1px solid var(--border);">
-      <div style="width: 64px; height: 64px; background: var(--accent-light); color: var(--accent); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 1.5rem; margin-bottom: 0.75rem;">👤</div>
-      <p style="font-weight: 600; color: var(--text);">Guest</p>
-      <p style="font-size: 0.875rem; color: var(--text-muted);">Local listener</p>
-    </div>
-    <div style="padding: 1rem 1.25rem;">
-      <p style="font-size: 0.8125rem; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.02em; margin-bottom: 0.5rem;">Settings</p>
-      <div style="display: flex; justify-content: space-between; align-items: center; padding: 0.75rem 0; border-bottom: 1px solid var(--border-muted);">
-        <span>Theme</span>
-        <span style="color: var(--text-muted); font-size: 0.875rem;">System</span>
+    <p style="padding: 0.5rem 1.25rem 0;"><a href="../index.html" class="back-link">&larr; Design hub</a></p>
+
+    <div class="settings-scroll content">
+
+      <!-- User info -->
+      <div class="settings-section" style="border-bottom: 1px solid var(--border);">
+        <div style="display:flex;align-items:center;gap:0.75rem;">
+          <div class="avatar-circle">&#128100;</div>
+          <div>
+            <p style="font-weight: 600; color: var(--text);">Guest</p>
+            <p style="font-size: 0.875rem; color: var(--text-muted);">Local listener</p>
+          </div>
+        </div>
       </div>
-      <div style="display: flex; justify-content: space-between; align-items: center; padding: 0.75rem 0; border-bottom: 1px solid var(--border-muted);">
-        <span>Download over Wi‑Fi only</span>
-        <span style="color: var(--accent); font-size: 0.875rem;">On</span>
+
+      <!-- Storage Usage (Story 8.5) -->
+      <div class="settings-section">
+        <p class="settings-group-title">Storage Usage</p>
+        <div class="usage-card">
+          <div class="usage-header">
+            <span class="usage-label">App Storage</span>
+            <span class="usage-value">248 MB / 1.0 GB</span>
+          </div>
+          <div class="usage-bar-track">
+            <div class="usage-bar-fill" style="width: 24.8%;"></div>
+          </div>
+          <span class="usage-percent">24.8% used</span>
+          <div class="usage-breakdown">
+            <div class="usage-breakdown-item">
+              <span class="usage-dot" style="background: var(--accent);"></span>
+              <span>Downloaded MP3s</span>
+              <span class="usage-breakdown-val">180 MB</span>
+            </div>
+            <div class="usage-breakdown-item">
+              <span class="usage-dot" style="background: #6366f1;"></span>
+              <span>Databases</span>
+              <span class="usage-breakdown-val">52 MB</span>
+            </div>
+            <div class="usage-breakdown-item">
+              <span class="usage-dot" style="background: var(--text-muted);"></span>
+              <span>Other</span>
+              <span class="usage-breakdown-val">16 MB</span>
+            </div>
+          </div>
+        </div>
       </div>
+
+      <!-- Mobile Data Usage (Story 8.5) -->
+      <div class="settings-section">
+        <p class="settings-group-title">Mobile Data Usage</p>
+        <div class="usage-card">
+          <div class="usage-header">
+            <span class="usage-label">This Month</span>
+            <span class="usage-value">1.2 GB</span>
+          </div>
+          <div class="usage-breakdown">
+            <div class="usage-breakdown-item">
+              <span class="usage-dot" style="background: var(--accent);"></span>
+              <span>Streaming</span>
+              <span class="usage-breakdown-val">820 MB</span>
+            </div>
+            <div class="usage-breakdown-item">
+              <span class="usage-dot" style="background: #6366f1;"></span>
+              <span>Downloads</span>
+              <span class="usage-breakdown-val">340 MB</span>
+            </div>
+            <div class="usage-breakdown-item">
+              <span class="usage-dot" style="background: var(--text-muted);"></span>
+              <span>DB Updates</span>
+              <span class="usage-breakdown-val">40 MB</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Download Management (Story 8.2) -->
+      <div class="settings-section">
+        <p class="settings-group-title">Downloads</p>
+        <div class="download-mgmt-list">
+          <div class="download-mgmt-item">
+            <div class="download-mgmt-info">
+              <span class="download-mgmt-title">&#1343;&#1407;&#1377;&#1391;</span>
+              <span class="download-mgmt-size">45 MB &middot; 12 files</span>
+            </div>
+            <button type="button" class="clean-btn">Clean</button>
+          </div>
+          <div class="download-mgmt-item">
+            <div class="download-mgmt-info">
+              <span class="download-mgmt-title">&#1357;&#1387;&#1408;&#1407;&#1384;</span>
+              <span class="download-mgmt-size">135 MB &middot; 38 files</span>
+            </div>
+            <button type="button" class="clean-btn">Clean</button>
+          </div>
+        </div>
+        <button type="button" class="btn-danger-outline" style="margin-top: 0.75rem;">Clean All Downloads</button>
+        <p class="settings-hint">Remove downloaded MP3s to free storage. Playback falls back to streaming when online.</p>
+      </div>
+
+      <!-- Database Management (Story 8.3) -->
+      <div class="settings-section">
+        <p class="settings-group-title">Catalog Databases</p>
+        <div class="db-mgmt-list">
+          <div class="db-mgmt-item active-db">
+            <div class="db-mgmt-info">
+              <span class="db-mgmt-name">grqaser-catalog-v3.db <span class="db-active-badge">Active</span></span>
+              <span class="db-mgmt-meta">26 MB &middot; Downloaded Feb 15, 2026</span>
+            </div>
+            <div class="db-mgmt-actions">
+              <button type="button" class="db-action-btn" title="Refresh">&#8635;</button>
+            </div>
+          </div>
+          <div class="db-mgmt-item">
+            <div class="db-mgmt-info">
+              <span class="db-mgmt-name">grqaser-catalog-v2.db</span>
+              <span class="db-mgmt-meta">26 MB &middot; Downloaded Jan 28, 2026</span>
+            </div>
+            <div class="db-mgmt-actions">
+              <button type="button" class="db-action-btn set-active-btn" title="Set active">&#9679;</button>
+              <button type="button" class="db-action-btn remove-db-btn" title="Remove">&#128465;</button>
+            </div>
+          </div>
+        </div>
+        <button type="button" class="btn-accent-outline" style="margin-top: 0.75rem;">Load New Database from URL</button>
+        <p class="settings-hint">Load catalog databases from a public URL (e.g., GitHub). Refresh fetches a new version alongside the current one.</p>
+      </div>
+
+      <!-- General Settings -->
+      <div class="settings-section">
+        <p class="settings-group-title">Settings</p>
+        <div class="settings-row">
+          <span>Theme</span>
+          <span class="settings-row-value">System</span>
+        </div>
+        <div class="settings-row">
+          <span>Download over Wi&#8209;Fi only</span>
+          <span class="settings-row-value accent">On</span>
+        </div>
+      </div>
+
     </div>
+
     <nav class="bottom-nav">
-      <a href="home.html" class="nav-item"><span class="nav-icon">🏠</span>Home</a>
-      <a href="library.html" class="nav-item"><span class="nav-icon">📚</span>Library</a>
-      <a href="audio-player.html" class="nav-item"><span class="nav-icon">🎧</span>Player</a>
-      <a href="profile.html" class="nav-item active"><span class="nav-icon">👤</span>Profile</a>
+      <a href="home.html" class="nav-item"><span class="nav-icon">&#127968;</span>Home</a>
+      <a href="library.html" class="nav-item"><span class="nav-icon">&#128218;</span>Library</a>
+      <a href="audio-player.html" class="nav-item"><span class="nav-icon">&#127911;</span>Player</a>
+      <a href="profile.html" class="nav-item active"><span class="nav-icon">&#128100;</span>Profile</a>
     </nav>
   </div>
+
+  <style>
+    .settings-scroll {
+      padding-bottom: 6rem;
+      overflow-y: auto;
+    }
+    .settings-section {
+      padding: 1rem 1.25rem;
+      border-bottom: 1px solid var(--border-muted);
+    }
+    .avatar-circle {
+      width: 56px;
+      height: 56px;
+      background: var(--accent-light);
+      color: var(--accent);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.5rem;
+      flex-shrink: 0;
+    }
+    .settings-group-title {
+      font-size: 0.8125rem;
+      font-weight: 700;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      margin-bottom: 0.75rem;
+    }
+    .settings-hint {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      margin-top: 0.5rem;
+      line-height: 1.4;
+    }
+
+    /* Usage card (Stories 8.5) */
+    .usage-card {
+      background: var(--card);
+      border: 1px solid var(--border-muted);
+      border-radius: var(--radius);
+      padding: 0.875rem;
+      box-shadow: var(--shadow);
+    }
+    .usage-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      margin-bottom: 0.5rem;
+    }
+    .usage-label { font-size: 0.875rem; font-weight: 600; color: var(--text); }
+    .usage-value { font-size: 0.8125rem; font-weight: 700; color: var(--accent); }
+    .usage-bar-track {
+      height: 8px;
+      background: var(--border-muted);
+      border-radius: var(--radius-full);
+      overflow: hidden;
+      margin-bottom: 0.375rem;
+    }
+    .usage-bar-fill {
+      height: 100%;
+      background: linear-gradient(90deg, var(--accent) 0%, var(--accent-hover) 100%);
+      border-radius: var(--radius-full);
+      transition: width 0.4s ease;
+    }
+    .usage-percent { font-size: 0.75rem; color: var(--text-muted); font-weight: 600; }
+    .usage-breakdown { margin-top: 0.75rem; }
+    .usage-breakdown-item {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      font-size: 0.8125rem;
+      color: var(--text);
+      padding: 0.25rem 0;
+    }
+    .usage-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+    .usage-breakdown-val {
+      margin-left: auto;
+      font-weight: 600;
+      color: var(--text-muted);
+      font-size: 0.8125rem;
+    }
+
+    /* Download management (Story 8.2) */
+    .download-mgmt-list { }
+    .download-mgmt-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0.625rem 0;
+      border-bottom: 1px solid var(--border-muted);
+    }
+    .download-mgmt-item:last-child { border-bottom: none; }
+    .download-mgmt-info { display: flex; flex-direction: column; gap: 0.125rem; }
+    .download-mgmt-title { font-size: 0.9375rem; font-weight: 600; color: var(--text); }
+    .download-mgmt-size { font-size: 0.75rem; color: var(--text-muted); }
+    .clean-btn {
+      padding: 0.375rem 0.75rem;
+      border-radius: var(--radius-sm);
+      font-size: 0.8125rem;
+      font-weight: 600;
+      background: var(--border-muted);
+      color: var(--text);
+      border: none;
+      cursor: pointer;
+      transition: background 0.15s, color 0.15s;
+    }
+    .clean-btn:hover { background: #fee2e2; color: #dc2626; }
+    .btn-danger-outline {
+      width: 100%;
+      padding: 0.625rem;
+      border-radius: var(--radius-sm);
+      font-size: 0.875rem;
+      font-weight: 600;
+      background: transparent;
+      color: #dc2626;
+      border: 1px solid #fca5a5;
+      cursor: pointer;
+      transition: background 0.15s;
+      font-family: inherit;
+    }
+    .btn-danger-outline:hover { background: #fef2f2; }
+
+    /* Database management (Story 8.3) */
+    .db-mgmt-list { }
+    .db-mgmt-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0.625rem 0;
+      border-bottom: 1px solid var(--border-muted);
+    }
+    .db-mgmt-item:last-child { border-bottom: none; }
+    .db-mgmt-item.active-db {
+      background: var(--accent-light);
+      margin: 0 -0.5rem;
+      padding: 0.625rem 0.5rem;
+      border-radius: var(--radius-sm);
+      border-bottom: none;
+    }
+    .db-mgmt-info { display: flex; flex-direction: column; gap: 0.125rem; flex: 1; min-width: 0; }
+    .db-mgmt-name { font-size: 0.875rem; font-weight: 600; color: var(--text); display: flex; align-items: center; gap: 0.375rem; flex-wrap: wrap; }
+    .db-active-badge {
+      font-size: 0.625rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      background: var(--accent);
+      color: white;
+      padding: 0.125rem 0.375rem;
+      border-radius: var(--radius-full);
+    }
+    .db-mgmt-meta { font-size: 0.75rem; color: var(--text-muted); }
+    .db-mgmt-actions { display: flex; gap: 0.375rem; flex-shrink: 0; }
+    .db-action-btn {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      background: var(--border-muted);
+      color: var(--text-muted);
+      border: none;
+      cursor: pointer;
+      font-size: 0.875rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: background 0.15s, color 0.15s;
+    }
+    .db-action-btn:hover { background: var(--border); color: var(--text); }
+    .set-active-btn:hover { background: var(--accent-light); color: var(--accent); }
+    .remove-db-btn:hover { background: #fee2e2; color: #dc2626; }
+    .btn-accent-outline {
+      width: 100%;
+      padding: 0.625rem;
+      border-radius: var(--radius-sm);
+      font-size: 0.875rem;
+      font-weight: 600;
+      background: transparent;
+      color: var(--accent);
+      border: 1px solid var(--accent);
+      cursor: pointer;
+      transition: background 0.15s;
+      font-family: inherit;
+    }
+    .btn-accent-outline:hover { background: var(--accent-light); }
+
+    /* General settings rows */
+    .settings-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 0.75rem 0;
+      border-bottom: 1px solid var(--border-muted);
+      font-size: 0.9375rem;
+    }
+    .settings-row:last-child { border-bottom: none; }
+    .settings-row-value { color: var(--text-muted); font-size: 0.875rem; }
+    .settings-row-value.accent { color: var(--accent); font-weight: 600; }
+  </style>
 </body>
 </html>

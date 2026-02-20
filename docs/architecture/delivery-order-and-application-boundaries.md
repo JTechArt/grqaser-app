@@ -49,7 +49,7 @@ After Epic 7, there are **two runnable applications**: **books-admin-app** (admi
 
 - Validate crawler and viewer behavior **via books-admin-app**. Test the mobile app against data validated through books-admin-app.
 
-## Data flow and dependency (post–Epic 7)
+## Data flow and dependency (post–Epic 7; updated for Epic 8)
 
 ```
 books-admin-app (crawler + viewer + DB versioning + data edit)
@@ -58,12 +58,16 @@ books-admin-app (crawler + viewer + DB versioning + data edit)
     ↓
     REST API + Web UI — single admin entrypoint
     ↓
-GrqaserApp (consumes books-admin-app API)
+    DB file exported/hosted at public URL (e.g. GitHub)   ← Epic 8
+    ↓
+GrqaserApp (downloads DB file → reads catalog from local SQLite)   ← Epic 8
 ```
 
-One data contract (schema and types). books-admin-app is the writer (crawler) and reader (viewer/API); GrqaserApp is a consumer of the API.
+One data contract (schema and types). books-admin-app is the writer (crawler) and reader (viewer/API). **After Epic 8:** GrqaserApp downloads the DB file from a public URL and reads catalog data from **local SQLite** — no API calls for catalog. MP3 streaming still uses the network when files are not downloaded locally.
 
 ## References
 
 - [Epic 7](../prd/epic-7.md) — Remove crawler and database-viewer; UI/UX for books-admin-app and GrqaserApp.
+- [Epic 8](../prd/epic-8.md) — GrqaserApp local data, offline playback, DB management, settings.
 - [Books-admin-app architecture](./books-admin-app-architecture.md) — Run model, DB versioning, crawler control, data management, design system and UI/UX (Epic 7).
+- [GrqaserApp data integration and audio](./grqaserapp-data-integration-and-audio.md) — Local SQLite, offline playback, library, DB management (Epic 8).
