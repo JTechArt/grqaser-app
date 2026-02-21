@@ -1,15 +1,14 @@
 # Database Bundling
 
-Place `grqaser.db` (the catalog SQLite database exported from books-admin-app)
-in this directory. `react-native-sqlite-storage` copies it to the app's
-writable storage on first launch via `createFromLocation: 1`.
+**Single source of truth:** `data/grqaser.db` (repo root).
 
-## Steps
+This directory must contain `grqaser.db` so the Android app can bundle the catalog.
+Copy from the source of truth (from repo root):
 
-1. Export the catalog DB from books-admin-app (the SQLite file with the `books`
-   table).
-2. Copy it here as `grqaser.db`.
-3. Rebuild the Android app (`npx react-native run-android`).
+```bash
+cp data/grqaser.db GrqaserApp/android/app/src/main/assets/grqaser.db
+```
 
-For iOS, add the same `grqaser.db` file to the Xcode project under
-"Copy Bundle Resources" in Build Phases.
+The app opens it read-only from assets (createFromLocation with ~ path). Rebuild after updating.
+
+For iOS, copy to `GrqaserApp/ios/GrqaserApp/grqaser.db` (Copy Bundle Resources).

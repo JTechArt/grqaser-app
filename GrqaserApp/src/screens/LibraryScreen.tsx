@@ -13,6 +13,7 @@ import {
 import {useNavigation, useFocusEffect} from '@react-navigation/native';
 import {useSelector, useDispatch} from 'react-redux';
 import {StackNavigationProp} from '@react-navigation/stack';
+import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import type {RootState, AppDispatch} from '../state';
 import type {RootStackParamList} from '../navigation/types';
@@ -38,6 +39,7 @@ const FILTERS: {key: FilterType; label: string}[] = [
 const LibraryScreen: React.FC = () => {
   const navigation = useNavigation<NavProp>();
   const dispatch = useDispatch<AppDispatch>();
+  const insets = useSafeAreaInsets();
   const [activeFilter, setActiveFilter] = useState<FilterType>('all');
 
   const books = useSelector((s: RootState) => s.books.books);
@@ -167,13 +169,14 @@ const LibraryScreen: React.FC = () => {
 
   return (
     <View style={styles.container}>
-      <View style={styles.header}>
+      <View style={[styles.header, {paddingTop: insets.top + 16}]}>
         <Text style={styles.headerTitle}>Library</Text>
         <Text style={styles.headerSubtitle}>Your reading & listening</Text>
       </View>
       <ScrollView
         horizontal
         showsHorizontalScrollIndicator={false}
+        style={styles.pillScroll}
         contentContainerStyle={styles.pillRow}>
         {FILTERS.map(renderFilterPill)}
       </ScrollView>
@@ -223,7 +226,6 @@ const styles = StyleSheet.create({
   container: {flex: 1, backgroundColor: theme.colors.background},
   header: {
     paddingHorizontal: 20,
-    paddingTop: 16,
     paddingBottom: 4,
   },
   headerTitle: {
@@ -235,7 +237,12 @@ const styles = StyleSheet.create({
     color: theme.colors.onSurface,
     marginTop: 2,
   } as TextStyle,
+  pillScroll: {
+    flexGrow: 0,
+  },
   pillRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
     paddingHorizontal: 20,
     paddingVertical: 12,
     gap: 8,

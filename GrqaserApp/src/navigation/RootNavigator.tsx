@@ -4,6 +4,7 @@ import {createBottomTabNavigator} from '@react-navigation/bottom-tabs';
 import {createStackNavigator} from '@react-navigation/stack';
 import {useNavigation} from '@react-navigation/native';
 import {useTheme} from 'react-native-paper';
+import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 
 // Screens
@@ -59,6 +60,7 @@ const TabBarIcon: React.FC<TabBarIconProps> = ({
 const TabNavigator: React.FC = () => {
   const theme = useTheme();
   const navigation = useNavigation();
+  const insets = useSafeAreaInsets();
 
   return (
     <View style={{flex: 1}}>
@@ -79,9 +81,9 @@ const TabNavigator: React.FC = () => {
           tabBarStyle: {
             backgroundColor: theme.colors.surface,
             borderTopColor: theme.colors.outline,
-            paddingBottom: 5,
+            paddingBottom: Math.max(insets.bottom, 5),
             paddingTop: 5,
-            height: 60,
+            height: 56 + Math.max(insets.bottom, 5),
           },
           tabBarLabelStyle: {
             fontSize: 12,

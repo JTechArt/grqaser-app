@@ -26,8 +26,8 @@ const baseConfig = {
   // Base settings
   baseUrl: 'https://grqaser.org',
   // DB path: env for books-admin-app / Story 6.2; else crawler default
-  dbPath: process.env.CRAWLER_DB_PATH || process.env.DB_PATH || path.join(__dirname, '../../../data/grqaser.db'),
-  dataDir: path.join(__dirname, '../../../data'),
+  dbPath: process.env.CRAWLER_DB_PATH || process.env.DB_PATH || path.join(__dirname, '../../../../data/grqaser.db'),
+  dataDir: path.join(__dirname, '../../../../data'),
 
   // Crawler mode: full (default) | update | fix-download-all | full-database | test
   // Env: CRAWLER_MODE. CLI: --mode=update
