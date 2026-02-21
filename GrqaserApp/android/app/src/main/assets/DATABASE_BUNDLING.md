@@ -11,4 +11,4 @@ cp data/grqaser.db GrqaserApp/android/app/src/main/assets/grqaser.db
 
 The app opens it read-only from assets (createFromLocation with ~ path). Rebuild after updating.
 
-For iOS, copy to `GrqaserApp/ios/GrqaserApp/grqaser.db` (Copy Bundle Resources).
+**iOS:** Copy to `GrqaserApp/ios/GrqaserApp/grqaser.db`. The Xcode project includes this file in Copy Bundle Resources, so after copying, build the app (e.g. Product → Run). The app opens it read-only from the bundle.

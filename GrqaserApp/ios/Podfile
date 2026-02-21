@@ -60,5 +60,12 @@ target 'GrqaserApp' do
       :mac_catalyst_enabled => false
     )
     __apply_Xcode_12_5_M1_post_install_workaround(installer)
+
+    # Remove Copy Swift pod module maps phase if present (it conflicted with Pods producing the same files).
+    grqaser_app_project = installer.aggregate_targets.find { |t| t.name == 'Pods-GrqaserApp' }.user_project
+    grqaser_app_target = grqaser_app_project.targets.find { |t| t.name == 'GrqaserApp' }
+    if grqaser_app_target
+      grqaser_app_target.build_phases.delete_if { |p| p.respond_to?(:name) && (p.name == 'Copy SwiftAudioEx module map' || p.name == 'Copy Swift pod module maps') }
+    end
   end
 end
