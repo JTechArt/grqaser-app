@@ -23,6 +23,11 @@ Testing and deployment follow the same phase order as development. **After Epic 
 
 - Single command or CI job to run **books-admin-app** tests (crawler + viewer behavior). GrqaserApp lint and test in CI. No Phase 3 tests should assume incomplete Phase 1 or 2 data (verified via books-admin-app).
 
+### Books-admin-app: single command and pipeline
+
+- **Single command:** From repo root run `npm run admin:test`, or from `books-admin-app/` run `npm test`. This runs the full Jest suite (crawler unit tests, API route tests, DB versioning tests, crawler smoke/integration).
+- **CI job:** A pipeline (e.g. GitHub Actions) should run books-admin-app tests with the same command. Example: `cd books-admin-app && npm ci && npm test`. Use Node LTS matching `books-admin-app/package.json` engines. Do not assume Epic 6 or Phase 2 data exists; tests use in-process or temporary test DBs.
+
 ## Deployment and runbooks (post–Epic 7)
 
 - **Books-admin-app:** Document run instructions (port, active DB path, crawler config, env). How to run full crawl, validate output, and use the web UI for books/stats/crawler/DB versioning/data edit. No separate runbooks for standalone crawler or database-viewer.
