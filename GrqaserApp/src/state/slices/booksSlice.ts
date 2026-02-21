@@ -1,6 +1,7 @@
 import {createSlice, createAsyncThunk, PayloadAction} from '@reduxjs/toolkit';
 import {Book, BookFilter} from '../../types/book';
 import {booksApi, getErrorMessage} from '../../services/booksApi';
+import {getPlaybackPositions} from '../../services/preferencesStorage';
 
 interface BooksState {
   books: Book[];
@@ -37,7 +38,12 @@ export const fetchBooks = createAsyncThunk(
   'books/fetchBooks',
   async (_, {rejectWithValue}) => {
     try {
-      return await booksApi.getBooks();
+      const books = await booksApi.getBooks();
+      const positions = await getPlaybackPositions();
+      return books.map(b => ({
+        ...b,
+        playProgress: positions[b.id] as number | undefined,
+      }));
     } catch (error) {
       return rejectWithValue(getErrorMessage(error));
     }
@@ -103,6 +109,21 @@ const booksSlice = createSlice({
     },
     clearSearchError: state => {
       state.searchError = null;
+    },
+    mergePlayProgress: (
+      state,
+      action: PayloadAction<Record<string, number>>,
+    ) => {
+      const positions = action.payload;
+      state.books = state.books.map(b => ({
+        ...b,
+        playProgress: positions[b.id] as number | undefined,
+      }));
+      state.filteredBooks = applyFilters(
+        state.books,
+        state.filters,
+        state.searchQuery,
+      );
     },
   },
   extraReducers: builder => {
@@ -193,6 +214,19 @@ export const {
   addToRecentlyPlayed,
   clearError,
   clearSearchError,
+  mergePlayProgress,
 } = booksSlice.actions;
+
+export const syncPlayProgress = createAsyncThunk(
+  'books/syncPlayProgress',
+  async (_, {dispatch, rejectWithValue}) => {
+    try {
+      const positions = await getPlaybackPositions();
+      dispatch(mergePlayProgress(positions));
+    } catch (error) {
+      return rejectWithValue(getErrorMessage(error));
+    }
+  },
+);
 
 export default booksSlice.reducer;

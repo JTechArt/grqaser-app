@@ -5,6 +5,7 @@
 import TrackPlayer, {Event} from 'react-native-track-player';
 import {store} from '../state';
 import {setError, setPlaying} from '../state/slices/playerSlice';
+import {syncPlayProgress} from '../state/slices/booksSlice';
 import {savePlaybackPosition} from './preferencesStorage';
 import {storageService} from './storageService';
 
@@ -62,7 +63,9 @@ export async function PlaybackService(): Promise<void> {
     const bookId = track?.id as string | undefined;
     if (bookId && typeof ev.position === 'number') {
       lastPositionSaveAt = now;
-      savePlaybackPosition(bookId, ev.position).catch(() => {});
+      savePlaybackPosition(bookId, ev.position)
+        .then(() => store.dispatch(syncPlayProgress()))
+        .catch(() => {});
 
       const url = track?.url as string | undefined;
       const isStreaming = url != null && !url.startsWith('file://');

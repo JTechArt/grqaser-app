@@ -22,6 +22,7 @@ import {
   fetchLibraryEntries,
   removeBookFromLibrary,
 } from '../state/slices/librarySlice';
+import {syncPlayProgress} from '../state/slices/booksSlice';
 import {theme} from '../theme';
 import {formatDuration} from '../utils/formatters';
 
@@ -56,6 +57,7 @@ const LibraryScreen: React.FC = () => {
   useFocusEffect(
     useCallback(() => {
       dispatch(fetchLibraryEntries());
+      dispatch(syncPlayProgress());
     }, [dispatch]),
   );
 
@@ -69,14 +71,13 @@ const LibraryScreen: React.FC = () => {
   const filteredBooks = useMemo(() => {
     switch (activeFilter) {
       case 'in_progress':
-        return libraryBooks.filter(
-          b =>
-            b.playProgress != null &&
-            b.playProgress > 0 &&
-            b.duration != null &&
-            b.duration > 0 &&
-            b.playProgress < b.duration,
-        );
+        return libraryBooks.filter(b => {
+          if (b.playProgress == null || b.playProgress <= 0) return false;
+          if (b.duration != null && b.duration > 0) {
+            return b.playProgress < b.duration;
+          }
+          return true;
+        });
       case 'favorites':
         return libraryBooks.filter(b => favoriteIds.includes(b.id));
       case 'downloaded':
