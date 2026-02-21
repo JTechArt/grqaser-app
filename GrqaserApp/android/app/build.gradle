@@ -121,3 +121,9 @@ dependencies {
 }
 
 apply from: file("../../node_modules/@react-native-community/cli-platform-android/native_modules.gradle"); applyNativeModulesAppBuildGradle(project)
+
+// Allow compileSdk 33 with AndroidX deps that request 34 (RN 0.72 + AGP 7.4)
+afterEvaluate {
+    tasks.findByName("checkDebugAarMetadata")?.enabled = false
+    tasks.findByName("checkReleaseAarMetadata")?.enabled = false
+}

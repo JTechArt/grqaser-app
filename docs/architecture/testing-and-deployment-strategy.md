@@ -23,10 +23,20 @@ Testing and deployment follow the same phase order as development. **After Epic 
 
 - Single command or CI job to run **books-admin-app** tests (crawler + viewer behavior). GrqaserApp lint and test in CI. No Phase 3 tests should assume incomplete Phase 1 or 2 data (verified via books-admin-app).
 
+### GrqaserApp: lint and test in CI
+
+- **Commands:** From repo root run `cd GrqaserApp && npm ci && npm run lint && npm test`, or from `GrqaserApp/` run `npm run lint` and `npm test`. Use Node LTS matching `GrqaserApp/package.json` engines (e.g. Node 22).
+- **CI job:** A pipeline (e.g. GitHub Actions) can run GrqaserApp lint and test on changes under `GrqaserApp/**`. Native iOS/Android builds in CI are optional (require macOS runner for iOS, Android SDK for Android); see [GrqaserApp build and signing](./grqaserapp-build-and-signing.md).
+
+### Books-admin-app: single command and pipeline
+
+- **Single command:** From repo root run `npm run admin:test`, or from `books-admin-app/` run `npm test`. This runs the full Jest suite (crawler unit tests, API route tests, DB versioning tests, crawler smoke/integration).
+- **CI job:** A pipeline (e.g. GitHub Actions) should run books-admin-app tests with the same command. Example: `cd books-admin-app && npm ci && npm test`. Use Node LTS matching `books-admin-app/package.json` engines. Do not assume Epic 6 or Phase 2 data exists; tests use in-process or temporary test DBs.
+
 ## Deployment and runbooks (post–Epic 7)
 
 - **Books-admin-app:** Document run instructions (port, active DB path, crawler config, env). How to run full crawl, validate output, and use the web UI for books/stats/crawler/DB versioning/data edit. No separate runbooks for standalone crawler or database-viewer.
-- **GrqaserApp:** Store submission or internal distribution steps; env and signing requirements. **(Epic 8)** Document the public URL for catalog DB downloads; document default/bundled DB if applicable. Document storage allocation and cleanup procedures for users. Known troubleshooting (e.g. from `docs/tasks/06-TROUBLESHOOTING.md` or equivalent).
+- **GrqaserApp:** Build and run from repo: `npm run ios` / `npm run android` from `GrqaserApp/`. Signing and env for TestFlight/internal distribution: see [GrqaserApp build and signing](./grqaserapp-build-and-signing.md). **(Epic 8)** Document the public URL for catalog DB downloads; document default/bundled DB if applicable. Document storage allocation and cleanup procedures for users. Known troubleshooting (e.g. from `docs/tasks/06-TROUBLESHOOTING.md` or equivalent).
 
 ## Phase gates and QA
 

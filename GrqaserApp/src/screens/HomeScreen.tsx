@@ -4,6 +4,7 @@ import {useNavigation} from '@react-navigation/native';
 import {useDispatch, useSelector} from 'react-redux';
 import {Text, Searchbar, ActivityIndicator, Banner} from 'react-native-paper';
 import {StackNavigationProp} from '@react-navigation/stack';
+import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import LinearGradient from 'react-native-linear-gradient';
 
 import {RootStackParamList} from '../navigation/types';
@@ -18,6 +19,7 @@ import {Book} from '../types/book';
 import BookCard from '../components/BookCard';
 import MiniPlayer from '../components/MiniPlayer';
 import {theme} from '../theme';
+import {Button} from 'react-native-paper';
 
 type HomeScreenNavigationProp = StackNavigationProp<
   RootStackParamList,
@@ -27,6 +29,7 @@ type HomeScreenNavigationProp = StackNavigationProp<
 const HomeScreen: React.FC = () => {
   const navigation = useNavigation<HomeScreenNavigationProp>();
   const dispatch = useDispatch<AppDispatch>();
+  const insets = useSafeAreaInsets();
   const [refreshing, setRefreshing] = useState(false);
 
   const {books, filteredBooks, loading, error, searchQuery} = useSelector(
@@ -75,7 +78,7 @@ const HomeScreen: React.FC = () => {
   const renderHeader = () => (
     <LinearGradient
       colors={[theme.colors.accentLight, theme.colors.surface]}
-      style={styles.header}>
+      style={[styles.header, {paddingTop: insets.top + 20}]}>
       <View style={styles.headerContent}>
         <Text style={styles.appTitle}>Grqaser</Text>
         <Text style={styles.appSubtitle}>Book Lover</Text>
@@ -125,12 +128,23 @@ const HomeScreen: React.FC = () => {
           <Text style={styles.emptyStateText}>
             No books yet. Pull down to refresh.
           </Text>
+          <Text style={styles.emptyStateHint}>
+            You can also load a catalog database from Settings.
+          </Text>
+          <Button
+            mode="outlined"
+            onPress={() => navigation.navigate('Settings')}
+            style={styles.settingsBtn}
+            textColor={theme.colors.primary}
+            icon="cog">
+            Open Settings
+          </Button>
         </View>
       ) : (
         <View style={styles.booksGrid}>
-          {filteredBooks.slice(0, 6).map(book => (
+          {filteredBooks.slice(0, 6).map((book, index) => (
             <BookCard
-              key={book.id}
+              key={`${book.id}-${index}`}
               book={book}
               onPress={() => handleBookPress(book)}
             />
@@ -163,9 +177,9 @@ const HomeScreen: React.FC = () => {
           horizontal
           showsHorizontalScrollIndicator={false}
           contentContainerStyle={styles.recentBooksContainer}>
-          {recentBooks.map(book => (
+          {recentBooks.map((book, index) => (
             <BookCard
-              key={book.id}
+              key={`${book.id}-${index}`}
               book={book}
               onPress={() => handleBookPress(book)}
               compact
@@ -216,7 +230,6 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   header: {
-    paddingTop: 60,
     paddingBottom: 20,
     paddingHorizontal: 20,
   },
@@ -295,6 +308,16 @@ const styles = StyleSheet.create({
   emptyStateText: {
     fontSize: 16,
     color: theme.colors.onSurface,
+  },
+  emptyStateHint: {
+    fontSize: 14,
+    color: theme.colors.onSurface,
+    marginTop: 8,
+    textAlign: 'center',
+  },
+  settingsBtn: {
+    marginTop: 16,
+    borderColor: theme.colors.primary,
   },
 });
 

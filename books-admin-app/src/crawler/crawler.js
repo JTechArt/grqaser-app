@@ -58,7 +58,7 @@ class GrqaserCrawler {
       const testPath = this.testDbPath || path.join(__dirname, '../../data/test_grqaser.db');
       this.dbPath = path.isAbsolute(testPath) ? testPath : path.join(__dirname, '../..', testPath.replace(/^\.\//, ''));
     } else {
-      this.dbPath = config.dbPath || path.join(__dirname, '../../data/grqaser.db');
+      this.dbPath = config.dbPath || path.join(__dirname, '../../../data/grqaser.db');
     }
 
     const crawling = config.crawling || {};

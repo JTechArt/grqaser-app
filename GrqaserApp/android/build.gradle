@@ -19,3 +19,18 @@ buildscript {
         classpath("com.facebook.react:react-native-gradle-plugin")
     }
 }
+
+allprojects {
+    repositories {
+        google()
+        mavenCentral()
+    }
+    configurations.all {
+        resolutionStrategy {
+            force "androidx.core:core:1.12.0"
+            force "androidx.core:core-ktx:1.12.0"
+            force "androidx.appcompat:appcompat:1.5.1"
+            force "androidx.appcompat:appcompat-resources:1.5.1"
+        }
+    }
+}

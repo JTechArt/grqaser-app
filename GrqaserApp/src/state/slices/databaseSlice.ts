@@ -36,8 +36,20 @@ export const initializeDatabases = createAsyncThunk(
   async (_, {dispatch, rejectWithValue}) => {
     try {
       await initAppMetaDb(APP_META_DB);
-      await initBundledCatalogDb();
-      await dispatch(fetchManagedDatabases()).unwrap();
+
+      // Check if a user-managed DB is already active; prefer it over the bundled one
+      const managed = await dispatch(fetchManagedDatabases()).unwrap();
+      if (managed.active) {
+        await initCatalogDb(managed.active.filePath);
+      } else {
+        // Fall back to bundled catalog DB; non-fatal if missing
+        try {
+          await initBundledCatalogDb();
+        } catch {
+          // No bundled DB available -- user can load one from Settings
+        }
+      }
+
       return true;
     } catch (error) {
       const msg =
@@ -186,6 +198,7 @@ const databaseSlice = createSlice({
       })
       .addCase(initializeDatabases.rejected, (state, action) => {
         state.loading = false;
+        state.initialized = false;
         state.error =
           (action.payload as string) ?? 'Failed to initialize databases';
       })

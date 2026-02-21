@@ -24,6 +24,7 @@ const SEEK_BAR_HEIGHT = 40;
 const PlayerScreen: React.FC = () => {
   const {width} = useWindowDimensions();
   const currentBook = useSelector((s: RootState) => s.player.currentBook);
+  const isPlaying = useSelector((s: RootState) => s.player.isPlaying);
   const playerError = useSelector((s: RootState) => s.player.error);
   const {position, duration} = useProgress(1000);
   const [seekBarWidth, setSeekBarWidth] = useState(
@@ -51,6 +52,17 @@ const PlayerScreen: React.FC = () => {
     },
     [seekBarWidth, duration, currentBook?.duration],
   );
+
+  const handleSkipBack = useCallback(() => {
+    const next = Math.max(0, position - 10);
+    seekTo(next);
+  }, [position]);
+
+  const handleSkipForward = useCallback(() => {
+    const maxDuration = duration > 0 ? duration : (currentBook?.duration ?? 0);
+    const next = Math.min(maxDuration || 0, position + 10);
+    seekTo(next);
+  }, [position, duration, currentBook?.duration]);
 
   const displayDuration =
     duration > 0 ? duration : (currentBook?.duration ?? 0) || 1;
@@ -144,10 +156,34 @@ const PlayerScreen: React.FC = () => {
 
       <View style={styles.controls}>
         <TouchableOpacity
+          onPress={handleSkipBack}
+          style={styles.secondaryControl}
+          activeOpacity={0.8}>
+          <Icon
+            name="rewind"
+            size={28}
+            color={theme.colors.onSurface}
+          />
+        </TouchableOpacity>
+        <TouchableOpacity
           onPress={handlePlayPause}
           style={styles.playPauseButton}
           activeOpacity={0.8}>
-          <Icon name="play-pause" size={48} color={theme.colors.primary} />
+          <Icon
+            name={isPlaying ? 'pause' : 'play'}
+            size={34}
+            color={theme.colors.onPrimary}
+          />
+        </TouchableOpacity>
+        <TouchableOpacity
+          onPress={handleSkipForward}
+          style={styles.secondaryControl}
+          activeOpacity={0.8}>
+          <Icon
+            name="fast-forward"
+            size={28}
+            color={theme.colors.onSurface}
+          />
         </TouchableOpacity>
       </View>
     </ScrollView>
@@ -246,9 +282,23 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
+    gap: 20,
+  },
+  secondaryControl: {
+    width: 46,
+    height: 46,
+    borderRadius: 23,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: theme.colors.surface,
   },
   playPauseButton: {
-    padding: 16,
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: theme.colors.primary,
   },
 });
 

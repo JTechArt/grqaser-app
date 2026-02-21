@@ -80,6 +80,18 @@ You can **start** and **stop** the crawler from the app (Crawler tab or API). Th
 
 To run the crawler manually from the repo (e.g. for debugging), set `CRAWLER_DB_PATH` or `DB_PATH` to the active path so writes go to the same DB the viewer reads.
 
+### Running a full crawl and validating output
+
+1. **Set crawler mode to full:** In the Crawler tab, set **Mode** to `full` (or via `PUT /api/v1/crawler/config` with `{ "mode": "full" }`). This runs the full queue-based discovery (listing + detail pages) and writes to the active DB.
+2. **Start the crawler:** Click **Start crawler** (or `POST /api/v1/crawler/start`). The crawler runs as a subprocess; progress appears in the Crawler tab (URL queue, logs).
+3. **Validate output:** After the run completes (or while it runs):
+   - **Books tab:** Confirm new/updated books appear; use list, search, and filters.
+   - **Stats:** Use the Stats tab or `GET /api/v1/stats/overview` to check book count and author/category stats.
+   - **Crawler logs:** In the Crawler tab, open **Logs** to see per-book success/failure and any validation skips.
+   - **Health:** `GET /api/v1/health` confirms DB connectivity and that the app is using the active DB.
+
+For a small test run, set mode to `test` and a **Test limit** (e.g. 5) in crawler config, then start and validate the same way.
+
 ## Data management (view and edit)
 
 The data view (list, detail, search, filters) reads from the **active database** (Story 6.2). You can **edit** any book from the detail modal.

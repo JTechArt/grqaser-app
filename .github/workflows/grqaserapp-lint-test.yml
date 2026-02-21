@@ -1,0 +1,38 @@
+# Run GrqaserApp lint and test. Story 5.2.
+name: GrqaserApp Lint and Test
+
+on:
+  push:
+    branches: [main, master]
+    paths:
+      - 'GrqaserApp/**'
+      - '.github/workflows/grqaserapp-lint-test.yml'
+  pull_request:
+    branches: [main, master]
+    paths:
+      - 'GrqaserApp/**'
+      - '.github/workflows/grqaserapp-lint-test.yml'
+
+jobs:
+  lint-and-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+          cache-dependency-path: GrqaserApp/package-lock.json
+
+      - name: Install and lint (GrqaserApp)
+        run: |
+          cd GrqaserApp
+          npm ci
+          npm run lint
+
+      - name: Test (GrqaserApp)
+        run: |
+          cd GrqaserApp
+          npm test -- --ci --passWithNoTests

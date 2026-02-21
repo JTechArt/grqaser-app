@@ -1,0 +1,49 @@
+# Quality Gate: 5.2
+schema: 1
+story: "5.2"
+story_title: "GrqaserApp testing and build"
+gate: CONCERNS
+status_reason: "Test issues resolved (14/14 suites, 149 tests pass). Lint still fails (31 ESLint/Prettier issues in GrqaserApp); CI will fail on lint step until fixed."
+reviewer: "Quinn (Test Architect)"
+updated: "2026-02-21T13:00:00Z"
+
+waiver: { active: false }
+
+top_issues:
+  - id: "MNT-001"
+    severity: medium
+    finding: "Pre-existing ESLint/Prettier errors (31) in GrqaserApp cause npm run lint to fail; CI job fails on lint step."
+    suggested_action: "Run eslint --fix and fix remaining issues in GrqaserApp so CI stays green."
+
+risk_summary:
+  totals: { critical: 0, high: 0, medium: 0, low: 0 }
+  recommendations:
+    must_fix: []
+    monitor: []
+
+evidence:
+  tests_reviewed: 149
+  risks_identified: 0
+  trace:
+    ac_covered: [1, 2, 3]
+    ac_gaps: []
+
+nfr_validation:
+  security:
+    status: PASS
+    notes: "No auth or secrets changes; build/signing doc advises not committing passwords."
+  performance:
+    status: PASS
+    notes: "N/A for test and build docs."
+  reliability:
+    status: CONCERNS
+    notes: "All test suites pass; CI still fails on lint step until MNT-001 fixed."
+  maintainability:
+    status: PASS
+    notes: "New tests (playerSlice, BookCard) are well-structured; build doc is clear."
+
+recommendations:
+  immediate: []
+  future:
+    - action: "Fix pre-existing lint errors in GrqaserApp so npm run lint passes and CI is green."
+      refs: ["GrqaserApp/"]
