@@ -15,7 +15,7 @@ Minimal but critical rules for AI agents and developers. Project-specific; preve
 
 - **Crawler:** Keep parsing and normalization testable (unit tests); DB writes covered by integration tests. No HTML in persisted text fields; validate required fields and types before write.
 - **Database-viewer:** REST API under `/api/v1/`; pagination and filters where specified in PRD. Health endpoint must reflect DB connectivity.
-- **GrqaserApp:** TypeScript throughout; state via Redux Toolkit; API calls through a service layer. Handle network and playback errors with clear user feedback.
+- **GrqaserApp:** TypeScript throughout; state via Redux Toolkit. **(Epic 8)** Catalog reads go through `src/database/catalogRepository.ts` (local SQLite), not API calls. Download and DB management through `src/services/downloadManager.ts` and `src/services/databaseManager.ts`. Handle network errors (download/stream), playback errors, and offline states with clear user feedback.
 
 ## References
 

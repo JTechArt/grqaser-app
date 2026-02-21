@@ -42,12 +42,70 @@ grqaser/
 - **Entry:** `src/server.js`. See [Books-admin-app architecture](./books-admin-app-architecture.md) for run model, DB versioning, API, and design system/UI/UX (Epic 7).
 - **UI/UX:** Follow design system in `docs/design/README.md` and mockups in `docs/design/books-admin-app/` (Stories 7.3–7.4).
 
-## GrqaserApp (`GrqaserApp/`)
+## GrqaserApp (`GrqaserApp/`) — updated for Epic 8
 
-- **Role:** Phase 3 mobile app. Consumes data via **books-admin-app API** (or agreed export). Do not start catalog/playback work until crawler data has been validated via books-admin-app.
-- **Key dirs:** `src/` (screens, navigation, state, services, types), `android/`, `ios/`.
+- **Role:** Phase 3 mobile app. **After Epic 8:** reads catalog from a **local SQLite database** (no API calls for catalog); downloads and plays MP3s offline; manages multiple DB versions; auto-adds opened books to Library.
+- **Key dirs:** `src/` (screens, navigation, state, services, database, types), `android/`, `ios/`.
 - **Entry:** App entry per React Native (e.g. `index.js` / `App.tsx`).
-- **UI/UX:** Follow design system in `docs/design/README.md` and mockups in `docs/design/grqaser-app/` (Stories 7.3, 7.5).
+- **UI/UX:** Follow design system in `docs/design/README.md` and mockups in `docs/design/grqaser-app/` (Stories 7.3, 7.5). Categories section removed (Epic 8).
+
+### GrqaserApp source layout (post–Epic 8)
+
+```
+GrqaserApp/src/
+├── screens/
+│   ├── HomeScreen.tsx          # Featured books (no categories)
+│   ├── SearchScreen.tsx        # Full-text search over local DB
+│   ├── BookDetailScreen.tsx    # Metadata, play, download
+│   ├── LibraryScreen.tsx       # Auto-added books, manual remove
+│   ├── PlayerScreen.tsx        # Full-screen player
+│   ├── ProfileScreen.tsx       # User profile
+│   ├── SettingsScreen.tsx      # Theme, DB management, storage/data usage, MP3 cleanup
+│   └── FavoritesScreen.tsx     # Favorites list
+├── navigation/
+│   ├── RootNavigator.tsx
+│   ├── types.ts
+│   └── deepLinking.ts
+├── state/
+│   ├── index.ts
+│   └── slices/
+│       ├── booksSlice.ts
+│       ├── playerSlice.ts
+│       ├── userSlice.ts
+│       ├── downloadSlice.ts      # (Epic 8) MP3 download state
+│       ├── databaseSlice.ts      # (Epic 8) Managed DBs, active DB
+│       └── librarySlice.ts       # (Epic 8) Library auto-add/remove
+├── services/
+│   ├── booksApi.ts               # (Epic 8) Replaced by local DB reads; retained for streaming URL resolution
+│   ├── apiConfig.ts
+│   ├── bookMapper.ts
+│   ├── playerService.ts
+│   ├── playbackService.ts
+│   ├── preferencesStorage.ts
+│   ├── databaseManager.ts        # (Epic 8) Load/list/refresh/remove/switch DBs
+│   └── downloadManager.ts        # (Epic 8) Download/delete MP3s, storage metrics
+├── database/                     # (Epic 8) Local SQLite access
+│   ├── connection.ts             # Open/close SQLite connections
+│   ├── catalogRepository.ts      # Read books, search, metadata from active catalog DB
+│   └── appMetaRepository.ts      # Read/write managed_databases, downloaded_mp3s, library_entries
+├── components/
+│   ├── BookCard.tsx
+│   ├── MiniPlayer.tsx
+│   ├── AudioSpeedControl.tsx
+│   └── TrackPlayerProvider.tsx
+├── types/
+│   └── book.ts                   # (Epic 8) Add ManagedDatabase, DownloadedMp3, LibraryEntry, StorageUsage
+├── theme/
+│   └── index.ts
+├── utils/
+│   └── formatters.ts
+├── constants/
+│   └── index.ts
+└── store/
+    └── index.ts
+```
+
+**Removed (Epic 8):** `CategoryScreen.tsx`, `CategoryCard.tsx` — categories section is removed from the app.
 
 ## Design and mockups (`docs/design/`) — Epic 7.3–7.5
 
@@ -56,10 +114,10 @@ grqaser/
 - **books-admin-app/:** HTML mockups for Dashboard, Books, Crawler, Databases, Book detail/edit.
 - **grqaser-app/:** HTML mockups for Home, Book detail, Library, Audio player, Profile (mobile frame, same design rules).
 
-## File placement rules (post–Epic 7)
+## File placement rules (post–Epic 7, updated for Epic 8)
 
 - **New admin code:** Under `books-admin-app/src/` only (server, routes, config, models/db, crawler); static UI in `books-admin-app/public/`. Follow [books-admin-app architecture](./books-admin-app-architecture.md) and `docs/design/` mockups.
-- **New GrqaserApp code:** Under `GrqaserApp/src/` (screens, services, state, types). Use path aliases if configured. API base: books-admin-app.
+- **New GrqaserApp code:** Under `GrqaserApp/src/` (screens, services, state, database, types). Use path aliases if configured. **(Epic 8)** Local DB access in `src/database/`; download and DB management services in `src/services/`; new Redux slices in `src/state/slices/`.
 - **Design/mockup changes:** Under `docs/design/` (README.md, index.html, books-admin-app/, grqaser-app/).
 - **Shared types/schema:** Document in `docs/architecture/data-models-and-schema.md`; duplicate minimal types in each app or use a shared package only if introduced explicitly.
 
@@ -70,4 +128,4 @@ grqaser/
 
 ## Dev agent reference
 
-Use this source tree and [delivery order and application boundaries](./delivery-order-and-application-boundaries.md). All admin work goes into **books-admin-app**; GrqaserApp consumes **books-admin-app API**. Do not add features to standalone crawler or database-viewer (they are removed or archived).
+Use this source tree and [delivery order and application boundaries](./delivery-order-and-application-boundaries.md). All admin work goes into **books-admin-app**. **(Epic 8)** GrqaserApp reads catalog from **local SQLite** (not the API); new local DB, download, and library modules go under `GrqaserApp/src/database/` and `GrqaserApp/src/services/`. Do not add features to standalone crawler or database-viewer (they are removed or archived).

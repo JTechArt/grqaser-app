@@ -1,11 +1,10 @@
 import {createSlice, createAsyncThunk, PayloadAction} from '@reduxjs/toolkit';
-import {Book, BookCategory, BookFilter} from '../../types/book';
+import {Book, BookFilter} from '../../types/book';
 import {booksApi, getErrorMessage} from '../../services/booksApi';
 
 interface BooksState {
   books: Book[];
   filteredBooks: Book[];
-  categories: BookCategory[];
   favorites: string[];
   recentlyPlayed: string[];
   loading: boolean;
@@ -19,7 +18,6 @@ interface BooksState {
 const initialState: BooksState = {
   books: [],
   filteredBooks: [],
-  categories: [],
   favorites: [],
   recentlyPlayed: [],
   loading: false,
@@ -27,10 +25,10 @@ const initialState: BooksState = {
   searchLoading: false,
   searchError: null,
   filters: {
-    category: 'all',
     type: 'all',
     language: 'all',
     duration: 'all',
+    category: 'all',
   },
   searchQuery: '',
 };
@@ -40,17 +38,6 @@ export const fetchBooks = createAsyncThunk(
   async (_, {rejectWithValue}) => {
     try {
       return await booksApi.getBooks();
-    } catch (error) {
-      return rejectWithValue(getErrorMessage(error));
-    }
-  },
-);
-
-export const fetchCategories = createAsyncThunk(
-  'books/fetchCategories',
-  async (_, {rejectWithValue}) => {
-    try {
-      return await booksApi.getCategories();
     } catch (error) {
       return rejectWithValue(getErrorMessage(error));
     }
@@ -137,9 +124,6 @@ const booksSlice = createSlice({
         state.loading = false;
         state.error = (action.payload as string) ?? 'Failed to load books';
       })
-      .addCase(fetchCategories.fulfilled, (state, action) => {
-        state.categories = action.payload;
-      })
       .addCase(searchBooks.pending, state => {
         state.searchLoading = true;
         state.searchError = null;
@@ -172,10 +156,6 @@ const applyFilters = (
         book.author.toLowerCase().includes(query) ||
         book.description?.toLowerCase().includes(query),
     );
-  }
-
-  if (filters.category !== 'all') {
-    filtered = filtered.filter(book => book.category === filters.category);
   }
 
   if (filters.type !== 'all') {

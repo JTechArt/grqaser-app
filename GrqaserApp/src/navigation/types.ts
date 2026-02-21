@@ -1,4 +1,4 @@
-import {Book, BookCategory} from '../types/book';
+import {Book} from '../types/book';
 
 export type TabParamList = {
   Home: undefined;
@@ -15,9 +15,6 @@ export type RootStackParamList = {
   };
   Search: {
     initialQuery?: string;
-  };
-  Category: {
-    category: BookCategory;
   };
   Settings: undefined;
   Player: {

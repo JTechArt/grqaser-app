@@ -23,9 +23,16 @@
         <p class="book-detail-desc">Description and chapters would go here. Same design system: teal primary, slate text.</p>
       </div>
       <div class="book-detail-actions">
-        <a href="audio-player.html" class="play-btn-circle" aria-label="Play">
-          <span class="icon">▶</span>
-        </a>
+        <div class="detail-action-row">
+          <a href="audio-player.html" class="play-btn-circle" aria-label="Play">
+            <span class="icon">▶</span>
+          </a>
+          <button type="button" class="download-btn" aria-label="Download for offline">
+            <span class="download-icon">⬇</span>
+            <span class="download-label">Download</span>
+          </button>
+        </div>
+        <p class="download-hint">Download all MP3s for offline listening</p>
       </div>
     </div>
     <nav class="bottom-nav">
@@ -78,6 +85,31 @@
       box-shadow: 0 -2px 12px rgba(15, 23, 42, 0.06);
       text-align: center;
     }
+    .detail-action-row {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 1.25rem;
+    }
+    .download-btn {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      width: 72px;
+      height: 72px;
+      border-radius: 50%;
+      background: var(--accent-light);
+      color: var(--accent);
+      border: 2px solid var(--accent);
+      cursor: pointer;
+      transition: transform 0.15s, background 0.15s;
+    }
+    .download-btn:hover { transform: scale(1.05); background: #b2f5ea; }
+    .download-btn:active { transform: scale(0.98); }
+    .download-icon { font-size: 1.25rem; line-height: 1; }
+    .download-label { font-size: 0.5625rem; font-weight: 700; margin-top: 0.15rem; text-transform: uppercase; letter-spacing: 0.04em; }
+    .download-hint { font-size: 0.75rem; color: var(--text-muted); margin-top: 0.75rem; }
   </style>
 </body>
 </html>

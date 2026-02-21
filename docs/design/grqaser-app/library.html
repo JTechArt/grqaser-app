@@ -10,9 +10,9 @@
   <div class="mobile-frame">
     <header class="hero-header">
       <h1>Library</h1>
-      <span class="subtitle">Your reading & listening</span>
+      <span class="subtitle">Your reading &amp; listening</span>
     </header>
-    <p style="padding: 0.5rem 1.25rem 0;"><a href="../index.html" class="back-link">← Design hub</a></p>
+    <p style="padding: 0.5rem 1.25rem 0;"><a href="../index.html" class="back-link">&larr; Design hub</a></p>
     <div class="category-pills" style="padding-top: 0.5rem;">
       <button type="button" class="pill active">In progress</button>
       <button type="button" class="pill">Favorites</button>
@@ -20,44 +20,108 @@
     </div>
     <p class="section-title">In progress</p>
     <div class="library-list content">
-      <a href="book-detail.html" class="library-card">
-        <div class="book-cover library-cover">
-          <img src="https://picsum.photos/seed/ktak1/160/220" alt="" loading="lazy" onerror="this.style.display='none'">
-        </div>
-        <div class="book-info">
-          <div class="book-title">Կտակ</div>
-          <div class="book-author">Վրթանես Փափազյան</div>
-          <div class="book-duration">0ժ 51ր · 15%</div>
-        </div>
-      </a>
+      <div class="library-card-wrap">
+        <a href="book-detail.html" class="library-card">
+          <div class="book-cover library-cover">
+            <img src="https://picsum.photos/seed/ktak1/160/220" alt="" loading="lazy" onerror="this.style.display='none'">
+            <span class="downloaded-badge" title="Downloaded for offline">&darr;</span>
+          </div>
+          <div class="book-info">
+            <div class="book-title">&#1343;&#1407;&#1377;&#1391;</div>
+            <div class="book-author">&#1358;&#1408;&#1385;&#1377;&#1398;&#1381;&#1405; &#1363;&#1377;&#1411;&#1377;&#1382;&#1397;&#1377;&#1398;</div>
+            <div class="book-duration">0&#1386; 51&#1408; &middot; 15%</div>
+          </div>
+        </a>
+        <button type="button" class="remove-btn" aria-label="Remove from library" title="Remove from library">&times;</button>
+      </div>
+      <div class="library-card-wrap">
+        <a href="book-detail.html" class="library-card">
+          <div class="book-cover library-cover">
+            <img src="https://picsum.photos/seed/sirt3/160/220" alt="" loading="lazy" onerror="this.style.display='none'">
+          </div>
+          <div class="book-info">
+            <div class="book-title">&#1357;&#1387;&#1408;&#1407;&#1384;</div>
+            <div class="book-author">&#1335;&#1380;&#1396;&#1400;&#1398;&#1380;&#1400; &#1380;&#1381; &#1329;&#1396;&#1387;&#1401;&#1387;&#1405;</div>
+            <div class="book-duration">9&#1386; 55&#1408; &middot; 2%</div>
+          </div>
+        </a>
+        <button type="button" class="remove-btn" aria-label="Remove from library" title="Remove from library">&times;</button>
+      </div>
     </div>
     <nav class="bottom-nav">
-      <a href="home.html" class="nav-item"><span class="nav-icon">🏠</span>Home</a>
-      <a href="library.html" class="nav-item active"><span class="nav-icon">📚</span>Library</a>
-      <a href="audio-player.html" class="nav-item"><span class="nav-icon">🎧</span>Player</a>
-      <a href="profile.html" class="nav-item"><span class="nav-icon">👤</span>Profile</a>
+      <a href="home.html" class="nav-item"><span class="nav-icon">&#127968;</span>Home</a>
+      <a href="library.html" class="nav-item active"><span class="nav-icon">&#128218;</span>Library</a>
+      <a href="audio-player.html" class="nav-item"><span class="nav-icon">&#127911;</span>Player</a>
+      <a href="profile.html" class="nav-item"><span class="nav-icon">&#128100;</span>Profile</a>
     </nav>
   </div>
   <style>
     .library-list { padding: 0 1.25rem 2rem; }
+    .library-card-wrap {
+      position: relative;
+      margin-bottom: 0.75rem;
+    }
     .library-card {
       display: flex;
       flex-direction: row;
       gap: 1rem;
       padding: 0.75rem;
+      padding-right: 2.5rem;
       background: var(--card);
       border-radius: var(--radius-lg);
       border: 1px solid var(--border-muted);
       text-decoration: none;
       color: inherit;
-      margin-bottom: 0.75rem;
       box-shadow: var(--shadow);
       transition: box-shadow 0.2s;
     }
     .library-card:hover { box-shadow: var(--shadow-md); }
-    .library-cover { width: 80px; height: 110px; flex-shrink: 0; border-radius: var(--radius-sm); }
+    .library-cover {
+      width: 80px;
+      height: 110px;
+      flex-shrink: 0;
+      border-radius: var(--radius-sm);
+      position: relative;
+    }
     .library-cover img { border-radius: var(--radius-sm); }
     .library-card .book-info { flex: 1; text-align: left; padding: 0; display: flex; flex-direction: column; justify-content: center; }
+    .downloaded-badge {
+      position: absolute;
+      bottom: 4px;
+      right: 4px;
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      background: var(--accent);
+      color: white;
+      font-size: 0.6875rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: var(--shadow);
+    }
+    .remove-btn {
+      position: absolute;
+      top: 50%;
+      right: 0.5rem;
+      transform: translateY(-50%);
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      background: var(--border-muted);
+      color: var(--text-muted);
+      border: none;
+      cursor: pointer;
+      font-size: 0.875rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: background 0.15s, color 0.15s;
+    }
+    .remove-btn:hover {
+      background: #fee2e2;
+      color: #dc2626;
+    }
   </style>
 </body>
 </html>

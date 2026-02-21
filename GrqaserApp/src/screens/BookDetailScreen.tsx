@@ -1,4 +1,4 @@
-import React from 'react';
+import React, {useEffect} from 'react';
 import {
   View,
   Text,
@@ -7,17 +7,21 @@ import {
   Image,
   useWindowDimensions,
   TextStyle,
+  TouchableOpacity,
+  ActivityIndicator,
 } from 'react-native';
 import {RouteProp, useNavigation} from '@react-navigation/native';
 import {useSelector, useDispatch} from 'react-redux';
 import {Button, IconButton} from 'react-native-paper';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import {toggleFavorite} from '../state/slices/booksSlice';
+import {downloadBook} from '../state/slices/downloadSlice';
+import {addBookToLibrary} from '../state/slices/librarySlice';
 import {RootStackParamList} from '../navigation/types';
 import {theme} from '../theme';
 import {formatDuration} from '../utils/formatters';
 import {playBook} from '../services/playerService';
-import type {RootState} from '../state';
+import type {RootState, AppDispatch} from '../state';
 
 type BookDetailScreenRouteProp = RouteProp<RootStackParamList, 'BookDetail'>;
 
@@ -29,11 +33,28 @@ const COVER_MAX_HEIGHT = 280;
 const BookDetailScreen: React.FC<Props> = ({route}) => {
   const {width} = useWindowDimensions();
   const navigation = useNavigation();
-  const dispatch = useDispatch();
+  const dispatch = useDispatch<AppDispatch>();
   const playerError = useSelector((s: RootState) => s.player.error);
   const favoriteIds = useSelector((s: RootState) => s.books.favorites);
+  const downloadingBooks = useSelector(
+    (s: RootState) => s.download.downloadingBooks,
+  );
+  const downloadedBookIds = useSelector(
+    (s: RootState) => s.download.downloadedBookIds,
+  );
+  const downloadError = useSelector((s: RootState) => s.download.error);
   const book = route.params?.book;
   const isFavorite = book ? favoriteIds.includes(book.id) : false;
+  const isDownloading = book ? !!downloadingBooks[book.id] : false;
+  const isDownloaded = book ? downloadedBookIds.includes(book.id) : false;
+  const downloadProgress = book ? downloadingBooks[book.id] : undefined;
+
+  const bookId = book?.id;
+  useEffect(() => {
+    if (bookId) {
+      dispatch(addBookToLibrary(bookId));
+    }
+  }, [bookId, dispatch]);
 
   if (!book) {
     return (
@@ -47,7 +68,8 @@ const BookDetailScreen: React.FC<Props> = ({route}) => {
 
   const coverWidth = width;
   const coverHeight = Math.min(width / COVER_ASPECT, COVER_MAX_HEIGHT);
-  const canPlay = book.type === 'audiobook' && book.audioUrl?.trim();
+  const canPlay =
+    book.type === 'audiobook' && (!!book.audioUrl?.trim() || isDownloaded);
 
   const onPlayPress = () => {
     if (!canPlay) {
@@ -136,16 +158,56 @@ const BookDetailScreen: React.FC<Props> = ({route}) => {
         {playerError ? (
           <Text style={styles.errorText}>{playerError}</Text>
         ) : null}
-        <Button
-          mode="contained"
-          onPress={onPlayPress}
-          icon="play"
-          disabled={!canPlay}
-          style={styles.playButton}
-          contentStyle={styles.playButtonContent}>
-          Play
-        </Button>
-        {!canPlay && book.type === 'audiobook' ? (
+        {downloadError ? (
+          <Text style={styles.errorText}>{downloadError}</Text>
+        ) : null}
+        <View style={styles.actionRow}>
+          <Button
+            mode="contained"
+            onPress={onPlayPress}
+            icon="play"
+            disabled={!canPlay}
+            style={styles.playButton}
+            contentStyle={styles.playButtonContent}>
+            Play
+          </Button>
+          {book.type === 'audiobook' && (
+            <TouchableOpacity
+              style={[
+                styles.downloadBtn,
+                isDownloaded && styles.downloadBtnDone,
+              ]}
+              onPress={() => {
+                if (!isDownloading && !isDownloaded) {
+                  dispatch(downloadBook({bookId: book.id}));
+                }
+              }}
+              disabled={isDownloading || isDownloaded}>
+              {isDownloading ? (
+                <ActivityIndicator size="small" color={theme.colors.primary} />
+              ) : (
+                <Icon
+                  name={isDownloaded ? 'check' : 'arrow-down'}
+                  size={22}
+                  color={theme.colors.primary}
+                />
+              )}
+              <Text style={styles.downloadBtnLabel}>
+                {isDownloading
+                  ? `${Math.round((downloadProgress?.fraction ?? 0) * 100)}%`
+                  : isDownloaded
+                  ? 'Downloaded'
+                  : 'Download'}
+              </Text>
+            </TouchableOpacity>
+          )}
+        </View>
+        {book.type === 'audiobook' && !isDownloaded && !isDownloading ? (
+          <Text style={styles.playHint}>
+            Download all MP3s for offline listening
+          </Text>
+        ) : null}
+        {!canPlay && book.type === 'audiobook' && !isDownloaded ? (
           <Text style={styles.playHint}>
             No audio URL available for this book.
           </Text>
@@ -214,8 +276,34 @@ const styles = StyleSheet.create({
     color: theme.colors.text,
     marginBottom: 24,
   } as TextStyle,
-  playButton: {marginBottom: 8},
+  actionRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 8,
+    gap: 12,
+  },
+  playButton: {flex: 1},
   playButtonContent: {paddingVertical: 6},
+  downloadBtn: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    width: 72,
+    height: 72,
+    borderRadius: 36,
+    borderWidth: 2,
+    borderColor: theme.colors.primary,
+    backgroundColor: 'transparent',
+  },
+  downloadBtnDone: {
+    borderColor: theme.colors.primary,
+    backgroundColor: `${theme.colors.primary}15`,
+  },
+  downloadBtnLabel: {
+    ...theme.typography.caption,
+    color: theme.colors.primary,
+    marginTop: 2,
+    fontSize: 10,
+  } as TextStyle,
   playHint: {
     ...theme.typography.caption,
     color: theme.colors.onSurface,

@@ -1,0 +1,59 @@
+schema: 1
+story: '8.2'
+story_title: 'MP3 download storage and offline playback cleanup'
+gate: PASS
+status_reason: 'All 5 acceptance criteria met. Download, offline playback, and cleanup flows are well-implemented with comprehensive test coverage (64 tests, 6 suites). Minor issues are non-blocking.'
+reviewer: 'Quinn (Test Architect)'
+updated: '2026-02-21T00:00:00Z'
+
+top_issues:
+  - id: 'MNT-001'
+    severity: medium
+    finding: 'getLocalFilePath() hardcodes .mp3 extension but downloadBookMp3s() extracts actual extension from URL — potential path mismatch for non-mp3 audio files'
+    suggested_action: 'Use consistent extension logic; store actual file path from download or always normalize to .mp3'
+  - id: 'REQ-001'
+    severity: low
+    finding: 'SettingsScreen download list shows book author as subtitle instead of download size and file count per story spec'
+    suggested_action: 'Query downloaded_mp3s by book ID to show file count and total size per book in the downloads list'
+  - id: 'DOC-001'
+    severity: low
+    finding: 'Dev Agent Record not filled in — empty TBD, no debug logs, completion notes, or file list'
+    suggested_action: 'Dev should update Dev Agent Record sections before marking Ready for Review'
+waiver: { active: false }
+
+quality_score: 90
+expires: '2026-03-07T00:00:00Z'
+
+evidence:
+  tests_reviewed: 64
+  risks_identified: 1
+  trace:
+    ac_covered: [1, 2, 3, 4, 5]
+    ac_gaps: []
+
+nfr_validation:
+  _assessed: [security, performance, reliability, maintainability]
+  security:
+    status: PASS
+    notes: 'HTTPS downloads, local file storage in app sandbox, parameterized SQL queries. No secrets or auth involved.'
+  performance:
+    status: PASS
+    notes: 'Background downloads with 500ms progress interval. Efficient SQL queries with COALESCE and DISTINCT.'
+  reliability:
+    status: CONCERNS
+    notes: 'Retry logic is good (MAX_RETRIES=2). However: no download cancellation support, partial files not cleaned up if app terminates during download, getLocalFilePath extension mismatch.'
+  maintainability:
+    status: PASS
+    notes: 'Clean separation of concerns (downloadManager/downloadSlice/appMetaRepository). Comprehensive test coverage. Standard Redux Toolkit patterns.'
+
+recommendations:
+  immediate: []
+  future:
+    - action: 'Align getLocalFilePath() extension logic with downloadBookMp3s() to prevent path mismatches'
+      refs: ['src/services/downloadManager.ts']
+    - action: 'Add download cancellation support (e.g., AbortController or RNFS.stopDownload)'
+      refs: ['src/services/downloadManager.ts', 'src/state/slices/downloadSlice.ts']
+    - action: 'Show per-book download size and file count in SettingsScreen downloads list'
+      refs: ['src/screens/SettingsScreen.tsx']
+    - action: 'Add partial download cleanup on app startup to handle interrupted downloads'
+      refs: ['src/services/downloadManager.ts']

@@ -10,10 +10,13 @@ Testing and deployment follow the same phase order as development. **After Epic 
 - **Integration tests:** DB writes (crawler); API + DB (read and write); optional UI tests. Verify crawler output and viewer/API behavior through the single app.
 - **Run:** e.g. `npm test` from `books-admin-app/`. Phase 1 and 2 sign-off is achieved via books-admin-app (crawler behavior validated, then viewer/API used to verify data).
 
-### GrqaserApp (Phase 3)
+### GrqaserApp (Phase 3; updated for Epic 8)
 
-- **Unit / integration:** Components, state, services. Redux and API integration (books-admin-app API). Key flows (browse, search, book detail).
-- **E2E:** Critical path (e.g. play a book) where feasible. iOS and Android.
+- **Unit / integration:** Components, state, services. Redux slices (books, audio, user, search, downloads, databaseManagement, library). Local SQLite repository tests (catalog reads, metadata writes). Key flows (browse, search, book detail, library auto-add).
+- **Local DB tests (Epic 8):** Verify catalog reads from local SQLite; test DB switch triggers full data reload; test managed_databases CRUD; test downloaded_mp3s tracking and cleanup.
+- **Offline tests (Epic 8):** Verify playback works from downloaded MP3s with no network; verify appropriate offline messages when streaming unavailable and MP3 not downloaded; verify catalog browsing/search works offline (local DB).
+- **Download manager tests (Epic 8):** Test MP3 download, progress tracking, cleanup (all and per-book); verify storage metrics update correctly.
+- **E2E:** Critical path (e.g. play a book, download for offline, switch DB) where feasible. iOS and Android.
 - **Run:** e.g. `npm test`, `npm run lint` from `GrqaserApp/`. Builds: iOS and Android from repo; signing and env documented.
 
 ## CI (post–Epic 7)
@@ -23,7 +26,7 @@ Testing and deployment follow the same phase order as development. **After Epic 
 ## Deployment and runbooks (post–Epic 7)
 
 - **Books-admin-app:** Document run instructions (port, active DB path, crawler config, env). How to run full crawl, validate output, and use the web UI for books/stats/crawler/DB versioning/data edit. No separate runbooks for standalone crawler or database-viewer.
-- **GrqaserApp:** Store submission or internal distribution steps; env and signing requirements; API base (books-admin-app). Document known troubleshooting (e.g. from `docs/tasks/06-TROUBLESHOOTING.md` or equivalent).
+- **GrqaserApp:** Store submission or internal distribution steps; env and signing requirements. **(Epic 8)** Document the public URL for catalog DB downloads; document default/bundled DB if applicable. Document storage allocation and cleanup procedures for users. Known troubleshooting (e.g. from `docs/tasks/06-TROUBLESHOOTING.md` or equivalent).
 
 ## Phase gates and QA
 

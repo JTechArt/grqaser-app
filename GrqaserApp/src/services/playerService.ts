@@ -1,6 +1,6 @@
 /**
  * Player service: build track from book, start playback, sync with TrackPlayer.
- * Uses crawler-backed audio URL (book.audioUrl from main_audio_url).
+ * Prefers local downloaded MP3 over streaming URL for offline playback.
  */
 import TrackPlayer from 'react-native-track-player';
 import {store} from '../state';
@@ -12,47 +12,56 @@ import {
   clearError,
   setPlaying,
 } from '../state/slices/playerSlice';
+import {addBookToLibrary} from '../state/slices/librarySlice';
 import {getPlaybackPositions} from './preferencesStorage';
+import {downloadManager} from './downloadManager';
+import {resetStreamingPosition} from './playbackService';
 import type {Book} from '../types/book';
 
-export function bookToTrack(book: Book): {
-  url: string;
-  title: string;
-  artist: string;
-  id?: string;
-  duration?: number;
-  artwork?: string;
-} {
-  const url = book.audioUrl?.trim();
-  if (!url) {
-    throw new Error('Book has no audio URL');
+/**
+ * Resolve the playback URL for a book. If the book is downloaded locally,
+ * returns the local file path; otherwise returns the streaming URL.
+ */
+async function resolveAudioUrl(book: Book): Promise<string | null> {
+  const isDownloaded = await downloadManager.isBookDownloaded(book.id);
+  if (isDownloaded) {
+    const localPath = downloadManager.getLocalFilePath(book.id);
+    return `file://${localPath}`;
   }
-  return {
-    id: book.id,
-    url,
-    title: book.title,
-    artist: book.author,
-    duration: book.duration,
-    artwork: book.coverImage,
-  };
+  return book.audioUrl?.trim() || null;
 }
 
 /**
- * Load and play a book. Uses book.audioUrl (crawler main_audio_url).
- * Dispatches setCurrentBook, clearError; on failure dispatches setError.
+ * Load and play a book. Prefers local MP3 when downloaded; otherwise streams.
+ * If offline and not downloaded, dispatches an appropriate error.
  */
 export async function playBook(book: Book): Promise<void> {
-  const url = book.audioUrl?.trim();
-  if (!url) {
-    store.dispatch(setError('No audio URL for this book'));
-    return;
-  }
   store.dispatch(clearError());
+  store.dispatch(addBookToLibrary(book.id));
   try {
-    const track = bookToTrack(book);
+    const url = await resolveAudioUrl(book);
+    if (!url) {
+      store.dispatch(
+        setError(
+          'This book is not available offline. Download it to listen without internet.',
+        ),
+      );
+      return;
+    }
+
+    const track = {
+      id: book.id,
+      url,
+      title: book.title,
+      artist: book.author,
+      duration: book.duration,
+      artwork: book.coverImage,
+    };
+
     const positions = await getPlaybackPositions();
     const savedPosition = positions[book.id] ?? 0;
     await TrackPlayer.reset();
+    resetStreamingPosition();
     await TrackPlayer.add(track);
     if (savedPosition > 0) {
       await TrackPlayer.seekTo(savedPosition);
