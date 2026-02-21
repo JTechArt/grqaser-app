@@ -1,0 +1,33 @@
+# Run books-admin-app test suite (crawler + viewer behavior). Story 5.1.
+name: Books Admin App Tests
+
+on:
+  push:
+    branches: [main, master]
+    paths:
+      - 'books-admin-app/**'
+      - '.github/workflows/books-admin-app-tests.yml'
+  pull_request:
+    branches: [main, master]
+    paths:
+      - 'books-admin-app/**'
+      - '.github/workflows/books-admin-app-tests.yml'
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+          cache-dependency-path: books-admin-app/package-lock.json
+
+      - name: Install and test (books-admin-app)
+        run: |
+          cd books-admin-app
+          npm ci
+          npm test
