@@ -12,7 +12,10 @@ jest.mock('../../src/database/appMetaRepository', () => ({
 
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import {appMetaRepository} from '../../src/database/appMetaRepository';
-import {storageService} from '../../src/services/storageService';
+import {
+  storageService,
+  STORAGE_LIMIT_BYTES,
+} from '../../src/services/storageService';
 
 const {
   __mockGetFSInfo: mockGetFSInfo,
@@ -46,8 +49,10 @@ describe('storageService', () => {
       expect(result.breakdown.databases).toBe(52_000_000);
       expect(result.breakdown.other).toBe(16_000_000);
       expect(result.usedBytes).toBe(248_000_000);
-      expect(result.allocatedBytes).toBe(1_000_000_000);
-      expect(result.percentage).toBe(24.8);
+      expect(result.allocatedBytes).toBe(STORAGE_LIMIT_BYTES);
+      expect(result.percentage).toBe(
+        Math.round((248_000_000 / STORAGE_LIMIT_BYTES) * 1000) / 10,
+      );
     });
 
     it('clamps other to 0 when document dir is smaller than tracked totals', async () => {
@@ -69,18 +74,18 @@ describe('storageService', () => {
       expect(result.usedBytes).toBe(150);
     });
 
-    it('returns 0% when allocated is 0', async () => {
+    it('returns 0% when used bytes is 0', async () => {
       (appMetaRepository.getTotalDownloadSize as jest.Mock).mockResolvedValue(
         0,
       );
       (appMetaRepository.getTotalDatabaseSize as jest.Mock).mockResolvedValue(
         0,
       );
-      mockGetFSInfo.mockResolvedValue({totalSpace: 0, freeSpace: 0});
       mockReadDir.mockResolvedValue([]);
 
       const result = await storageService.getStorageUsage();
 
+      expect(result.allocatedBytes).toBe(STORAGE_LIMIT_BYTES);
       expect(result.percentage).toBe(0);
       expect(result.usedBytes).toBe(0);
     });

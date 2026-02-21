@@ -1,6 +1,7 @@
 import React, {useEffect} from 'react';
 import {View, Text, StyleSheet, ScrollView, TextStyle} from 'react-native';
 import {useNavigation} from '@react-navigation/native';
+import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import {useSelector, useDispatch} from 'react-redux';
 import type {RootState} from '../state';
 import type {AppDispatch} from '../state';
@@ -16,6 +17,7 @@ type NavProp = StackNavigationProp<RootStackParamList, 'MainTabs'>;
 const FavoritesScreen: React.FC = () => {
   const navigation = useNavigation<NavProp>();
   const dispatch = useDispatch<AppDispatch>();
+  const insets = useSafeAreaInsets();
   const {books, favorites} = useSelector((s: RootState) => s.books);
 
   useEffect(() => {
@@ -30,7 +32,12 @@ const FavoritesScreen: React.FC = () => {
 
   if (favoriteBooks.length === 0) {
     return (
-      <View style={[styles.container, styles.centered]}>
+      <View
+        style={[
+          styles.container,
+          styles.centered,
+          {paddingTop: insets.top + 16},
+        ]}>
         <Text style={styles.emptyTitle}>No favorites yet</Text>
         <Text style={styles.emptySubtext}>
           Tap the heart on a book to add it here.
@@ -42,7 +49,10 @@ const FavoritesScreen: React.FC = () => {
   return (
     <ScrollView
       style={styles.container}
-      contentContainerStyle={styles.content}
+      contentContainerStyle={[
+        styles.content,
+        {paddingTop: insets.top + theme.spacing.md},
+      ]}
       showsVerticalScrollIndicator={false}>
       <View style={styles.grid}>
         {favoriteBooks.map((book: Book, index) => (

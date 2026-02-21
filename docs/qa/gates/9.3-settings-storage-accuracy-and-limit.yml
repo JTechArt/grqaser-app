@@ -1,0 +1,36 @@
+# Quality Gate: 9.3
+schema: 1
+story: "9.3"
+story_title: "Settings Storage Data Accuracy and Storage Limit"
+gate: PASS
+status_reason: "All six ACs implemented: catalog DB size from disk (sync on list + after download), storage limit 10 GB as allocated, mobile data from actual bytes, metrics refresh after all operations including set active; tests updated and passing."
+reviewer: "Quinn (Test Architect)"
+updated: "2026-02-21T00:00:00Z"
+
+waiver: { active: false }
+top_issues: []
+
+risk_summary:
+  totals: { critical: 0, high: 0, medium: 0, low: 0 }
+  recommendations:
+    must_fix: []
+    monitor: []
+
+evidence:
+  tests_reviewed: 149
+  risks_identified: 0
+  trace:
+    ac_covered: [1, 2, 3, 4, 5, 6]
+    ac_gaps: []
+
+nfr_validation:
+  security: { status: PASS, notes: "No sensitive data; storage is local metrics." }
+  performance: { status: PASS, notes: "RNFS.stat per DB on list; acceptable for Settings." }
+  reliability: { status: PASS, notes: "Stale file sizes corrected on list; limit is constant." }
+  maintainability: { status: PASS, notes: "updateDatabaseFileSize added; tests cover STORAGE_LIMIT." }
+
+recommendations:
+  immediate: []
+  future:
+    - action: "Consider blocking new downloads when used storage exceeds STORAGE_LIMIT_BYTES (optional per story Task 2)."
+      refs: ["GrqaserApp/src/services/storageService.ts", "GrqaserApp/src/services/downloadManager.ts"]
