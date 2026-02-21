@@ -98,19 +98,20 @@ const styles = StyleSheet.create({
   },
   speedContainer: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
+    flexWrap: 'nowrap',
+    gap: 4,
   },
   speedButton: {
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 20,
+    flex: 1,
+    paddingHorizontal: 4,
+    paddingVertical: 6,
+    borderRadius: 14,
     borderWidth: 1,
-    minWidth: 50,
     alignItems: 'center',
+    justifyContent: 'center',
   },
   speedText: {
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: '500',
   },
 });
