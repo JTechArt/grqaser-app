@@ -16,9 +16,10 @@ import {
   setError,
   clearError,
   setPlaying,
+  setPlaybackRate,
 } from '../state/slices/playerSlice';
 import {addBookToLibrary} from '../state/slices/librarySlice';
-import {getPlaybackPositions} from './preferencesStorage';
+import {getPlaybackPositions, getPlaybackSpeed} from './preferencesStorage';
 import {downloadManager} from './downloadManager';
 import {resetStreamingPosition} from './playbackService';
 import type {Book} from '../types/book';
@@ -143,6 +144,9 @@ export async function playBook(book: Book): Promise<boolean> {
     store.dispatch(setCurrentBook(book));
     store.dispatch(setDuration(book.duration ?? 0));
     await TrackPlayer.play();
+    const savedSpeed = await getPlaybackSpeed();
+    await TrackPlayer.setRate(savedSpeed);
+    store.dispatch(setPlaybackRate(savedSpeed));
     const playbackState = await TrackPlayer.getPlaybackState();
     store.dispatch(
       setPlaying(
@@ -192,6 +196,19 @@ export async function seekTo(positionSeconds: number): Promise<void> {
     await TrackPlayer.seekTo(Math.max(0, positionSeconds));
   } catch (e) {
     const message = e instanceof Error ? e.message : 'Seek failed';
+    store.dispatch(setError(message));
+  }
+}
+
+/**
+ * Set playback speed (rate). Affects current and future playback until changed.
+ */
+export async function setPlaybackSpeed(speed: number): Promise<void> {
+  try {
+    await ensurePlayerReady();
+    await TrackPlayer.setRate(speed);
+  } catch (e) {
+    const message = e instanceof Error ? e.message : 'Speed change failed';
     store.dispatch(setError(message));
   }
 }

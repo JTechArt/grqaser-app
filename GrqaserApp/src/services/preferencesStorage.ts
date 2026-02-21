@@ -6,6 +6,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 const KEY_PLAYBACK_POSITIONS = '@grqaser/playback_positions';
 const KEY_FAVORITES = '@grqaser/favorites';
 const KEY_THEME = '@grqaser/theme';
+const KEY_PLAYBACK_SPEED = '@grqaser/playback_speed';
 
 export type ThemeMode = 'light' | 'dark' | 'auto';
 
@@ -84,6 +85,31 @@ export async function getThemePreference(): Promise<ThemeMode> {
 export async function setThemePreference(mode: ThemeMode): Promise<void> {
   try {
     await AsyncStorage.setItem(KEY_THEME, mode);
+  } catch {
+    // ignore
+  }
+}
+
+const DEFAULT_PLAYBACK_SPEED = 1;
+
+export async function getPlaybackSpeed(): Promise<number> {
+  try {
+    const raw = await AsyncStorage.getItem(KEY_PLAYBACK_SPEED);
+    if (raw == null) {
+      return DEFAULT_PLAYBACK_SPEED;
+    }
+    const value = Number.parseFloat(raw);
+    return Number.isFinite(value) && value >= 0.5 && value <= 2
+      ? value
+      : DEFAULT_PLAYBACK_SPEED;
+  } catch {
+    return DEFAULT_PLAYBACK_SPEED;
+  }
+}
+
+export async function savePlaybackSpeed(speed: number): Promise<void> {
+  try {
+    await AsyncStorage.setItem(KEY_PLAYBACK_SPEED, String(speed));
   } catch {
     // ignore
   }

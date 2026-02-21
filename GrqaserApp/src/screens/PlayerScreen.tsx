@@ -1,4 +1,4 @@
-import React, {useCallback, useState} from 'react';
+import React, {useCallback, useEffect, useState} from 'react';
 import {
   View,
   Text,
@@ -11,13 +11,24 @@ import {
   TextStyle,
 } from 'react-native';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
-import {useSelector} from 'react-redux';
+import {useSelector, useDispatch} from 'react-redux';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import {useProgress} from 'react-native-track-player';
 import {theme} from '../theme';
 import {formatTime} from '../utils/formatters';
-import {togglePlayPause, seekTo} from '../services/playerService';
+import {
+  togglePlayPause,
+  seekTo,
+  setPlaybackSpeed as setPlaybackSpeedService,
+} from '../services/playerService';
+import {
+  getPlaybackSpeed,
+  savePlaybackSpeed,
+} from '../services/preferencesStorage';
+import AudioSpeedControl from '../components/AudioSpeedControl';
+import {setPlaybackRate} from '../state/slices/playerSlice';
 import type {RootState} from '../state';
+import type {AppDispatch} from '../state';
 
 const COVER_SIZE = 240;
 const SEEK_BAR_HEIGHT = 40;
@@ -25,12 +36,27 @@ const SEEK_BAR_HEIGHT = 40;
 const PlayerScreen: React.FC = () => {
   const {width} = useWindowDimensions();
   const insets = useSafeAreaInsets();
+  const dispatch = useDispatch<AppDispatch>();
   const currentBook = useSelector((s: RootState) => s.player.currentBook);
   const isPlaying = useSelector((s: RootState) => s.player.isPlaying);
   const playerError = useSelector((s: RootState) => s.player.error);
+  const playbackRate = useSelector((s: RootState) => s.player.playbackRate);
   const {position, duration} = useProgress(1000);
   const [seekBarWidth, setSeekBarWidth] = useState(
     width - theme.spacing.lg * 2,
+  );
+
+  useEffect(() => {
+    getPlaybackSpeed().then(speed => dispatch(setPlaybackRate(speed)));
+  }, [dispatch]);
+
+  const handleSpeedChange = useCallback(
+    async (speed: number) => {
+      dispatch(setPlaybackRate(speed));
+      await setPlaybackSpeedService(speed);
+      await savePlaybackSpeed(speed);
+    },
+    [dispatch],
   );
 
   const handlePlayPause = useCallback(() => {
@@ -187,6 +213,14 @@ const PlayerScreen: React.FC = () => {
           <Icon name="fast-forward" size={28} color={theme.colors.onSurface} />
         </TouchableOpacity>
       </View>
+
+      <View style={styles.speedSection}>
+        <AudioSpeedControl
+          currentSpeed={playbackRate}
+          onSpeedChange={handleSpeedChange}
+          disabled={!currentBook}
+        />
+      </View>
     </ScrollView>
   );
 };
@@ -284,6 +318,10 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     gap: 20,
+  },
+  speedSection: {
+    width: '100%',
+    marginTop: 8,
   },
   secondaryControl: {
     width: 46,
