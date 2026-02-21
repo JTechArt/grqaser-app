@@ -10,6 +10,10 @@ import type {StorageUsage, MobileDataUsage} from '../types/book';
 
 const DATA_USAGE_KEY = '@grqaser/mobile_data_usage';
 
+/** Maximum storage allocated for app data (MP3s + databases). Default 10 GB. */
+export const STORAGE_LIMIT_BYTES =
+  10 * 1024 * 1024 * 1024;
+
 interface DataUsageStore {
   period: string; // "YYYY-MM"
   streaming: number;
@@ -48,12 +52,21 @@ async function saveDataUsage(store: DataUsageStore): Promise<void> {
 
 export type DataUsageCategory = 'streaming' | 'downloads' | 'dbUpdates';
 
-async function getDocumentDirSize(): Promise<number> {
+/** Recursively sum file sizes under dir (so subdirs like databases/ and mp3downloads/ are included). */
+async function getDirSizeRecursive(dirPath: string): Promise<number> {
   try {
-    const items = await RNFS.readDir(RNFS.DocumentDirectoryPath);
+    const items = await RNFS.readDir(dirPath);
     let total = 0;
     for (const item of items) {
-      total += Number(item.size) || 0;
+      const isDir =
+        typeof (item as {isDirectory?: () => boolean}).isDirectory ===
+          'function' &&
+        (item as {isDirectory: () => boolean}).isDirectory();
+      if (isDir) {
+        total += await getDirSizeRecursive(item.path);
+      } else {
+        total += Number(item.size) || 0;
+      }
     }
     return total;
   } catch {
@@ -61,18 +74,21 @@ async function getDocumentDirSize(): Promise<number> {
   }
 }
 
+async function getDocumentDirSize(): Promise<number> {
+  return getDirSizeRecursive(RNFS.DocumentDirectoryPath);
+}
+
 export const storageService = {
   async getStorageUsage(): Promise<StorageUsage> {
-    const [mp3Total, dbTotal, fsInfo, docDirSize] = await Promise.all([
+    const [mp3Total, dbTotal, docDirSize] = await Promise.all([
       appMetaRepository.getTotalDownloadSize(),
       appMetaRepository.getTotalDatabaseSize(),
-      RNFS.getFSInfo(),
       getDocumentDirSize(),
     ]);
 
     const otherBytes = Math.max(0, docDirSize - mp3Total - dbTotal);
     const usedBytes = mp3Total + dbTotal + otherBytes;
-    const allocatedBytes = fsInfo.totalSpace;
+    const allocatedBytes = STORAGE_LIMIT_BYTES;
     const percentage =
       allocatedBytes > 0
         ? Math.round((usedBytes / allocatedBytes) * 1000) / 10

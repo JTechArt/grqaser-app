@@ -19,6 +19,7 @@ import {
   ProgressBar,
 } from 'react-native-paper';
 import {useSelector, useDispatch} from 'react-redux';
+import {useFocusEffect} from '@react-navigation/native';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import type {RootState, AppDispatch} from '../state';
 import {updatePreferences} from '../state/slices/userSlice';
@@ -140,6 +141,15 @@ const SettingsScreen: React.FC = () => {
     loadUsageMetrics();
   }, [dispatch, loadUsageMetrics]);
 
+  // Refresh DB list and metrics when Settings tab is focused so catalog file
+  // sizes are synced from disk (fixes stale size e.g. 184.7 KB from Content-Length).
+  useFocusEffect(
+    useCallback(() => {
+      dispatch(fetchManagedDatabases());
+      loadUsageMetrics();
+    }, [dispatch, loadUsageMetrics]),
+  );
+
   const downloadedBooks = useMemo(
     () => books.filter(b => downloadedBookIds.includes(b.id)),
     [books, downloadedBookIds],
@@ -210,9 +220,9 @@ const SettingsScreen: React.FC = () => {
 
   const handleSetActive = useCallback(
     (dbId: string) => {
-      dispatch(switchActiveDb(dbId));
+      dispatch(switchActiveDb(dbId)).then(() => loadUsageMetrics());
     },
-    [dispatch],
+    [dispatch, loadUsageMetrics],
   );
 
   const handleRemove = useCallback(

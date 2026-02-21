@@ -50,6 +50,33 @@ function validateUrl(url: string): void {
   }
 }
 
+/**
+ * List the databases directory and return actual file sizes by db id.
+ * Does not depend on stored paths — finds files by listing the dir (e.g. "db-xxx.db" -> id "db-xxx").
+ */
+async function getDatabaseFileSizesFromDisk(): Promise<Map<string, number>> {
+  const map = new Map<string, number>();
+  try {
+    const exists = await RNFS.exists(DB_DIR);
+    if (!exists) {
+      return map;
+    }
+    const items = await RNFS.readDir(DB_DIR);
+    for (const item of items) {
+      if (item.isFile() && item.name.endsWith('.db')) {
+        const id = item.name.replace(/\.db$/i, '');
+        const size = Number(item.size);
+        if (id && Number.isFinite(size) && size >= 0) {
+          map.set(id, size);
+        }
+      }
+    }
+  } catch {
+    // return empty map
+  }
+  return map;
+}
+
 export const databaseManager = {
   async loadDatabaseFromUrl(
     url: string,
@@ -120,7 +147,21 @@ export const databaseManager = {
   },
 
   async listManagedDatabases(): Promise<ManagedDatabase[]> {
-    return appMetaRepository.listDatabases();
+    const list = await appMetaRepository.listDatabases();
+    const sizeByDbId = await getDatabaseFileSizesFromDisk();
+    const result: ManagedDatabase[] = [];
+    for (const db of list) {
+      const diskSize = sizeByDbId.get(db.id);
+      const fileSizeBytes =
+        diskSize !== undefined && Number.isFinite(diskSize) && diskSize >= 0
+          ? diskSize
+          : db.fileSizeBytes;
+      if (diskSize !== undefined && diskSize !== db.fileSizeBytes) {
+        await appMetaRepository.updateDatabaseFileSize(db.id, fileSizeBytes);
+      }
+      result.push({...db, fileSizeBytes});
+    }
+    return result;
   },
 
   async getActiveDatabase(): Promise<ManagedDatabase | null> {
