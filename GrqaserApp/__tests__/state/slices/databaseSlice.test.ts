@@ -163,8 +163,10 @@ describe('databaseSlice', () => {
     });
 
     it('sets error on failure', async () => {
-      const SQLite = require('react-native-sqlite-storage');
-      SQLite.openDatabase.mockRejectedValueOnce(new Error('DB open failed'));
+      const appMetaRepo = require('../../../src/database/appMetaRepository');
+      appMetaRepo.initAppMetaDb.mockRejectedValueOnce(
+        new Error('DB open failed'),
+      );
 
       const store = createTestStore();
       await store.dispatch(initializeDatabases());

@@ -198,6 +198,7 @@ const databaseSlice = createSlice({
       })
       .addCase(initializeDatabases.rejected, (state, action) => {
         state.loading = false;
+        state.initialized = false;
         state.error =
           (action.payload as string) ?? 'Failed to initialize databases';
       })
