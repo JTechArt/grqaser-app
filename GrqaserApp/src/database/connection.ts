@@ -7,8 +7,14 @@
  *   iOS     — add the .db file to the Xcode project (Copy Bundle Resources)
  * Then call openBundledDatabase(filename) which uses createFromLocation to
  * copy from assets on first launch automatically.
+ *
+ * iOS: react-native-sqlite-storage looks for createFromLocation "1" in
+ * Bundle/www/; we use "~fileName" so it looks in the bundle root (no www).
+ * Downloaded DBs: the plugin appends "name" to a base dir; we pass
+ * location "Documents" and the path relative to Documents so the path matches.
  */
 import SQLite from 'react-native-sqlite-storage';
+import RNFS from 'react-native-fs';
 
 SQLite.enablePromise(true);
 
@@ -18,14 +24,24 @@ export interface DatabaseConnection {
 }
 
 /**
- * Open a SQLite database at the given path in the default documents location.
+ * Open a SQLite database at the given path. For paths under the app Documents
+ * directory (e.g. downloaded DBs), we pass location 'Documents' and the
+ * relative path so the native plugin opens the correct file on both iOS and Android.
  */
 export async function openDatabase(
   filePath: string,
 ): Promise<DatabaseConnection> {
+  const docs = RNFS.DocumentDirectoryPath;
+  const isUnderDocuments =
+    filePath === docs || filePath.startsWith(docs + '/');
+  const name = isUnderDocuments
+    ? filePath.slice(docs.length + 1)
+    : filePath;
+  const location = isUnderDocuments ? 'Documents' : 'default';
+
   const db = await SQLite.openDatabase({
-    name: filePath,
-    location: 'default',
+    name,
+    location,
   });
   return {
     db,
@@ -34,16 +50,19 @@ export async function openDatabase(
 }
 
 /**
- * Open a pre-bundled database from app assets. On first launch the file is
- * copied from Android assets / iOS bundle to a writable location automatically.
+ * Open a pre-bundled database from app assets. Opens the bundle file read-only
+ * so we always use the actual bundle content (avoids using a stale/corrupt copy
+ * that may have been written to Library/LocalDatabase on a previous run).
+ * Uses "~fileName" so iOS looks in the bundle root (not www/).
  */
 export async function openBundledDatabase(
   fileName: string,
 ): Promise<DatabaseConnection> {
   const db = await SQLite.openDatabase({
     name: fileName,
-    createFromLocation: 1,
+    createFromLocation: `~${fileName}`,
     location: 'default',
+    readOnly: true,
   });
   return {
     db,

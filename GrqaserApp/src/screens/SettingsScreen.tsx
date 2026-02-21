@@ -381,8 +381,16 @@ const SettingsScreen: React.FC = () => {
         <List.Subheader>CATALOG DATABASES</List.Subheader>
 
         {managedDatabases.length === 0 && !dbLoading ? (
-          <View style={styles.emptyDownloads}>
-            <Text style={styles.hintText}>No catalog databases loaded</Text>
+          <View style={styles.emptyDbSection}>
+            <Icon
+              name="database-alert-outline"
+              size={40}
+              color={appTheme.colors.primary}
+            />
+            <Text style={styles.emptyDbTitle}>No catalog loaded</Text>
+            <Text style={styles.emptyDbHint}>
+              Load a catalog database from a URL to browse and play audiobooks.
+            </Text>
           </View>
         ) : (
           managedDatabases.map(db => (
@@ -464,13 +472,20 @@ const SettingsScreen: React.FC = () => {
         {dbError && <Text style={styles.errorText}>{dbError}</Text>}
 
         <Button
-          mode="outlined"
+          mode={managedDatabases.length === 0 ? 'contained' : 'outlined'}
           onPress={() => setUrlModalVisible(true)}
           disabled={isDownloading || dbLoading}
           style={styles.loadUrlBtn}
-          textColor={appTheme.colors.primary}
+          buttonColor={
+            managedDatabases.length === 0 ? appTheme.colors.primary : undefined
+          }
+          textColor={
+            managedDatabases.length === 0
+              ? appTheme.colors.onPrimary
+              : appTheme.colors.primary
+          }
           icon="download">
-          Load New Database from URL
+          Load Database from URL
         </Button>
 
         <Text style={styles.hintText}>
@@ -559,6 +574,22 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 8,
   },
+  emptyDbSection: {
+    alignItems: 'center',
+    paddingHorizontal: 24,
+    paddingVertical: 20,
+  },
+  emptyDbTitle: {
+    ...appTheme.typography.h4,
+    color: appTheme.colors.text,
+    marginTop: 12,
+  } as TextStyle,
+  emptyDbHint: {
+    ...appTheme.typography.body2,
+    color: appTheme.colors.onSurface,
+    textAlign: 'center',
+    marginTop: 6,
+  } as TextStyle,
 
   // Usage card styles (shared by storage & data usage)
   usageCard: {

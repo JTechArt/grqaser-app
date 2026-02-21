@@ -40,6 +40,12 @@ nvm install 22
 nvm use 22
 ```
 
+To avoid having to run `nvm use 22` in every new terminal, set it as default:
+
+```bash
+nvm alias default 22
+```
+
 Verify:
 
 ```bash
@@ -125,7 +131,13 @@ Run on a specific simulator model:
 
 ```bash
 cd GrqaserApp
-npx react-native run-ios --simulator "iPhone 16"
+npx react-native run-ios --simulator "iPhone 17 Pro"
+```
+
+List available simulators to find valid names:
+
+```bash
+xcrun simctl list devices available
 ```
 
 ## 5. Run on a Physical iPhone (debug build)
@@ -199,6 +211,21 @@ cd GrqaserApp/ios
 pod install
 cd ..
 npm run ios
+```
+
+### `react-native-reanimated` requires React Native 78+
+
+If `pod install` fails with:
+
+`[Reanimated] Unsupported React Native version. Please use 78 or newer.`
+
+The `^3.5.4` semver range in `package.json` resolved to a newer version that dropped support for RN 0.72. Fix by pinning:
+
+```bash
+cd GrqaserApp
+npm install react-native-reanimated@3.5.4 --save-exact
+cd ios
+pod install
 ```
 
 ### Clean and rebuild

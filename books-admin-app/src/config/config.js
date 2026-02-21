@@ -13,9 +13,9 @@ module.exports = {
   },
 
   database: {
-    // DB path: default single file; Story 6.2 active path from db-registry when not set via env
-    path: process.env.DB_PATH || path.join(__dirname, '../../data/grqaser.db'),
-    dataRoot: process.env.DB_DATA_ROOT || path.join(__dirname, '../../data'),
+    // Single source of truth: data/grqaser.db at repo root (shared with GrqaserApp iOS/Android)
+    path: process.env.DB_PATH || path.join(__dirname, '../../../data/grqaser.db'),
+    dataRoot: process.env.DB_DATA_ROOT || path.join(__dirname, '../../../data'),
     timeout: 30000,
     verbose: false
   },
