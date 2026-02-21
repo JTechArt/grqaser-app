@@ -17,7 +17,6 @@ import {
 import {initializeDatabases} from '../state/slices/databaseSlice';
 import {Book} from '../types/book';
 import BookCard from '../components/BookCard';
-import MiniPlayer from '../components/MiniPlayer';
 import {theme} from '../theme';
 import {Button} from 'react-native-paper';
 
@@ -35,7 +34,6 @@ const HomeScreen: React.FC = () => {
   const {books, filteredBooks, loading, error, searchQuery} = useSelector(
     (state: RootState) => state.books,
   );
-  const {currentBook} = useSelector((state: RootState) => state.player);
   const {initialized: dbInitialized, error: dbError} = useSelector(
     (state: RootState) => state.database,
   );
@@ -216,7 +214,6 @@ const HomeScreen: React.FC = () => {
         {renderRecentBooks()}
         {renderBooks()}
       </ScrollView>
-      {currentBook && <MiniPlayer />}
     </View>
   );
 };

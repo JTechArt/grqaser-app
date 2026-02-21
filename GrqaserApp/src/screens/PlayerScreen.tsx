@@ -10,6 +10,7 @@ import {
   LayoutChangeEvent,
   TextStyle,
 } from 'react-native';
+import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import {useSelector} from 'react-redux';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import {useProgress} from 'react-native-track-player';
@@ -23,6 +24,7 @@ const SEEK_BAR_HEIGHT = 40;
 
 const PlayerScreen: React.FC = () => {
   const {width} = useWindowDimensions();
+  const insets = useSafeAreaInsets();
   const currentBook = useSelector((s: RootState) => s.player.currentBook);
   const isPlaying = useSelector((s: RootState) => s.player.isPlaying);
   const playerError = useSelector((s: RootState) => s.player.error);
@@ -59,7 +61,7 @@ const PlayerScreen: React.FC = () => {
   }, [position]);
 
   const handleSkipForward = useCallback(() => {
-    const maxDuration = duration > 0 ? duration : (currentBook?.duration ?? 0);
+    const maxDuration = duration > 0 ? duration : currentBook?.duration ?? 0;
     const next = Math.min(maxDuration || 0, position + 10);
     seekTo(next);
   }, [position, duration, currentBook?.duration]);
@@ -73,7 +75,11 @@ const PlayerScreen: React.FC = () => {
   if (!currentBook) {
     return (
       <View style={styles.container}>
-        <View style={styles.centered}>
+        <View
+          style={[
+            styles.centered,
+            {paddingTop: insets.top + theme.spacing.lg},
+          ]}>
           <Icon name="headphones" size={64} color={theme.colors.onSurface} />
           <Text style={styles.emptyTitle}>No book playing</Text>
           <Text style={styles.emptySubtext}>
@@ -87,7 +93,10 @@ const PlayerScreen: React.FC = () => {
   return (
     <ScrollView
       style={styles.container}
-      contentContainerStyle={styles.content}
+      contentContainerStyle={[
+        styles.content,
+        {paddingTop: insets.top + theme.spacing.lg},
+      ]}
       showsVerticalScrollIndicator={false}>
       <View style={styles.coverWrapper}>
         {currentBook.coverImage ? (
@@ -159,11 +168,7 @@ const PlayerScreen: React.FC = () => {
           onPress={handleSkipBack}
           style={styles.secondaryControl}
           activeOpacity={0.8}>
-          <Icon
-            name="rewind"
-            size={28}
-            color={theme.colors.onSurface}
-          />
+          <Icon name="rewind" size={28} color={theme.colors.onSurface} />
         </TouchableOpacity>
         <TouchableOpacity
           onPress={handlePlayPause}
@@ -179,11 +184,7 @@ const PlayerScreen: React.FC = () => {
           onPress={handleSkipForward}
           style={styles.secondaryControl}
           activeOpacity={0.8}>
-          <Icon
-            name="fast-forward"
-            size={28}
-            color={theme.colors.onSurface}
-          />
+          <Icon name="fast-forward" size={28} color={theme.colors.onSurface} />
         </TouchableOpacity>
       </View>
     </ScrollView>
