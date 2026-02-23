@@ -2,7 +2,7 @@
  * Playback service for react-native-track-player.
  * Handles remote events (lock screen, notification, BT) and runs in background.
  */
-import TrackPlayer, {Event} from 'react-native-track-player';
+import TrackPlayer, {Event, State} from 'react-native-track-player';
 import {store} from '../state';
 import {setError, setPlaying} from '../state/slices/playerSlice';
 import {syncPlayProgress} from '../state/slices/booksSlice';
@@ -79,6 +79,27 @@ export async function PlaybackService(): Promise<void> {
           .catch(() => {});
       }
       lastStreamingPosition = ev.position;
+    }
+  });
+
+  // Save position immediately on pause/stop so "In Progress" is reliable across sessions
+  TrackPlayer.addEventListener(Event.PlaybackState, async ev => {
+    const state = ev.state;
+    if (
+      state === State.Paused ||
+      state === State.Stopped ||
+      state === State.Ready
+    ) {
+      const track = await TrackPlayer.getActiveTrack();
+      const bookId = track?.id as string | undefined;
+      if (bookId) {
+        const position = await TrackPlayer.getPosition();
+        if (typeof position === 'number' && position >= 0) {
+          savePlaybackPosition(bookId, position)
+            .then(() => store.dispatch(syncPlayProgress()))
+            .catch(() => {});
+        }
+      }
     }
   });
 }
