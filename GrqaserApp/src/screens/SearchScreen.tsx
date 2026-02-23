@@ -1,11 +1,5 @@
 import React, {useEffect, useState} from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  FlatList,
-  useWindowDimensions,
-} from 'react-native';
+import {View, Text, StyleSheet, FlatList} from 'react-native';
 import {RouteProp, useRoute, useNavigation} from '@react-navigation/native';
 import {useDispatch, useSelector} from 'react-redux';
 import {StackNavigationProp} from '@react-navigation/stack';
@@ -14,6 +8,7 @@ import {RootStackParamList} from '../navigation/types';
 import {RootState, AppDispatch} from '../state';
 import {searchBooks, clearSearchError} from '../state/slices/booksSlice';
 import BookCard from '../components/BookCard';
+import {useBookGridLayout} from '../utils/bookGridLayout';
 import {Book} from '../types/book';
 
 type SearchScreenNavProp = StackNavigationProp<RootStackParamList, 'Search'>;
@@ -24,7 +19,7 @@ const SearchScreen: React.FC = () => {
   const route = useRoute<SearchScreenRouteProp>();
   const navigation = useNavigation<SearchScreenNavProp>();
   const dispatch = useDispatch<AppDispatch>();
-  const {width} = useWindowDimensions();
+  const {cardWidth, numColumns} = useBookGridLayout();
   const initialQuery = route.params?.initialQuery ?? '';
   const [query, setQuery] = useState(initialQuery);
 
@@ -44,9 +39,6 @@ const SearchScreen: React.FC = () => {
       dispatch(searchBooks(query.trim()));
     }
   };
-
-  const cardWidth = width * 0.45;
-  const numColumns = Math.floor(width / (cardWidth + 12)) || 2;
 
   const handleBookPress = (book: Book) => {
     navigation.navigate('BookDetail', {book});
