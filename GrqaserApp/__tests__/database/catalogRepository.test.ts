@@ -99,17 +99,29 @@ describe('catalogRepository', () => {
   });
 
   describe('searchBooks', () => {
-    it('queries with LIKE and returns mapped results', async () => {
+    it('queries with LIKE and LIMIT, returns mapped results', async () => {
       await initCatalogDb('test.db');
       mockExecuteSql.mockResolvedValueOnce(makeRows([sampleRow]));
 
       const books = await catalogRepository.searchBooks('Test');
 
       expect(mockExecuteSql).toHaveBeenCalledWith(
-        expect.stringContaining('LIKE'),
-        ['%Test%', '%Test%', '%Test%'],
+        expect.stringMatching(/LIKE.*LIMIT/),
+        ['%Test%', '%Test%', '%Test%', 100],
       );
       expect(books).toHaveLength(1);
+    });
+
+    it('respects custom limit', async () => {
+      await initCatalogDb('test.db');
+      mockExecuteSql.mockResolvedValueOnce(makeRows([]));
+
+      await catalogRepository.searchBooks('x', 50);
+
+      expect(mockExecuteSql).toHaveBeenCalledWith(
+        expect.any(String),
+        ['%x%', '%x%', '%x%', 50],
+      );
     });
 
     it('returns empty for no matches', async () => {

@@ -109,12 +109,16 @@ export const catalogRepository = {
     return mapApiBookToBook(results.rows.item(0));
   },
 
-  async searchBooks(query: string): Promise<Book[]> {
+  /**
+   * Search books by title, author, or description. Limited to avoid loading
+   * thousands of rows with 2000+ book catalogs (performance: Story 10.5).
+   */
+  async searchBooks(query: string, limit = 100): Promise<Book[]> {
     const {db} = assertConnected();
     const like = `%${query}%`;
     const [results] = await db.executeSql(
-      'SELECT * FROM books WHERE title LIKE ? OR author LIKE ? OR description LIKE ? ORDER BY title ASC',
-      [like, like, like],
+      'SELECT * FROM books WHERE title LIKE ? OR author LIKE ? OR description LIKE ? ORDER BY title ASC LIMIT ?',
+      [like, like, like, limit],
     );
     return rowsToArray(results).map(mapApiBookToBook);
   },

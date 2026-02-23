@@ -61,6 +61,10 @@ const FavoritesScreen: React.FC = () => {
         key={numColumns}
         numColumns={numColumns}
         contentContainerStyle={styles.listContent}
+        initialNumToRender={12}
+        maxToRenderPerBatch={10}
+        windowSize={10}
+        removeClippedSubviews
       />
     </View>
   );
