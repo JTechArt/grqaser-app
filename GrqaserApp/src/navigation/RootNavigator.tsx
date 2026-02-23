@@ -1,5 +1,5 @@
 import React from 'react';
-import {View} from 'react-native';
+import {View, StyleSheet} from 'react-native';
 import {createBottomTabNavigator} from '@react-navigation/bottom-tabs';
 import {createStackNavigator} from '@react-navigation/stack';
 import {useNavigation} from '@react-navigation/native';
@@ -23,6 +23,12 @@ import {RootStackParamList, TabParamList} from './types';
 
 const Tab = createBottomTabNavigator<TabParamList>();
 const Stack = createStackNavigator<RootStackParamList>();
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+  },
+});
 
 function getTabIconName(routeName: string, focused: boolean): string {
   switch (routeName) {
@@ -63,7 +69,7 @@ const TabNavigator: React.FC = () => {
   const insets = useSafeAreaInsets();
 
   return (
-    <View style={{flex: 1}}>
+    <View style={styles.container}>
       <Tab.Navigator
         screenOptions={({route}) => ({
           // Arrow here is RN's tabBarIcon API; TabBarIcon is stable (no new component type)
