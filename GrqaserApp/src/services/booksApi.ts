@@ -48,18 +48,18 @@ export const booksApi = {
   async searchBooks(
     query: string,
     _page = 1,
-    _limit = 20,
+    limit = 100,
   ): Promise<BookSearchResult> {
     if (!query.trim()) {
-      return {books: [], totalCount: 0, hasMore: false, page: 1, limit: _limit};
+      return {books: [], totalCount: 0, hasMore: false, page: 1, limit};
     }
-    const books = await catalogRepository.searchBooks(query.trim());
+    const books = await catalogRepository.searchBooks(query.trim(), limit);
     return {
       books,
       totalCount: books.length,
-      hasMore: false,
+      hasMore: books.length >= limit,
       page: 1,
-      limit: books.length,
+      limit,
     };
   },
 };

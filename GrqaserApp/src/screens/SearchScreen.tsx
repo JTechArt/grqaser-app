@@ -77,6 +77,10 @@ const SearchScreen: React.FC = () => {
             key={numColumns}
             numColumns={numColumns}
             contentContainerStyle={styles.listContent}
+            initialNumToRender={12}
+            maxToRenderPerBatch={10}
+            windowSize={10}
+            removeClippedSubviews
             ListEmptyComponent={
               query.trim() ? (
                 <Text style={styles.empty}>No books found.</Text>

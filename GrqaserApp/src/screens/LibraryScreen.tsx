@@ -331,6 +331,10 @@ const LibraryScreen: React.FC = () => {
           renderItem={renderItem}
           contentContainerStyle={styles.list}
           showsVerticalScrollIndicator={false}
+          initialNumToRender={12}
+          maxToRenderPerBatch={10}
+          windowSize={10}
+          removeClippedSubviews
         />
       )}
     </View>
