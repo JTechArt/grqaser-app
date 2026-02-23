@@ -1,7 +1,10 @@
 jest.mock('react-native-fs');
 jest.mock('@react-navigation/native', () => ({
   useNavigation: () => ({navigate: jest.fn(), goBack: jest.fn()}),
-  useFocusEffect: (cb: () => void) => cb(),
+  useFocusEffect: (cb: () => void | (() => void)) => {
+    const ReactMod = require('react');
+    ReactMod.useEffect(() => cb(), [cb]);
+  },
 }));
 jest.mock('@react-native-async-storage/async-storage', () => ({
   getItem: jest.fn().mockResolvedValue(null),
