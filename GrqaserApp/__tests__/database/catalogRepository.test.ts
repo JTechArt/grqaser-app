@@ -118,10 +118,12 @@ describe('catalogRepository', () => {
 
       await catalogRepository.searchBooks('x', 50);
 
-      expect(mockExecuteSql).toHaveBeenCalledWith(
-        expect.any(String),
-        ['%x%', '%x%', '%x%', 50],
-      );
+      expect(mockExecuteSql).toHaveBeenCalledWith(expect.any(String), [
+        '%x%',
+        '%x%',
+        '%x%',
+        50,
+      ]);
     });
 
     it('returns empty for no matches', async () => {

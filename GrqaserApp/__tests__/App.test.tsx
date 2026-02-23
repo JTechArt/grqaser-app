@@ -25,7 +25,11 @@ jest.mock('../src/navigation/RootNavigator', () => {
 jest.mock('../src/components/TrackPlayerProvider', () => {
   const React = require('react');
   const {View} = require('react-native');
-  return function MockTrackPlayerProvider({children}: {children?: React.ReactNode}) {
+  return function MockTrackPlayerProvider({
+    children,
+  }: {
+    children?: React.ReactNode;
+  }) {
     return React.createElement(View, null, children);
   };
 });

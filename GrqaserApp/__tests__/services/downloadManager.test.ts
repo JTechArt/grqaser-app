@@ -25,10 +25,9 @@ describe('downloadManager', () => {
       });
       mockStat.mockResolvedValue({size: 5000});
 
-      const result = await downloadManager.downloadBookMp3s(
-        'book-1',
-        ['https://example.com/audio.mp3'],
-      );
+      const result = await downloadManager.downloadBookMp3s('book-1', [
+        'https://example.com/audio.mp3',
+      ]);
 
       expect(result).toHaveLength(1);
       expect(result[0].bookId).toBe('book-1');
@@ -130,9 +129,7 @@ describe('downloadManager', () => {
 
       await downloadManager.deleteAllDownloads();
 
-      expect(mockUnlink).toHaveBeenCalledWith(
-        '/mock/documents/mp3downloads',
-      );
+      expect(mockUnlink).toHaveBeenCalledWith('/mock/documents/mp3downloads');
     });
   });
 
@@ -184,9 +181,7 @@ describe('downloadManager', () => {
 
     it('returns chapter-specific path with index', () => {
       const path = downloadManager.getLocalFilePath('book-1', 3);
-      expect(path).toBe(
-        '/mock/documents/mp3downloads/book-1/book-1_ch3.mp3',
-      );
+      expect(path).toBe('/mock/documents/mp3downloads/book-1/book-1_ch3.mp3');
     });
   });
 });

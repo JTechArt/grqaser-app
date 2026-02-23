@@ -35,7 +35,9 @@ export function startNetworkMonitor(): () => void {
   NetInfo.fetch().then(handleState);
   const unsubscribe = NetInfo.addEventListener(handleState);
 
-  if (intervalId) clearInterval(intervalId);
+  if (intervalId) {
+    clearInterval(intervalId);
+  }
   intervalId = setInterval(() => {
     NetInfo.fetch().then(handleState);
   }, PING_INTERVAL_MS);

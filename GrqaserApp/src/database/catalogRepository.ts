@@ -87,7 +87,9 @@ export const catalogRepository = {
    * Get books by IDs (e.g. for Library or Favorites). Skips missing IDs.
    */
   async getBooksByIds(ids: string[]): Promise<Book[]> {
-    if (ids.length === 0) return [];
+    if (ids.length === 0) {
+      return [];
+    }
     const {db} = assertConnected();
     const placeholders = ids.map(() => '?').join(',');
     const [results] = await db.executeSql(
