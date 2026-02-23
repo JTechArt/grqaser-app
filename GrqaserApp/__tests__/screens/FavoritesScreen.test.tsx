@@ -10,7 +10,22 @@ import {store} from '../../src/state';
 import {fetchBooksByIds} from '../../src/state/slices/booksSlice';
 import FavoritesScreen from '../../src/screens/FavoritesScreen';
 
+jest.mock('../../src/utils/bookGridLayout', () => ({
+  useBookGridLayout: () => ({cardWidth: 150, numColumns: 2}),
+  CARD_GAP: 12,
+  CARD_MARGIN: 6,
+  LIST_PADDING: 8,
+  LIST_PADDING_BOTTOM: 24,
+  EMPTY_MARGIN_TOP: 24,
+}));
 jest.mock('react-native-vector-icons/MaterialCommunityIcons', () => 'Icon');
+jest.mock('../../src/components/LazyCoverImage', () => {
+  const Rn = require('react');
+  const {View} = require('react-native');
+  return function LazyCoverImage() {
+    return Rn.createElement(View, {testID: 'lazy-cover'});
+  };
+});
 jest.mock('../../src/theme', () => ({
   theme: {
     colors: {
