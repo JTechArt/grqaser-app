@@ -49,6 +49,8 @@ function isPlaceholder(item: LibraryListItem): item is DownloadPlaceholder {
   return 'placeholder' in item && item.placeholder === true;
 }
 
+const IN_PROGRESS_DAYS_MS = 7 * 24 * 60 * 60 * 1000;
+
 const LibraryScreen: React.FC = () => {
   const navigation = useNavigation<NavProp>();
   const dispatch = useDispatch<AppDispatch>();
@@ -96,8 +98,6 @@ const LibraryScreen: React.FC = () => {
       .map(id => booksById[id])
       .filter((b): b is Book => b != null);
   }, [booksById, libraryBookIds]);
-
-  const IN_PROGRESS_DAYS_MS = 7 * 24 * 60 * 60 * 1000;
 
   const filteredBooks = useMemo(() => {
     switch (activeFilter) {
@@ -204,7 +204,9 @@ const LibraryScreen: React.FC = () => {
     const downloadPct =
       isDownloading && downloadProgress.contentLength > 0
         ? Math.round(downloadProgress.fraction * 100)
-        : isDownloading ? 0 : null;
+        : isDownloading
+        ? 0
+        : null;
     const progressPct =
       book.playProgress != null && book.duration != null && book.duration > 0
         ? Math.round((book.playProgress / book.duration) * 100)

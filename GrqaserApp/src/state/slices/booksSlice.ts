@@ -87,7 +87,9 @@ export const fetchBooksByIds = createAsyncThunk(
   'books/fetchBooksByIds',
   async (ids: string[], {rejectWithValue}) => {
     try {
-      if (ids.length === 0) return [];
+      if (ids.length === 0) {
+        return [];
+      }
       const books = await booksApi.getBooksByIds(ids);
       const positions = await getPlaybackPositions();
       return books.map(b => ({
@@ -234,8 +236,7 @@ const booksSlice = createSlice({
       })
       .addCase(fetchBooksPage.rejected, (state, action) => {
         state.loading = false;
-        state.error =
-          (action.payload as string) ?? 'Failed to load book list';
+        state.error = (action.payload as string) ?? 'Failed to load book list';
       })
       .addCase(fetchBooksByIds.fulfilled, (state, action) => {
         for (const b of action.payload) {

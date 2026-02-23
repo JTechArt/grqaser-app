@@ -106,7 +106,11 @@ describe('databaseSlice', () => {
     });
 
     it('clears the active database', () => {
-      const withDb = {...initialState, activeDatabase: sampleDb, activeDbId: 'db-1'};
+      const withDb = {
+        ...initialState,
+        activeDatabase: sampleDb,
+        activeDbId: 'db-1',
+      };
       const state = reducer(withDb, setActiveDatabase(null));
       expect(state.activeDatabase).toBeNull();
       expect(state.activeDbId).toBeNull();
@@ -192,7 +196,9 @@ describe('databaseSlice', () => {
     });
 
     it('sets activeDatabase to null when no active DB', async () => {
-      mockRepo.listDatabases.mockResolvedValue([{...sampleDb, isActive: false}]);
+      mockRepo.listDatabases.mockResolvedValue([
+        {...sampleDb, isActive: false},
+      ]);
 
       const store = createTestStore();
       await store.dispatch(fetchManagedDatabases());

@@ -44,10 +44,7 @@ describe('librarySlice reducer', () => {
         type: 'library/fetchEntries/fulfilled',
         payload: {bookIds: ['book-1', 'book-2'], entries: sampleEntries},
       };
-      const state = reducer(
-        {...initialState, loading: true},
-        action,
-      );
+      const state = reducer({...initialState, loading: true}, action);
       expect(state.loading).toBe(false);
       expect(state.libraryBookIds).toEqual(['book-1', 'book-2']);
       expect(state.libraryEntries).toEqual(sampleEntries);

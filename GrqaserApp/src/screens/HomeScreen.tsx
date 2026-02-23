@@ -34,7 +34,6 @@ const HomeScreen: React.FC = () => {
   const [refreshing, setRefreshing] = useState(false);
 
   const {
-    books,
     booksById,
     filteredBooks,
     loading,
@@ -68,13 +67,13 @@ const HomeScreen: React.FC = () => {
     if (recentlyPlayed.length > 0) {
       dispatch(fetchBooksByIds(recentlyPlayed));
     }
-  }, [dispatch, recentlyPlayed.length]);
+  }, [dispatch, recentlyPlayed]);
 
   const onRefresh = async () => {
     setRefreshing(true);
     await Promise.all([
-      dispatch(fetchBooksPage({limit: 20, offset: 0}) as Promise<unknown>,
-      dispatch(fetchCatalogStats()) as Promise<unknown>,
+      dispatch(fetchBooksPage({limit: 20, offset: 0})),
+      dispatch(fetchCatalogStats()),
     ]);
     setRefreshing(false);
   };

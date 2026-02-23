@@ -32,11 +32,8 @@ export async function openDatabase(
   filePath: string,
 ): Promise<DatabaseConnection> {
   const docs = RNFS.DocumentDirectoryPath;
-  const isUnderDocuments =
-    filePath === docs || filePath.startsWith(docs + '/');
-  const name = isUnderDocuments
-    ? filePath.slice(docs.length + 1)
-    : filePath;
+  const isUnderDocuments = filePath === docs || filePath.startsWith(docs + '/');
+  const name = isUnderDocuments ? filePath.slice(docs.length + 1) : filePath;
   const location = isUnderDocuments ? 'Documents' : 'default';
 
   const db = await SQLite.openDatabase({

@@ -9,7 +9,6 @@ import {Provider} from 'react-redux';
 import {store} from '../../src/state';
 import {fetchBooksByIds} from '../../src/state/slices/booksSlice';
 import FavoritesScreen from '../../src/screens/FavoritesScreen';
-import {Book} from '../../src/types/book';
 
 jest.mock('react-native-vector-icons/MaterialCommunityIcons', () => 'Icon');
 jest.mock('../../src/theme', () => ({
@@ -56,15 +55,6 @@ jest.mock('../../src/services/booksApi', () => ({
 jest.mock('../../src/services/preferencesStorage', () => ({
   getPlaybackPositions: jest.fn().mockResolvedValue({}),
 }));
-
-const mockBook: Book = {
-  id: 'b1',
-  title: 'Favorite Book',
-  author: 'Author',
-  language: 'en',
-  type: 'audiobook',
-  category: 'Fiction',
-};
 
 describe('FavoritesScreen', () => {
   it('renders empty state when no favorites', () => {

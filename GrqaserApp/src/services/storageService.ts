@@ -11,8 +11,7 @@ import type {StorageUsage, MobileDataUsage} from '../types/book';
 const DATA_USAGE_KEY = '@grqaser/mobile_data_usage';
 
 /** Maximum storage allocated for app data (MP3s + databases). Default 10 GB. */
-export const STORAGE_LIMIT_BYTES =
-  10 * 1024 * 1024 * 1024;
+export const STORAGE_LIMIT_BYTES = 10 * 1024 * 1024 * 1024;
 
 interface DataUsageStore {
   period: string; // "YYYY-MM"
@@ -60,8 +59,7 @@ async function getDirSizeRecursive(dirPath: string): Promise<number> {
     for (const item of items) {
       const isDir =
         typeof (item as {isDirectory?: () => boolean}).isDirectory ===
-          'function' &&
-        (item as {isDirectory: () => boolean}).isDirectory();
+          'function' && (item as {isDirectory: () => boolean}).isDirectory();
       if (isDir) {
         total += await getDirSizeRecursive(item.path);
       } else {
