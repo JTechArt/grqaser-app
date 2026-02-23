@@ -4,7 +4,6 @@ import {
   Text,
   StyleSheet,
   FlatList,
-  Image,
   TouchableOpacity,
   TextStyle,
   ScrollView,
@@ -25,6 +24,7 @@ import {
 import {syncPlayProgress, fetchBooksByIds} from '../state/slices/booksSlice';
 import {theme} from '../theme';
 import {formatDuration} from '../utils/formatters';
+import LazyCoverImage from '../components/LazyCoverImage';
 
 type NavProp = StackNavigationProp<RootStackParamList>;
 
@@ -217,17 +217,13 @@ const LibraryScreen: React.FC = () => {
           onPress={() => handleBookPress(book)}
           activeOpacity={0.7}>
           <View style={styles.coverWrap}>
-            {book.coverImage ? (
-              <Image source={{uri: book.coverImage}} style={styles.cover} />
-            ) : (
-              <View style={styles.coverPlaceholder}>
-                <Icon
-                  name="book-open-variant"
-                  size={28}
-                  color={theme.colors.onSurface}
-                />
-              </View>
-            )}
+            <LazyCoverImage
+              uri={book.coverImage}
+              style={styles.cover}
+              compact
+              placeholderText={book.title.substring(0, 2).toUpperCase()}
+              priority="normal"
+            />
             {isDownloading && (
               <View style={styles.downloadProgressOverlay} pointerEvents="none">
                 <Text style={styles.downloadProgressText}>
