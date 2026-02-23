@@ -1,4 +1,4 @@
-import React, {useCallback, useMemo, useState} from 'react';
+import React, {useCallback, useEffect, useMemo, useState} from 'react';
 import {
   View,
   Text,
@@ -22,7 +22,10 @@ import {
   fetchLibraryEntries,
   removeBookFromLibrary,
 } from '../state/slices/librarySlice';
-import {syncPlayProgress} from '../state/slices/booksSlice';
+import {
+  syncPlayProgress,
+  fetchBooksByIds,
+} from '../state/slices/booksSlice';
 import {theme} from '../theme';
 import {formatDuration} from '../utils/formatters';
 
@@ -43,7 +46,7 @@ const LibraryScreen: React.FC = () => {
   const insets = useSafeAreaInsets();
   const [activeFilter, setActiveFilter] = useState<FilterType>('all');
 
-  const books = useSelector((s: RootState) => s.books.books);
+  const booksById = useSelector((s: RootState) => s.books.booksById);
   const libraryBookIds = useSelector(
     (s: RootState) => s.library.libraryBookIds,
   );
@@ -61,12 +64,17 @@ const LibraryScreen: React.FC = () => {
     }, [dispatch]),
   );
 
+  useEffect(() => {
+    if (libraryBookIds.length > 0) {
+      dispatch(fetchBooksByIds(libraryBookIds));
+    }
+  }, [dispatch, libraryBookIds]);
+
   const libraryBooks = useMemo(() => {
-    const bookMap = new Map(books.map(b => [b.id, b]));
     return libraryBookIds
-      .map(id => bookMap.get(id))
+      .map(id => booksById[id])
       .filter((b): b is Book => b != null);
-  }, [books, libraryBookIds]);
+  }, [booksById, libraryBookIds]);
 
   const filteredBooks = useMemo(() => {
     switch (activeFilter) {

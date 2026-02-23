@@ -14,9 +14,27 @@ function getErrorMessage(error: unknown): string {
   return 'An error occurred';
 }
 
+export type CatalogStats = {
+  totalBooks: number;
+  audiobooks: number;
+  ebooks: number;
+};
+
 export const booksApi = {
   async getBooks(): Promise<Book[]> {
     return catalogRepository.getAllBooks();
+  },
+
+  async getBooksPage(limit: number, offset: number): Promise<Book[]> {
+    return catalogRepository.getBooksPage(limit, offset);
+  },
+
+  async getBooksByIds(ids: string[]): Promise<Book[]> {
+    return catalogRepository.getBooksByIds(ids);
+  },
+
+  async getStats(): Promise<CatalogStats> {
+    return catalogRepository.getStats();
   },
 
   async getBookById(id: string): Promise<Book> {

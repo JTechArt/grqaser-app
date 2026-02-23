@@ -121,6 +121,54 @@ describe('catalogRepository', () => {
     });
   });
 
+  describe('getBooksPage', () => {
+    it('returns a page of books with LIMIT and OFFSET', async () => {
+      await initCatalogDb('test.db');
+      mockExecuteSql.mockResolvedValueOnce(makeRows([sampleRow]));
+
+      const books = await catalogRepository.getBooksPage(10, 0);
+
+      expect(mockExecuteSql).toHaveBeenCalledWith(
+        expect.stringContaining('LIMIT ? OFFSET ?'),
+        [10, 0],
+      );
+      expect(books).toHaveLength(1);
+      expect(books[0].id).toBe('1');
+    });
+
+    it('returns empty array for offset beyond data', async () => {
+      await initCatalogDb('test.db');
+      mockExecuteSql.mockResolvedValueOnce(makeRows([]));
+
+      const books = await catalogRepository.getBooksPage(20, 100);
+      expect(books).toEqual([]);
+    });
+  });
+
+  describe('getBooksByIds', () => {
+    it('returns books for given ids', async () => {
+      await initCatalogDb('test.db');
+      const row2 = {...sampleRow, id: 2, title: 'Second'};
+      mockExecuteSql.mockResolvedValueOnce(makeRows([sampleRow, row2]));
+
+      const books = await catalogRepository.getBooksByIds(['1', '2']);
+
+      expect(mockExecuteSql).toHaveBeenCalledWith(
+        expect.stringContaining('SELECT * FROM books WHERE id IN (?,?)'),
+        ['1', '2'],
+      );
+      expect(books).toHaveLength(2);
+      expect(books[0].id).toBe('1');
+      expect(books[1].title).toBe('Second');
+    });
+
+    it('returns empty array when ids is empty', async () => {
+      const books = await catalogRepository.getBooksByIds([]);
+      expect(books).toEqual([]);
+      expect(mockExecuteSql).not.toHaveBeenCalled();
+    });
+  });
+
   describe('getBookCount', () => {
     it('returns the count', async () => {
       await initCatalogDb('test.db');

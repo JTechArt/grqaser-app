@@ -5,7 +5,7 @@ import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import {useSelector, useDispatch} from 'react-redux';
 import type {RootState} from '../state';
 import type {AppDispatch} from '../state';
-import {fetchBooks} from '../state/slices/booksSlice';
+import {fetchBooksByIds} from '../state/slices/booksSlice';
 import BookCard from '../components/BookCard';
 import {theme} from '../theme';
 import type {Book} from '../types/book';
@@ -18,13 +18,17 @@ const FavoritesScreen: React.FC = () => {
   const navigation = useNavigation<NavProp>();
   const dispatch = useDispatch<AppDispatch>();
   const insets = useSafeAreaInsets();
-  const {books, favorites} = useSelector((s: RootState) => s.books);
+  const {booksById, favorites} = useSelector((s: RootState) => s.books);
 
   useEffect(() => {
-    dispatch(fetchBooks());
-  }, [dispatch]);
+    if (favorites.length > 0) {
+      dispatch(fetchBooksByIds(favorites));
+    }
+  }, [dispatch, favorites]);
 
-  const favoriteBooks = books.filter((b: Book) => favorites.includes(b.id));
+  const favoriteBooks = favorites
+    .map(id => booksById[id])
+    .filter((b): b is Book => b != null);
 
   const handleBookPress = (book: Book) => {
     navigation.navigate('BookDetail', {book});
