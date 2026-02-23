@@ -50,12 +50,12 @@ const AudioSpeedControl: React.FC<AudioSpeedControlProps> = ({
               key={option.value}
               style={[
                 styles.speedButton,
+                disabled && styles.speedButtonDisabled,
                 {
                   backgroundColor: isActive
                     ? theme.colors.primary
                     : theme.colors.surface,
                   borderColor: theme.colors.outline,
-                  opacity: disabled ? 0.5 : 1,
                 },
               ]}
               onPress={() => handleSpeedPress(option.value)}
@@ -64,11 +64,11 @@ const AudioSpeedControl: React.FC<AudioSpeedControlProps> = ({
               <Text
                 style={[
                   styles.speedText,
+                  isActive ? styles.speedTextActive : styles.speedTextInactive,
                   {
                     color: isActive
                       ? theme.colors.onPrimary
                       : theme.colors.onSurface,
-                    fontWeight: isActive ? '600' : '400',
                   },
                 ]}>
                 {option.label}
@@ -110,9 +110,18 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  speedButtonDisabled: {
+    opacity: 0.5,
+  },
   speedText: {
     fontSize: 11,
     fontWeight: '500',
+  },
+  speedTextActive: {
+    fontWeight: '600',
+  },
+  speedTextInactive: {
+    fontWeight: '400',
   },
 });
 
