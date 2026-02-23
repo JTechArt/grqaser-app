@@ -31,6 +31,8 @@ describe('booksSlice', () => {
 
   it('returns initial state', () => {
     expect(initialState.books).toEqual([]);
+    expect(initialState.booksById).toEqual({});
+    expect(initialState.catalogStats).toBeNull();
     expect(initialState.filteredBooks).toEqual([]);
     expect(initialState.filters.type).toBe('all');
   });
@@ -112,6 +114,46 @@ describe('booksSlice', () => {
       const state = reducer(stateWithBooks, setFilters({type: 'all'}));
       expect(state.filters.type).toBe('all');
       expect(state.filteredBooks.length).toBe(2);
+    });
+  });
+
+  describe('fetchBooksPage.fulfilled', () => {
+    it('stores page in books and merges into booksById', () => {
+      const payload = [book1, book2];
+      const state = reducer(initialState, {
+        type: 'books/fetchBooksPage/fulfilled',
+        payload,
+      });
+      expect(state.books).toHaveLength(2);
+      expect(state.booksById['b1']).toEqual(book1);
+      expect(state.booksById['b2']).toEqual(book2);
+      expect(state.loading).toBe(false);
+    });
+  });
+
+  describe('fetchBooksByIds.fulfilled', () => {
+    it('merges fetched books into booksById', () => {
+      const state = reducer(initialState, {
+        type: 'books/fetchBooksByIds/fulfilled',
+        payload: [book1],
+      });
+      expect(state.booksById['b1']).toEqual(book1);
+      expect(state.books).toEqual([]);
+    });
+  });
+
+  describe('fetchCatalogStats.fulfilled', () => {
+    it('stores catalog stats from DB count', () => {
+      const state = reducer(initialState, {
+        type: 'books/fetchCatalogStats/fulfilled',
+        payload: {totalBooks: 100, audiobooks: 80, ebooks: 20},
+      });
+      expect(state.catalogStats).toEqual({
+        totalBooks: 100,
+        audiobooks: 80,
+        ebooks: 20,
+      });
+      expect(state.loadingStats).toBe(false);
     });
   });
 });

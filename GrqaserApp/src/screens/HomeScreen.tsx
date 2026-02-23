@@ -10,7 +10,9 @@ import LinearGradient from 'react-native-linear-gradient';
 import {RootStackParamList} from '../navigation/types';
 import {RootState, AppDispatch} from '../state';
 import {
-  fetchBooks,
+  fetchBooksPage,
+  fetchCatalogStats,
+  fetchBooksByIds,
   setSearchQuery,
   clearError,
 } from '../state/slices/booksSlice';
@@ -31,9 +33,16 @@ const HomeScreen: React.FC = () => {
   const insets = useSafeAreaInsets();
   const [refreshing, setRefreshing] = useState(false);
 
-  const {books, filteredBooks, loading, error, searchQuery} = useSelector(
-    (state: RootState) => state.books,
-  );
+  const {
+    books,
+    booksById,
+    filteredBooks,
+    loading,
+    error,
+    searchQuery,
+    catalogStats,
+    recentlyPlayed,
+  } = useSelector((state: RootState) => state.books);
   const {initialized: dbInitialized, error: dbError} = useSelector(
     (state: RootState) => state.database,
   );
@@ -45,17 +54,28 @@ const HomeScreen: React.FC = () => {
     if (!dbInitialized) {
       dispatch(initializeDatabases()).then(action => {
         if (action.meta.requestStatus === 'fulfilled') {
-          dispatch(fetchBooks());
+          dispatch(fetchBooksPage({limit: 20, offset: 0}));
+          dispatch(fetchCatalogStats());
         }
       });
     } else {
-      dispatch(fetchBooks());
+      dispatch(fetchBooksPage({limit: 20, offset: 0}));
+      dispatch(fetchCatalogStats());
     }
   }, [dispatch, dbInitialized]);
 
+  useEffect(() => {
+    if (recentlyPlayed.length > 0) {
+      dispatch(fetchBooksByIds(recentlyPlayed));
+    }
+  }, [dispatch, recentlyPlayed.length]);
+
   const onRefresh = async () => {
     setRefreshing(true);
-    await dispatch(fetchBooks());
+    await Promise.all([
+      dispatch(fetchBooksPage({limit: 20, offset: 0}) as Promise<unknown>,
+      dispatch(fetchCatalogStats()) as Promise<unknown>,
+    ]);
     setRefreshing(false);
   };
 
@@ -94,8 +114,8 @@ const HomeScreen: React.FC = () => {
     </LinearGradient>
   );
 
-  const audiobookCount = books.filter(b => b.type === 'audiobook').length;
-  const ebookCount = books.filter(b => b.type === 'ebook').length;
+  const audiobookCount = catalogStats?.audiobooks ?? 0;
+  const ebookCount = catalogStats?.ebooks ?? 0;
 
   const renderStats = () => (
     <View style={styles.statsContainer}>
@@ -153,13 +173,9 @@ const HomeScreen: React.FC = () => {
   );
 
   const renderRecentBooks = () => {
-    const recentBooks = books
-      .filter(book => book.lastPlayedAt)
-      .sort(
-        (a, b) =>
-          new Date(b.lastPlayedAt!).getTime() -
-          new Date(a.lastPlayedAt!).getTime(),
-      )
+    const recentBooks = recentlyPlayed
+      .map(id => booksById[id])
+      .filter((b): b is Book => b != null)
       .slice(0, 4);
 
     if (recentBooks.length === 0) {
