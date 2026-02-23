@@ -93,7 +93,9 @@ export const databaseManager = {
       fromUrl: url.trim(),
       toFile: filePath,
       progress: res => {
-        if (res.contentLength > 0) expectedBytes = res.contentLength;
+        if (res.contentLength > 0) {
+          expectedBytes = res.contentLength;
+        }
         onProgress?.({
           bytesWritten: res.bytesWritten,
           contentLength: res.contentLength,
@@ -117,7 +119,11 @@ export const databaseManager = {
     if (expected > 0 && size < expected * 0.95) {
       await RNFS.unlink(filePath).catch(() => {});
       throw new Error(
-        `Download incomplete: got ${Math.round(size / 1024)} KB, expected ~${Math.round(expected / 1024)} KB. Try again or use a different network.`,
+        `Download incomplete: got ${Math.round(
+          size / 1024,
+        )} KB, expected ~${Math.round(
+          expected / 1024,
+        )} KB. Try again or use a different network.`,
       );
     }
     const existingDbs = await appMetaRepository.listDatabases();

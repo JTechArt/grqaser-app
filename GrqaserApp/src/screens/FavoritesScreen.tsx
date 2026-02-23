@@ -1,13 +1,12 @@
 import React, {useEffect} from 'react';
-import {View, Text, StyleSheet, ScrollView, TextStyle} from 'react-native';
+import {View, Text, StyleSheet, FlatList} from 'react-native';
 import {useNavigation} from '@react-navigation/native';
-import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import {useSelector, useDispatch} from 'react-redux';
 import type {RootState} from '../state';
 import type {AppDispatch} from '../state';
-import {fetchBooks} from '../state/slices/booksSlice';
+import {fetchBooksByIds} from '../state/slices/booksSlice';
 import BookCard from '../components/BookCard';
-import {theme} from '../theme';
+import {useBookGridLayout} from '../utils/bookGridLayout';
 import type {Book} from '../types/book';
 import type {RootStackParamList} from '../navigation/types';
 import type {StackNavigationProp} from '@react-navigation/stack';
@@ -17,74 +16,77 @@ type NavProp = StackNavigationProp<RootStackParamList, 'MainTabs'>;
 const FavoritesScreen: React.FC = () => {
   const navigation = useNavigation<NavProp>();
   const dispatch = useDispatch<AppDispatch>();
-  const insets = useSafeAreaInsets();
-  const {books, favorites} = useSelector((s: RootState) => s.books);
+  const {cardWidth, numColumns} = useBookGridLayout();
+  const {booksById, favorites} = useSelector((s: RootState) => s.books);
 
   useEffect(() => {
-    dispatch(fetchBooks());
-  }, [dispatch]);
+    if (favorites.length > 0) {
+      dispatch(fetchBooksByIds(favorites));
+    }
+  }, [dispatch, favorites]);
 
-  const favoriteBooks = books.filter((b: Book) => favorites.includes(b.id));
+  const favoriteBooks = favorites
+    .map(id => booksById[id])
+    .filter((b): b is Book => b != null);
 
   const handleBookPress = (book: Book) => {
     navigation.navigate('BookDetail', {book});
   };
 
+  const renderBook = ({item}: {item: Book}) => (
+    <View style={[styles.cardWrapper, {width: cardWidth}]}>
+      <BookCard book={item} onPress={() => handleBookPress(item)} compact />
+    </View>
+  );
+
   if (favoriteBooks.length === 0) {
     return (
-      <View
-        style={[
-          styles.container,
-          styles.centered,
-          {paddingTop: insets.top + 16},
-        ]}>
-        <Text style={styles.emptyTitle}>No favorites yet</Text>
-        <Text style={styles.emptySubtext}>
-          Tap the heart on a book to add it here.
-        </Text>
+      <View style={styles.container}>
+        <View style={styles.emptyContainer}>
+          <Text style={styles.emptyTitle}>No favorites yet</Text>
+          <Text style={styles.emptySubtext}>
+            Tap the heart on a book to add it here.
+          </Text>
+        </View>
       </View>
     );
   }
 
   return (
-    <ScrollView
-      style={styles.container}
-      contentContainerStyle={[
-        styles.content,
-        {paddingTop: insets.top + theme.spacing.md},
-      ]}
-      showsVerticalScrollIndicator={false}>
-      <View style={styles.grid}>
-        {favoriteBooks.map((book: Book, index) => (
-          <BookCard
-            key={`${book.id}-${index}`}
-            book={book}
-            onPress={handleBookPress}
-          />
-        ))}
-      </View>
-    </ScrollView>
+    <View style={styles.container}>
+      <FlatList
+        data={favoriteBooks}
+        keyExtractor={(item, index) => `${item.id}-${index}`}
+        renderItem={renderBook}
+        key={numColumns}
+        numColumns={numColumns}
+        contentContainerStyle={styles.listContent}
+        initialNumToRender={12}
+        maxToRenderPerBatch={10}
+        windowSize={10}
+        removeClippedSubviews
+      />
+    </View>
   );
 };
 
 const styles = StyleSheet.create({
-  container: {flex: 1, backgroundColor: theme.colors.background},
-  content: {padding: theme.spacing.md, paddingBottom: 32},
-  centered: {justifyContent: 'center', alignItems: 'center'},
+  container: {flex: 1},
+  listContent: {padding: 8, paddingBottom: 24},
+  cardWrapper: {margin: 6},
+  emptyContainer: {
+    paddingTop: 24,
+    alignItems: 'center',
+  },
   emptyTitle: {
-    ...theme.typography.h4,
-    color: theme.colors.text,
-  } as TextStyle,
-  emptySubtext: {
-    ...theme.typography.body2,
-    color: theme.colors.onSurface,
-    marginTop: 8,
     textAlign: 'center',
-  } as TextStyle,
-  grid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    marginHorizontal: -8,
+    fontSize: 16,
+  },
+  emptySubtext: {
+    textAlign: 'center',
+    marginTop: 8,
+    fontSize: 14,
+    color: '#666',
   },
 });
 

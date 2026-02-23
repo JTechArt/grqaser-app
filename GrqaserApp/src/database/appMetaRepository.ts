@@ -158,7 +158,10 @@ export const appMetaRepository = {
     await db.executeSql('DELETE FROM managed_databases WHERE id = ?', [id]);
   },
 
-  async updateDatabaseFileSize(id: string, fileSizeBytes: number): Promise<void> {
+  async updateDatabaseFileSize(
+    id: string,
+    fileSizeBytes: number,
+  ): Promise<void> {
     const {db} = assertConnected();
     await db.executeSql(
       'UPDATE managed_databases SET file_size_bytes = ? WHERE id = ?',

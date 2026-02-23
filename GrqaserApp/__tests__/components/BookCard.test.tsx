@@ -15,6 +15,13 @@ jest.mock('react-native-fast-image', () => {
   (F as any).resizeMode = {cover: 'cover'};
   return {__esModule: true, default: F};
 });
+jest.mock('../../src/components/LazyCoverImage', () => {
+  const Rn = require('react');
+  const {View} = require('react-native');
+  return function LazyCoverImage() {
+    return Rn.createElement(View, {testID: 'lazy-cover'});
+  };
+});
 jest.mock('react-native-paper', () => {
   const {View} = require('react-native');
   const CardWithContent = Object.assign(View, {Content: View});

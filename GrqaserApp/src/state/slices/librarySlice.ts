@@ -1,14 +1,18 @@
 import {createSlice, createAsyncThunk} from '@reduxjs/toolkit';
 import {appMetaRepository} from '../../database/appMetaRepository';
+import type {LibraryEntry} from '../../types/book';
 
 interface LibraryState {
   libraryBookIds: string[];
+  /** Entries with lastOpenedAt for reliable In Progress section */
+  libraryEntries: LibraryEntry[];
   loading: boolean;
   error: string | null;
 }
 
 const initialState: LibraryState = {
   libraryBookIds: [],
+  libraryEntries: [],
   loading: false,
   error: null,
 };
@@ -18,7 +22,10 @@ export const fetchLibraryEntries = createAsyncThunk(
   async (_, {rejectWithValue}) => {
     try {
       const entries = await appMetaRepository.getLibraryEntries();
-      return entries.map(e => e.bookId);
+      return {
+        bookIds: entries.map(e => e.bookId),
+        entries,
+      };
     } catch (error) {
       const msg =
         error instanceof Error
@@ -35,7 +42,7 @@ export const addBookToLibrary = createAsyncThunk(
     try {
       await appMetaRepository.addToLibrary(bookId);
       const entries = await appMetaRepository.getLibraryEntries();
-      return entries.map(e => e.bookId);
+      return {bookIds: entries.map(e => e.bookId), entries};
     } catch (error) {
       const msg =
         error instanceof Error ? error.message : 'Failed to add to library';
@@ -72,7 +79,8 @@ const librarySlice = createSlice({
       })
       .addCase(fetchLibraryEntries.fulfilled, (state, action) => {
         state.loading = false;
-        state.libraryBookIds = action.payload;
+        state.libraryBookIds = action.payload.bookIds;
+        state.libraryEntries = action.payload.entries;
       })
       .addCase(fetchLibraryEntries.rejected, (state, action) => {
         state.loading = false;
@@ -81,15 +89,18 @@ const librarySlice = createSlice({
       })
 
       .addCase(addBookToLibrary.fulfilled, (state, action) => {
-        state.libraryBookIds = action.payload;
+        state.libraryBookIds = action.payload.bookIds;
+        state.libraryEntries = action.payload.entries;
       })
       .addCase(addBookToLibrary.rejected, (state, action) => {
         state.error = (action.payload as string) ?? 'Failed to add to library';
       })
 
       .addCase(removeBookFromLibrary.fulfilled, (state, action) => {
-        state.libraryBookIds = state.libraryBookIds.filter(
-          id => id !== action.payload,
+        const bookId = action.payload;
+        state.libraryBookIds = state.libraryBookIds.filter(id => id !== bookId);
+        state.libraryEntries = state.libraryEntries.filter(
+          e => e.bookId !== bookId,
         );
       })
       .addCase(removeBookFromLibrary.rejected, (state, action) => {

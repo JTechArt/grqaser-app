@@ -1,0 +1,37 @@
+# Quality Gate: 10.4
+schema: 1
+story: "10.4"
+story_title: "Offline Support and Connection Status"
+gate: PASS
+status_reason: "All five ACs met: app opens from local SQLite without network; offline playback/browse confirmed; ConnectionBanner shows failed/restored; 10s NetInfo ping; SettingsScreen disables Load/Refresh when offline; networkStatusSlice and ConnectionBanner tests added; 166 tests pass."
+reviewer: "Quinn (Test Architect)"
+updated: "2025-02-23T17:00:00Z"
+
+waiver: { active: false }
+top_issues: []
+
+evidence:
+  tests_reviewed: 166
+  risks_identified: 0
+  trace:
+    ac_covered: [1, 2, 3, 4, 5]
+    ac_gaps: []
+
+nfr_validation:
+  performance:
+    status: PASS
+    notes: "NetInfo subscription + 10s interval; no blocking; monitor cleanup on unmount."
+  reliability:
+    status: PASS
+    notes: "Local SQLite for catalog/library; offline mode fully supported; banner auto-dismisses restored."
+  maintainability:
+    status: PASS
+    notes: "networkStatusSlice, networkMonitor, ConnectionBanner well-structured; tests cover core behavior."
+  security:
+    status: PASS
+    notes: "No auth/security impact; network state only for UX."
+
+recommendations:
+  future:
+    - action: "Consider e2e test with simulated network toggle for offline/online transitions if manual verification becomes costly."
+      refs: ["GrqaserApp/__tests__/components/ConnectionBanner.test.tsx"]

@@ -83,9 +83,9 @@ describe('databaseManager', () => {
         databaseManager.loadDatabaseFromUrl('ftp://bad.url/db'),
       ).rejects.toThrow('Only http:// and https:// URLs are supported');
 
-      await expect(
-        databaseManager.loadDatabaseFromUrl(''),
-      ).rejects.toThrow('URL is required');
+      await expect(databaseManager.loadDatabaseFromUrl('')).rejects.toThrow(
+        'URL is required',
+      );
     });
 
     it('cleans up file on HTTP error', async () => {
@@ -263,9 +263,9 @@ describe('databaseManager', () => {
       };
       mockRepo.getDatabaseById.mockResolvedValue(db);
 
-      await expect(
-        databaseManager.removeDatabase('db-active'),
-      ).rejects.toThrow('Cannot remove the active database');
+      await expect(databaseManager.removeDatabase('db-active')).rejects.toThrow(
+        'Cannot remove the active database',
+      );
     });
 
     it('throws when DB not found', async () => {

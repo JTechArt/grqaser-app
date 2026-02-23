@@ -3,7 +3,10 @@
  * Story 9.4 — Library In-Progress filter and playProgress on Book objects.
  */
 
-import reducer, {mergePlayProgress, setFilters} from '../../../src/state/slices/booksSlice';
+import reducer, {
+  mergePlayProgress,
+  setFilters,
+} from '../../../src/state/slices/booksSlice';
 import {Book} from '../../../src/types/book';
 
 const book1: Book = {
@@ -31,19 +34,18 @@ describe('booksSlice', () => {
 
   it('returns initial state', () => {
     expect(initialState.books).toEqual([]);
+    expect(initialState.booksById).toEqual({});
+    expect(initialState.catalogStats).toBeNull();
     expect(initialState.filteredBooks).toEqual([]);
     expect(initialState.filters.type).toBe('all');
   });
 
   describe('mergePlayProgress', () => {
     it('merges playback positions into books', () => {
-      const stateWithBooks = reducer(
-        initialState,
-        {
-          type: 'books/fetchBooks/fulfilled',
-          payload: [book1, book2],
-        },
-      );
+      const stateWithBooks = reducer(initialState, {
+        type: 'books/fetchBooks/fulfilled',
+        payload: [book1, book2],
+      });
       expect(stateWithBooks.books[0].playProgress).toBeUndefined();
       expect(stateWithBooks.books[1].playProgress).toBeUndefined();
 
@@ -54,13 +56,10 @@ describe('booksSlice', () => {
     });
 
     it('sets playProgress undefined for books not in positions', () => {
-      const stateWithBooks = reducer(
-        initialState,
-        {
-          type: 'books/fetchBooks/fulfilled',
-          payload: [book1, book2],
-        },
-      );
+      const stateWithBooks = reducer(initialState, {
+        type: 'books/fetchBooks/fulfilled',
+        payload: [book1, book2],
+      });
       const positions: Record<string, number> = {b1: 100};
       const state = reducer(stateWithBooks, mergePlayProgress(positions));
       expect(state.books[0].playProgress).toBe(100);
@@ -68,13 +67,10 @@ describe('booksSlice', () => {
     });
 
     it('updates filteredBooks after merge', () => {
-      const stateWithBooks = reducer(
-        initialState,
-        {
-          type: 'books/fetchBooks/fulfilled',
-          payload: [book1, book2],
-        },
-      );
+      const stateWithBooks = reducer(initialState, {
+        type: 'books/fetchBooks/fulfilled',
+        payload: [book1, book2],
+      });
       const positions: Record<string, number> = {b1: 500, b2: 100};
       const state = reducer(stateWithBooks, mergePlayProgress(positions));
       expect(state.filteredBooks.length).toBe(2);
@@ -102,16 +98,53 @@ describe('booksSlice', () => {
 
   describe('setFilters / setSearchQuery', () => {
     it('applyFilters leaves in_progress to screen logic', () => {
-      const stateWithBooks = reducer(
-        initialState,
-        {
-          type: 'books/fetchBooks/fulfilled',
-          payload: [book1, book2],
-        },
-      );
+      const stateWithBooks = reducer(initialState, {
+        type: 'books/fetchBooks/fulfilled',
+        payload: [book1, book2],
+      });
       const state = reducer(stateWithBooks, setFilters({type: 'all'}));
       expect(state.filters.type).toBe('all');
       expect(state.filteredBooks.length).toBe(2);
+    });
+  });
+
+  describe('fetchBooksPage.fulfilled', () => {
+    it('stores page in books and merges into booksById', () => {
+      const payload = [book1, book2];
+      const state = reducer(initialState, {
+        type: 'books/fetchBooksPage/fulfilled',
+        payload,
+      });
+      expect(state.books).toHaveLength(2);
+      expect(state.booksById.b1).toEqual(book1);
+      expect(state.booksById.b2).toEqual(book2);
+      expect(state.loading).toBe(false);
+    });
+  });
+
+  describe('fetchBooksByIds.fulfilled', () => {
+    it('merges fetched books into booksById', () => {
+      const state = reducer(initialState, {
+        type: 'books/fetchBooksByIds/fulfilled',
+        payload: [book1],
+      });
+      expect(state.booksById.b1).toEqual(book1);
+      expect(state.books).toEqual([]);
+    });
+  });
+
+  describe('fetchCatalogStats.fulfilled', () => {
+    it('stores catalog stats from DB count', () => {
+      const state = reducer(initialState, {
+        type: 'books/fetchCatalogStats/fulfilled',
+        payload: {totalBooks: 100, audiobooks: 80, ebooks: 20},
+      });
+      expect(state.catalogStats).toEqual({
+        totalBooks: 100,
+        audiobooks: 80,
+        ebooks: 20,
+      });
+      expect(state.loadingStats).toBe(false);
     });
   });
 });

@@ -1,4 +1,11 @@
 jest.mock('react-native-fs');
+jest.mock('@react-navigation/native', () => ({
+  useNavigation: () => ({navigate: jest.fn(), goBack: jest.fn()}),
+  useFocusEffect: (cb: () => void | (() => void)) => {
+    const ReactMod = require('react');
+    ReactMod.useEffect(() => cb(), [cb]);
+  },
+}));
 jest.mock('@react-native-async-storage/async-storage', () => ({
   getItem: jest.fn().mockResolvedValue(null),
   setItem: jest.fn().mockResolvedValue(undefined),
@@ -9,6 +16,7 @@ jest.mock('../../src/database/appMetaRepository', () => ({
     getTotalDownloadSize: jest.fn().mockResolvedValue(180_000_000),
     getTotalDatabaseSize: jest.fn().mockResolvedValue(52_000_000),
     getDownloadedBookIds: jest.fn().mockResolvedValue([]),
+    listDatabases: jest.fn().mockResolvedValue([]),
   },
 }));
 jest.mock('../../src/database/catalogRepository', () => ({
@@ -40,6 +48,7 @@ import {PaperProvider} from 'react-native-paper';
 import {configureStore} from '@reduxjs/toolkit';
 import renderer, {act} from 'react-test-renderer';
 import SettingsScreen from '../../src/screens/SettingsScreen';
+import networkStatusReducer from '../../src/state/slices/networkStatusSlice';
 
 function createTestStore() {
   return configureStore({
@@ -52,7 +61,26 @@ function createTestStore() {
         loading: false,
         error: null,
       }),
-      books: () => ({books: []}),
+      books: () => ({
+        books: [],
+        booksById: {},
+        catalogStats: null,
+        favorites: [],
+        recentlyPlayed: [],
+        loading: false,
+        loadingStats: false,
+        error: null,
+        searchLoading: false,
+        searchError: null,
+        filters: {
+          type: 'all',
+          language: 'all',
+          duration: 'all',
+          category: 'all',
+        },
+        searchQuery: '',
+        filteredBooks: [],
+      }),
       database: () => ({
         managedDatabases: [],
         isDownloading: false,
@@ -60,6 +88,7 @@ function createTestStore() {
         error: null,
         loading: false,
       }),
+      networkStatus: networkStatusReducer,
     },
   });
 }

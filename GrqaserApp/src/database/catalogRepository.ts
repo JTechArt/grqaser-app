@@ -59,11 +59,42 @@ function rowsToArray(results: {
   return arr;
 }
 
+const DEFAULT_PAGE_SIZE = 20;
+
 export const catalogRepository = {
   async getAllBooks(): Promise<Book[]> {
     const {db} = assertConnected();
     const [results] = await db.executeSql(
       'SELECT * FROM books ORDER BY title ASC',
+    );
+    return rowsToArray(results).map(mapApiBookToBook);
+  },
+
+  /**
+   * Get a page of books for lazy loading. Use this instead of getAllBooks
+   * for initial load and featured lists to avoid loading the full catalog.
+   */
+  async getBooksPage(limit = DEFAULT_PAGE_SIZE, offset = 0): Promise<Book[]> {
+    const {db} = assertConnected();
+    const [results] = await db.executeSql(
+      'SELECT * FROM books ORDER BY title ASC LIMIT ? OFFSET ?',
+      [limit, offset],
+    );
+    return rowsToArray(results).map(mapApiBookToBook);
+  },
+
+  /**
+   * Get books by IDs (e.g. for Library or Favorites). Skips missing IDs.
+   */
+  async getBooksByIds(ids: string[]): Promise<Book[]> {
+    if (ids.length === 0) {
+      return [];
+    }
+    const {db} = assertConnected();
+    const placeholders = ids.map(() => '?').join(',');
+    const [results] = await db.executeSql(
+      `SELECT * FROM books WHERE id IN (${placeholders}) ORDER BY title ASC`,
+      ids,
     );
     return rowsToArray(results).map(mapApiBookToBook);
   },
@@ -80,12 +111,16 @@ export const catalogRepository = {
     return mapApiBookToBook(results.rows.item(0));
   },
 
-  async searchBooks(query: string): Promise<Book[]> {
+  /**
+   * Search books by title, author, or description. Limited to avoid loading
+   * thousands of rows with 2000+ book catalogs (performance: Story 10.5).
+   */
+  async searchBooks(query: string, limit = 100): Promise<Book[]> {
     const {db} = assertConnected();
     const like = `%${query}%`;
     const [results] = await db.executeSql(
-      'SELECT * FROM books WHERE title LIKE ? OR author LIKE ? OR description LIKE ? ORDER BY title ASC',
-      [like, like, like],
+      'SELECT * FROM books WHERE title LIKE ? OR author LIKE ? OR description LIKE ? ORDER BY title ASC LIMIT ?',
+      [like, like, like, limit],
     );
     return rowsToArray(results).map(mapApiBookToBook);
   },

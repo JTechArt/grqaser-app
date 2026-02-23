@@ -1,10 +1,9 @@
-import React, {useCallback, useMemo, useState} from 'react';
+import React, {useCallback, useEffect, useMemo, useState} from 'react';
 import {
   View,
   Text,
   StyleSheet,
   FlatList,
-  Image,
   TouchableOpacity,
   TextStyle,
   ScrollView,
@@ -22,20 +21,35 @@ import {
   fetchLibraryEntries,
   removeBookFromLibrary,
 } from '../state/slices/librarySlice';
-import {syncPlayProgress} from '../state/slices/booksSlice';
+import {syncPlayProgress, fetchBooksByIds} from '../state/slices/booksSlice';
 import {theme} from '../theme';
 import {formatDuration} from '../utils/formatters';
+import LazyCoverImage from '../components/LazyCoverImage';
 
 type NavProp = StackNavigationProp<RootStackParamList>;
 
-type FilterType = 'all' | 'in_progress' | 'favorites' | 'downloaded';
+type FilterType = 'all' | 'in_progress' | 'downloaded';
 
 const FILTERS: {key: FilterType; label: string}[] = [
   {key: 'all', label: 'All'},
-  {key: 'in_progress', label: 'In progress'},
-  {key: 'favorites', label: 'Favorites'},
-  {key: 'downloaded', label: 'Downloaded'},
+  {key: 'in_progress', label: 'In Progress'},
+  {key: 'downloaded', label: 'Downloads'},
 ];
+
+/** Placeholder row when a download has started but book details aren't loaded yet */
+interface DownloadPlaceholder {
+  id: string;
+  placeholder: true;
+  downloadPct: number;
+}
+
+type LibraryListItem = Book | DownloadPlaceholder;
+
+function isPlaceholder(item: LibraryListItem): item is DownloadPlaceholder {
+  return 'placeholder' in item && item.placeholder === true;
+}
+
+const IN_PROGRESS_DAYS_MS = 7 * 24 * 60 * 60 * 1000;
 
 const LibraryScreen: React.FC = () => {
   const navigation = useNavigation<NavProp>();
@@ -43,15 +57,20 @@ const LibraryScreen: React.FC = () => {
   const insets = useSafeAreaInsets();
   const [activeFilter, setActiveFilter] = useState<FilterType>('all');
 
-  const books = useSelector((s: RootState) => s.books.books);
+  const booksById = useSelector((s: RootState) => s.books.booksById);
   const libraryBookIds = useSelector(
     (s: RootState) => s.library.libraryBookIds,
   );
+  const libraryEntries = useSelector(
+    (s: RootState) => s.library.libraryEntries,
+  );
   const libraryLoading = useSelector((s: RootState) => s.library.loading);
   const libraryError = useSelector((s: RootState) => s.library.error);
-  const favoriteIds = useSelector((s: RootState) => s.books.favorites);
   const downloadedBookIds = useSelector(
     (s: RootState) => s.download.downloadedBookIds,
+  );
+  const downloadingBooks = useSelector(
+    (s: RootState) => s.download.downloadingBooks,
   );
 
   useFocusEffect(
@@ -61,31 +80,76 @@ const LibraryScreen: React.FC = () => {
     }, [dispatch]),
   );
 
+  const downloadingBookIds = useMemo(
+    () => Object.keys(downloadingBooks),
+    [downloadingBooks],
+  );
+
+  useEffect(() => {
+    const idsToLoad = new Set(libraryBookIds);
+    downloadingBookIds.forEach(id => idsToLoad.add(id));
+    if (idsToLoad.size > 0) {
+      dispatch(fetchBooksByIds(Array.from(idsToLoad)));
+    }
+  }, [dispatch, libraryBookIds, downloadingBookIds]);
+
   const libraryBooks = useMemo(() => {
-    const bookMap = new Map(books.map(b => [b.id, b]));
     return libraryBookIds
-      .map(id => bookMap.get(id))
+      .map(id => booksById[id])
       .filter((b): b is Book => b != null);
-  }, [books, libraryBookIds]);
+  }, [booksById, libraryBookIds]);
 
   const filteredBooks = useMemo(() => {
     switch (activeFilter) {
-      case 'in_progress':
-        return libraryBooks.filter(b => {
-          if (b.playProgress == null || b.playProgress <= 0) return false;
-          if (b.duration != null && b.duration > 0) {
-            return b.playProgress < b.duration;
-          }
-          return true;
-        });
-      case 'favorites':
-        return libraryBooks.filter(b => favoriteIds.includes(b.id));
-      case 'downloaded':
-        return libraryBooks.filter(b => downloadedBookIds.includes(b.id));
+      case 'in_progress': {
+        const now = Date.now();
+        const cutoff = now - IN_PROGRESS_DAYS_MS;
+        const openedRecently = new Set(
+          libraryEntries
+            .filter(e => new Date(e.lastOpenedAt).getTime() >= cutoff)
+            .map(e => e.bookId),
+        );
+        return libraryBooks.filter(b => openedRecently.has(b.id));
+      }
+      case 'downloaded': {
+        const downloadedSet = new Set(downloadedBookIds);
+        const downloadingSet = new Set(downloadingBookIds);
+        const inLibraryDownloadedOrDownloading = libraryBooks.filter(
+          b => downloadedSet.has(b.id) || downloadingSet.has(b.id),
+        );
+        const onlyDownloadingBooks = downloadingBookIds
+          .filter(id => !libraryBookIds.includes(id))
+          .map(id => booksById[id])
+          .filter((b): b is Book => b != null);
+        const placeholders: DownloadPlaceholder[] = downloadingBookIds
+          .filter(id => booksById[id] == null)
+          .map(id => {
+            const prog = downloadingBooks[id];
+            const pct =
+              prog && prog.contentLength > 0
+                ? Math.round(prog.fraction * 100)
+                : 0;
+            return {id, placeholder: true as const, downloadPct: pct};
+          });
+        return [
+          ...inLibraryDownloadedOrDownloading,
+          ...onlyDownloadingBooks,
+          ...placeholders,
+        ];
+      }
       default:
         return libraryBooks;
     }
-  }, [libraryBooks, activeFilter, favoriteIds, downloadedBookIds]);
+  }, [
+    libraryBooks,
+    libraryEntries,
+    activeFilter,
+    downloadedBookIds,
+    downloadingBookIds,
+    downloadingBooks,
+    libraryBookIds,
+    booksById,
+  ]);
 
   const handleBookPress = (book: Book) => {
     navigation.navigate('BookDetail', {book});
@@ -110,32 +174,67 @@ const LibraryScreen: React.FC = () => {
     );
   };
 
-  const renderItem = ({item}: {item: Book}) => {
-    const isDownloaded = downloadedBookIds.includes(item.id);
+  const renderItem = ({item}: {item: LibraryListItem}) => {
+    if (isPlaceholder(item)) {
+      return (
+        <View style={styles.cardWrap}>
+          <View style={styles.card}>
+            <View style={[styles.coverWrap, styles.coverPlaceholder]}>
+              <View style={styles.downloadProgressOverlay}>
+                <Text style={styles.downloadProgressText}>
+                  {item.downloadPct}%
+                </Text>
+                <Text style={styles.downloadProgressSubtext}>Downloading…</Text>
+              </View>
+            </View>
+            <View style={styles.info}>
+              <Text style={styles.title} numberOfLines={2}>
+                Loading…
+              </Text>
+            </View>
+          </View>
+        </View>
+      );
+    }
+
+    const book = item;
+    const isDownloaded = downloadedBookIds.includes(book.id);
+    const downloadProgress = downloadingBooks[book.id];
+    const isDownloading = downloadProgress != null;
+    const downloadPct =
+      isDownloading && downloadProgress.contentLength > 0
+        ? Math.round(downloadProgress.fraction * 100)
+        : isDownloading
+        ? 0
+        : null;
     const progressPct =
-      item.playProgress != null && item.duration != null && item.duration > 0
-        ? Math.round((item.playProgress / item.duration) * 100)
+      book.playProgress != null && book.duration != null && book.duration > 0
+        ? Math.round((book.playProgress / book.duration) * 100)
         : null;
 
     return (
       <View style={styles.cardWrap}>
         <TouchableOpacity
           style={styles.card}
-          onPress={() => handleBookPress(item)}
+          onPress={() => handleBookPress(book)}
           activeOpacity={0.7}>
           <View style={styles.coverWrap}>
-            {item.coverImage ? (
-              <Image source={{uri: item.coverImage}} style={styles.cover} />
-            ) : (
-              <View style={styles.coverPlaceholder}>
-                <Icon
-                  name="book-open-variant"
-                  size={28}
-                  color={theme.colors.onSurface}
-                />
+            <LazyCoverImage
+              uri={book.coverImage}
+              style={styles.cover}
+              compact
+              placeholderText={book.title.substring(0, 2).toUpperCase()}
+              priority="normal"
+            />
+            {isDownloading && (
+              <View style={styles.downloadProgressOverlay} pointerEvents="none">
+                <Text style={styles.downloadProgressText}>
+                  {downloadPct !== null ? `${downloadPct}%` : '…'}
+                </Text>
+                <Text style={styles.downloadProgressSubtext}>Downloading</Text>
               </View>
             )}
-            {isDownloaded && (
+            {isDownloaded && !isDownloading && (
               <View style={styles.downloadedBadge}>
                 <Icon name="arrow-down" size={12} color="#fff" />
               </View>
@@ -143,44 +242,50 @@ const LibraryScreen: React.FC = () => {
           </View>
           <View style={styles.info}>
             <Text style={styles.title} numberOfLines={2}>
-              {item.title}
+              {book.title}
             </Text>
             <Text style={styles.author} numberOfLines={1}>
-              {item.author}
+              {book.author}
             </Text>
-            {(item.duration != null || progressPct != null) && (
+            {(book.duration != null || progressPct != null) && (
               <Text style={styles.duration}>
-                {item.duration != null && item.duration > 0
-                  ? formatDuration(item.duration)
+                {book.duration != null && book.duration > 0
+                  ? formatDuration(book.duration)
                   : ''}
                 {progressPct != null ? ` · ${progressPct}%` : ''}
               </Text>
             )}
           </View>
         </TouchableOpacity>
-        <TouchableOpacity
-          style={styles.removeBtn}
-          onPress={() => handleRemove(item.id)}
-          hitSlop={{top: 8, bottom: 8, left: 8, right: 8}}>
-          <Icon name="close" size={16} color={theme.colors.onSurface} />
-        </TouchableOpacity>
+        {libraryBookIds.includes(book.id) && (
+          <TouchableOpacity
+            style={styles.removeBtn}
+            onPress={() => handleRemove(book.id)}
+            hitSlop={{top: 8, bottom: 8, left: 8, right: 8}}>
+            <Icon name="close" size={16} color={theme.colors.onSurface} />
+          </TouchableOpacity>
+        )}
       </View>
     );
   };
 
   return (
     <View style={styles.container}>
-      <View style={[styles.header, {paddingTop: insets.top + 16}]}>
-        <Text style={styles.headerTitle}>Library</Text>
-        <Text style={styles.headerSubtitle}>Your reading & listening</Text>
+      <View style={[styles.headerRow, {paddingTop: insets.top + 16}]}>
+        <View style={styles.header}>
+          <Text style={styles.headerTitle}>Library</Text>
+          <Text style={styles.headerSubtitle}>Your reading & listening</Text>
+        </View>
+        <View style={styles.sectionButtonsWrap}>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            style={styles.pillScroll}
+            contentContainerStyle={styles.pillRow}>
+            {FILTERS.map(renderFilterPill)}
+          </ScrollView>
+        </View>
       </View>
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        style={styles.pillScroll}
-        contentContainerStyle={styles.pillRow}>
-        {FILTERS.map(renderFilterPill)}
-      </ScrollView>
       {libraryError ? (
         <View style={styles.errorContainer}>
           <Icon
@@ -199,6 +304,13 @@ const LibraryScreen: React.FC = () => {
         <View style={styles.emptyContainer}>
           <ActivityIndicator size="large" color={theme.colors.primary} />
         </View>
+      ) : libraryBookIds.length > 0 && libraryBooks.length === 0 ? (
+        <View style={styles.emptyContainer}>
+          <ActivityIndicator size="large" color={theme.colors.primary} />
+          <Text style={[styles.emptyText, styles.loadingBooksText]}>
+            Loading books…
+          </Text>
+        </View>
       ) : filteredBooks.length === 0 ? (
         <View style={styles.emptyContainer}>
           <Icon name="bookshelf" size={48} color={theme.colors.onSurface} />
@@ -212,19 +324,28 @@ const LibraryScreen: React.FC = () => {
         </View>
       ) : (
         <FlatList
-          data={filteredBooks}
+          data={filteredBooks as LibraryListItem[]}
           keyExtractor={item => item.id}
           renderItem={renderItem}
           contentContainerStyle={styles.list}
           showsVerticalScrollIndicator={false}
+          initialNumToRender={12}
+          maxToRenderPerBatch={10}
+          windowSize={10}
+          removeClippedSubviews
         />
       )}
     </View>
   );
 };
 
+const SECTION_BUTTONS_HEIGHT = 52;
+
 const styles = StyleSheet.create({
   container: {flex: 1, backgroundColor: theme.colors.background},
+  headerRow: {
+    flexShrink: 0,
+  },
   header: {
     paddingHorizontal: 20,
     paddingBottom: 4,
@@ -238,23 +359,31 @@ const styles = StyleSheet.create({
     color: theme.colors.onSurface,
     marginTop: 2,
   } as TextStyle,
+  sectionButtonsWrap: {
+    height: SECTION_BUTTONS_HEIGHT,
+    flexShrink: 0,
+  },
   pillScroll: {
     flexGrow: 0,
+    height: SECTION_BUTTONS_HEIGHT,
   },
   pillRow: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 20,
     paddingVertical: 12,
-    gap: 8,
+    gap: 10,
+    minHeight: SECTION_BUTTONS_HEIGHT,
   },
   pill: {
-    paddingHorizontal: 16,
-    paddingVertical: 8,
+    paddingHorizontal: 18,
+    paddingVertical: 10,
     borderRadius: 20,
     backgroundColor: theme.colors.surface,
     borderWidth: 1,
     borderColor: theme.colors.outline,
+    minWidth: 96,
+    flexShrink: 0,
   },
   pillActive: {
     backgroundColor: theme.colors.primary,
@@ -312,6 +441,28 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
+  downloadProgressOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0,0,0,0.6)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderTopLeftRadius: theme.borderRadius.md,
+    borderBottomLeftRadius: theme.borderRadius.md,
+  },
+  downloadProgressText: {
+    ...theme.typography.h2,
+    color: '#ffffff',
+    fontWeight: '700',
+  } as TextStyle,
+  downloadProgressSubtext: {
+    ...theme.typography.caption,
+    color: 'rgba(255,255,255,0.9)',
+    marginTop: 4,
+  } as TextStyle,
   downloadedBadge: {
     position: 'absolute',
     bottom: 4,
@@ -323,6 +474,9 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
+  loadingBooksText: {
+    marginTop: 12,
+  } as TextStyle,
   info: {
     flex: 1,
     padding: 12,
