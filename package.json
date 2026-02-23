@@ -8,18 +8,19 @@
     "ios": "cd GrqaserApp && react-native run-ios",
     "start": "cd GrqaserApp && react-native start",
     "dev": "cd GrqaserApp && react-native start",
-    "test": "jest",
+    "test": "jest --selectProjects grqaser-app",
     "admin:start": "cd books-admin-app && npm start",
     "admin:test": "cd books-admin-app && npm test",
     "admin:dev": "cd books-admin-app && npm run dev",
-    "lint": "eslint . --ext .js,.jsx,.ts,.tsx",
-    "lint:fix": "eslint . --ext .js,.jsx,.ts,.tsx --fix",
+    "lint": "cd GrqaserApp && eslint . --ext .js,.jsx,.ts,.tsx",
+    "lint:fix": "cd GrqaserApp && eslint . --ext .js,.jsx,.ts,.tsx --fix",
     "type-check": "tsc --noEmit",
     "build:android": "cd android && ./gradlew assembleRelease",
     "build:ios": "cd ios && xcodebuild -workspace Grqaser.xcworkspace -scheme Grqaser -configuration Release -destination generic/platform=iOS -archivePath Grqaser.xcarchive archive",
     "bmad:refresh": "bmad-method install -f -i codex",
     "bmad:list": "bmad-method list:agents",
-    "bmad:validate": "bmad-method validate"
+    "bmad:validate": "bmad-method validate",
+    "test:all": "jest"
   },
   "dependencies": {
     "react": "18.2.0",
@@ -75,17 +76,36 @@
     "typescript": "4.8.4"
   },
   "jest": {
-    "preset": "react-native",
-    "moduleFileExtensions": [
-      "ts",
-      "tsx",
-      "js",
-      "jsx",
-      "json",
-      "node"
-    ],
-    "setupFiles": [
-      "<rootDir>/jest.setup.js"
+    "projects": [
+      {
+        "displayName": "grqaser-app",
+        "preset": "react-native",
+        "rootDir": "<rootDir>/GrqaserApp",
+        "moduleFileExtensions": [
+          "ts",
+          "tsx",
+          "js",
+          "jsx",
+          "json",
+          "node"
+        ],
+        "setupFiles": [
+          "<rootDir>/../jest.setup.js"
+        ]
+      },
+      {
+        "displayName": "books-admin-app",
+        "rootDir": "<rootDir>/books-admin-app",
+        "testEnvironment": "node",
+        "testMatch": [
+          "**/tests/**/*.test.js"
+        ],
+        "collectCoverageFrom": [
+          "src/**/*.js",
+          "!src/server.js"
+        ],
+        "coverageDirectory": "coverage"
+      }
     ]
   },
   "keywords": [
