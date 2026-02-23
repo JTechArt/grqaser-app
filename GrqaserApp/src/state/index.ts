@@ -5,6 +5,7 @@ import userReducer from './slices/userSlice';
 import databaseReducer from './slices/databaseSlice';
 import downloadReducer from './slices/downloadSlice';
 import libraryReducer from './slices/librarySlice';
+import networkStatusReducer from './slices/networkStatusSlice';
 
 export const store = configureStore({
   reducer: {
@@ -14,6 +15,7 @@ export const store = configureStore({
     database: databaseReducer,
     download: downloadReducer,
     library: libraryReducer,
+    networkStatus: networkStatusReducer,
   },
   middleware: getDefaultMiddleware =>
     getDefaultMiddleware({

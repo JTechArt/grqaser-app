@@ -30,6 +30,15 @@ jest.mock('../src/components/TrackPlayerProvider', () => {
   };
 });
 
+jest.mock('@react-native-community/netinfo', () => ({
+  fetch: jest.fn().mockResolvedValue({
+    isConnected: true,
+    type: 'wifi',
+    isInternetReachable: true,
+  }),
+  addEventListener: jest.fn(() => jest.fn()),
+}));
+
 import App from '../App';
 
 // Note: import explicitly to use the types shiped with jest.
