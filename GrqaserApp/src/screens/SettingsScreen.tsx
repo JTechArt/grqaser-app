@@ -115,6 +115,9 @@ const SettingsScreen: React.FC = () => {
   );
   const dbError = useSelector((s: RootState) => s.database.error);
   const dbLoading = useSelector((s: RootState) => s.database.loading);
+  const isOnline = useSelector(
+    (s: RootState) => s.networkStatus.isConnected === true,
+  );
 
   const [urlModalVisible, setUrlModalVisible] = useState(false);
   const [urlInput, setUrlInput] = useState('');
@@ -206,16 +209,30 @@ const SettingsScreen: React.FC = () => {
       );
       return;
     }
+    if (!isOnline) {
+      Alert.alert(
+        'Offline',
+        "You're offline. Database download requires an internet connection.",
+      );
+      return;
+    }
     setUrlModalVisible(false);
     setUrlInput('');
     dispatch(loadNewDatabase(trimmed)).then(() => loadUsageMetrics());
-  }, [urlInput, dispatch, loadUsageMetrics]);
+  }, [urlInput, dispatch, loadUsageMetrics, isOnline]);
 
   const handleRefresh = useCallback(
     (dbId: string) => {
+      if (!isOnline) {
+        Alert.alert(
+          'Offline',
+          "You're offline. Database refresh requires an internet connection.",
+        );
+        return;
+      }
       dispatch(refreshDb(dbId)).then(() => loadUsageMetrics());
     },
-    [dispatch, loadUsageMetrics],
+    [dispatch, loadUsageMetrics, isOnline],
   );
 
   const handleSetActive = useCallback(
@@ -429,7 +446,7 @@ const SettingsScreen: React.FC = () => {
                     mode="text"
                     compact
                     onPress={() => handleRefresh(db.id)}
-                    disabled={isDownloading || dbLoading}
+                    disabled={isDownloading || dbLoading || !isOnline}
                     icon="refresh"
                     textColor={appTheme.colors.primary}>
                     {''}
@@ -484,7 +501,7 @@ const SettingsScreen: React.FC = () => {
         <Button
           mode={managedDatabases.length === 0 ? 'contained' : 'outlined'}
           onPress={() => setUrlModalVisible(true)}
-          disabled={isDownloading || dbLoading}
+          disabled={isDownloading || dbLoading || !isOnline}
           style={styles.loadUrlBtn}
           buttonColor={
             managedDatabases.length === 0 ? appTheme.colors.primary : undefined

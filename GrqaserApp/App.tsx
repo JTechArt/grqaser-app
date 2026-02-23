@@ -1,5 +1,5 @@
 import React, {useEffect, useRef} from 'react';
-import {StatusBar, LogBox} from 'react-native';
+import {StatusBar, LogBox, View, StyleSheet} from 'react-native';
 import {NavigationContainer} from '@react-navigation/native';
 import {Provider, useDispatch, useSelector} from 'react-redux';
 import {store} from './src/state';
@@ -11,6 +11,8 @@ import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityI
 import {getAppTheme} from './src/theme';
 import RootNavigator from './src/navigation/RootNavigator';
 import TrackPlayerProvider from './src/components/TrackPlayerProvider';
+import ConnectionBanner from './src/components/ConnectionBanner';
+import {startNetworkMonitor} from './src/services/networkMonitor';
 import {setFavorites} from './src/state/slices/booksSlice';
 import {updatePreferences} from './src/state/slices/userSlice';
 import {
@@ -56,12 +58,22 @@ const renderPaperIcon = ({
   />
 );
 
+const styles = StyleSheet.create({
+  appWrap: {flex: 1},
+  content: {flex: 1},
+});
+
 const AppContent: React.FC = () => {
   const dispatch = useDispatch();
   const themeMode = useSelector((s: RootState) => s.user.preferences.theme);
   const favorites = useSelector((s: RootState) => s.books.favorites);
   const prevFavoritesRef = useRef<string[]>([]);
   const prevThemeRef = useRef(themeMode);
+
+  useEffect(() => {
+    const stop = startNetworkMonitor();
+    return stop;
+  }, []);
 
   useEffect(() => {
     if (typeof MaterialCommunityIcons.loadFont === 'function') {
@@ -101,9 +113,14 @@ const AppContent: React.FC = () => {
           barStyle={isDark ? 'light-content' : 'dark-content'}
           backgroundColor={appTheme.colors.primary}
         />
-        <TrackPlayerProvider>
-          <RootNavigator />
-        </TrackPlayerProvider>
+        <View style={styles.appWrap}>
+          <ConnectionBanner />
+          <View style={styles.content}>
+            <TrackPlayerProvider>
+              <RootNavigator />
+            </TrackPlayerProvider>
+          </View>
+        </View>
       </NavigationContainer>
     </PaperProvider>
   );
