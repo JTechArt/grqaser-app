@@ -2,11 +2,11 @@ import React from 'react';
 import {View, TouchableOpacity, StyleSheet, Dimensions} from 'react-native';
 import {Text, Card} from 'react-native-paper';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
-import FastImage from 'react-native-fast-image';
 
 import {Book} from '../types/book';
 import {theme} from '../theme';
 import {formatDuration} from '../utils/formatters';
+import LazyCoverImage from './LazyCoverImage';
 
 const {width} = Dimensions.get('window');
 const cardWidth = (width - 60) / 2; // 2 columns with margins
@@ -24,36 +24,19 @@ const BookCard: React.FC<BookCardProps> = ({
   compact = false,
   showProgress = false,
 }) => {
-  // Use app theme from theme module (avoids shadowing imported theme)
-
   const handlePress = () => {
     onPress(book);
   };
 
-  const renderCover = () => {
-    if (book.coverImage) {
-      return (
-        <FastImage
-          source={{uri: book.coverImage}}
-          style={[styles.cover, compact && styles.coverCompact]}
-          resizeMode={FastImage.resizeMode.cover}
-        />
-      );
-    }
-
-    return (
-      <View
-        style={[
-          styles.cover,
-          compact && styles.coverCompact,
-          styles.placeholderCover,
-        ]}>
-        <Text style={styles.placeholderText}>
-          {book.title.substring(0, 2).toUpperCase()}
-        </Text>
-      </View>
-    );
-  };
+  const renderCover = () => (
+    <LazyCoverImage
+      uri={book.coverImage}
+      style={[styles.cover, compact && styles.coverCompact]}
+      compact={compact}
+      placeholderText={book.title.substring(0, 2).toUpperCase()}
+      priority="normal"
+    />
+  );
 
   const renderProgress = () => {
     if (!showProgress || !book.playProgress || !book.duration) {
@@ -170,11 +153,6 @@ const styles = StyleSheet.create({
     backgroundColor: theme.colors.primary,
     justifyContent: 'center',
     alignItems: 'center',
-  },
-  placeholderText: {
-    color: 'white',
-    fontSize: 18,
-    fontWeight: 'bold',
   },
   typeIcon: {
     position: 'absolute',

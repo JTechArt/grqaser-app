@@ -4,7 +4,6 @@ import {
   Text,
   StyleSheet,
   ScrollView,
-  Image,
   useWindowDimensions,
   TouchableOpacity,
   LayoutChangeEvent,
@@ -16,6 +15,7 @@ import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import {useProgress} from 'react-native-track-player';
 import {theme} from '../theme';
 import {formatTime} from '../utils/formatters';
+import LazyCoverImage from '../components/LazyCoverImage';
 import {
   togglePlayPause,
   seekTo,
@@ -125,37 +125,18 @@ const PlayerScreen: React.FC = () => {
       ]}
       showsVerticalScrollIndicator={false}>
       <View style={styles.coverWrapper}>
-        {currentBook.coverImage ? (
-          <Image
-            source={{uri: currentBook.coverImage}}
-            style={[
-              styles.cover,
-              {
-                width: Math.min(COVER_SIZE, width - 48),
-                height: Math.min(COVER_SIZE, width - 48),
-              },
-            ]}
-            resizeMode="cover"
-          />
-        ) : (
-          <View
-            style={[
-              styles.coverPlaceholder,
-              {
-                width: Math.min(COVER_SIZE, width - 48),
-                height: Math.min(COVER_SIZE, width - 48),
-              },
-            ]}>
-            <Icon
-              name="book-open-variant"
-              size={56}
-              color={theme.colors.onSurface}
-            />
-            <Text style={styles.coverPlaceholderText}>
-              {currentBook.title.substring(0, 2).toUpperCase()}
-            </Text>
-          </View>
-        )}
+        <LazyCoverImage
+          uri={currentBook.coverImage}
+          style={[
+            styles.cover,
+            {
+              width: Math.min(COVER_SIZE, width - 48),
+              height: Math.min(COVER_SIZE, width - 48),
+            },
+          ]}
+          placeholderText={currentBook.title.substring(0, 2).toUpperCase()}
+          priority="high"
+        />
       </View>
       <Text style={styles.title} numberOfLines={2}>
         {currentBook.title}

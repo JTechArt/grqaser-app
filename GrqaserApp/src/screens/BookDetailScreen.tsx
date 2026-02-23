@@ -4,7 +4,6 @@ import {
   Text,
   StyleSheet,
   ScrollView,
-  Image,
   useWindowDimensions,
   TextStyle,
   TouchableOpacity,
@@ -20,6 +19,7 @@ import {addBookToLibrary} from '../state/slices/librarySlice';
 import {RootStackParamList} from '../navigation/types';
 import {theme} from '../theme';
 import {formatDuration} from '../utils/formatters';
+import LazyCoverImage from '../components/LazyCoverImage';
 import {playBook} from '../services/playerService';
 import type {RootState, AppDispatch} from '../state';
 
@@ -99,28 +99,12 @@ const BookDetailScreen: React.FC<Props> = ({route}) => {
       contentContainerStyle={styles.content}
       showsVerticalScrollIndicator={false}>
       <View style={[styles.coverContainer, {height: coverHeight}]}>
-        {book.coverImage ? (
-          <Image
-            source={{uri: book.coverImage}}
-            style={[styles.cover, {width: coverWidth, height: coverHeight}]}
-            resizeMode="cover"
-          />
-        ) : (
-          <View
-            style={[
-              styles.coverPlaceholder,
-              {width: coverWidth, height: coverHeight},
-            ]}>
-            <Icon
-              name="book-open-variant"
-              size={64}
-              color={theme.colors.onSurface}
-            />
-            <Text style={styles.coverPlaceholderText}>
-              {book.title.substring(0, 2).toUpperCase()}
-            </Text>
-          </View>
-        )}
+        <LazyCoverImage
+          uri={book.coverImage}
+          style={[styles.cover, {width: coverWidth, height: coverHeight}]}
+          placeholderText={book.title.substring(0, 2).toUpperCase()}
+          priority="high"
+        />
       </View>
       <View style={styles.meta}>
         <View style={styles.titleRow}>

@@ -1,5 +1,5 @@
 import React, {useEffect, useRef} from 'react';
-import {StatusBar, LogBox, View, StyleSheet} from 'react-native';
+import {AppState, StatusBar, LogBox, View, StyleSheet} from 'react-native';
 import {NavigationContainer} from '@react-navigation/native';
 import {Provider, useDispatch, useSelector} from 'react-redux';
 import {store} from './src/state';
@@ -21,6 +21,7 @@ import {
   getThemePreference,
   setThemePreference,
 } from './src/services/preferencesStorage';
+import {clearCoverImageMemoryCache} from './src/services/imageCacheService';
 
 LogBox.ignoreLogs(['Required dispatch_sync to load constants']);
 
@@ -73,6 +74,15 @@ const AppContent: React.FC = () => {
   useEffect(() => {
     const stop = startNetworkMonitor();
     return stop;
+  }, []);
+
+  useEffect(() => {
+    const sub = AppState.addEventListener('change', nextState => {
+      if (nextState === 'background') {
+        clearCoverImageMemoryCache();
+      }
+    });
+    return () => sub.remove();
   }, []);
 
   useEffect(() => {
