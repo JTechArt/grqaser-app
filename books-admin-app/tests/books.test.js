@@ -146,6 +146,22 @@ describe('GET /api/v1/books/search', () => {
     expect(res.body.data.books.length).toBe(1);
     expect(res.body.data.books[0].title).toBe('Third Title');
   });
+
+  it('ignores invalid author_ids/category_ids values and still returns 200', async () => {
+    const res = await request(app)
+      .get('/api/v1/books/search?author_ids=abc,-2,0&category_ids=x,999999z')
+      .expect(200);
+    expect(res.body.success).toBe(true);
+    expect(Array.isArray(res.body.data.books)).toBe(true);
+  });
+
+  it('handles special characters in text query safely', async () => {
+    const res = await request(app)
+      .get('/api/v1/books/search?text=%27%22%3Cscript%3E')
+      .expect(200);
+    expect(res.body.success).toBe(true);
+    expect(Array.isArray(res.body.data.books)).toBe(true);
+  });
 });
 
 describe('GET /api/v1/authors', () => {
