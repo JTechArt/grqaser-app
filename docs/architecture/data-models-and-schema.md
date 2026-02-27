@@ -50,7 +50,9 @@ Shared data contract for the crawler (writer), database-viewer (reader), and Grq
 
 ## Books table (DDL)
 
-**Single source of truth:** `crawler/src/schema/books-table.js` — both `crawler/src/models/database.js` and `crawler/src/crawler.js` use this module to create the books table and avoid schema drift.
+**Single source of truth:** `books-admin-app/src/crawler/schema/books-table.js` — both `books-admin-app/src/models/database.js` and crawler use this module to create the books table and avoid schema drift.
+
+**Epic 9 Migration:** The schema normalization is implemented via migration script `books-admin-app/src/migrations/001-normalize-authors-categories.js`. Run with `node books-admin-app/scripts/run-migration-001.js [db-path]`. The migration creates `authors` and `book_categories` tables, populates them from existing data, adds foreign key columns, and creates indexes. See [Epic 9 schema changes](./epic-9-schema-changes.md) for details.
 
 Current canonical schema (Epic 9 adds `author_id` and `category_id`; original columns kept temporarily):
 
