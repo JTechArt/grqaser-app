@@ -1,6 +1,6 @@
 # Quality Gate: 9.3
 schema: 1
-story: "9.3"
+story: "8.8"
 story_title: "Settings Storage Data Accuracy and Storage Limit"
 gate: PASS
 status_reason: "All six ACs implemented: catalog DB size from disk (sync on list + after download), storage limit 10 GB as allocated, mobile data from actual bytes, metrics refresh after all operations including set active; tests updated and passing."
