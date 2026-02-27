@@ -20,7 +20,11 @@ export function startNetworkMonitor(): () => void {
   const NetInfo = require('@react-native-community/netinfo').default;
   let intervalId: ReturnType<typeof setInterval> | null = null;
 
-  const handleState = (state: {isConnected?: boolean | null; type?: string; isInternetReachable?: boolean | null}) => {
+  const handleState = (state: {
+    isConnected?: boolean | null;
+    type?: string;
+    isInternetReachable?: boolean | null;
+  }) => {
     const connected =
       state.isConnected !== false &&
       state.type !== 'none' &&
@@ -28,12 +32,22 @@ export function startNetworkMonitor(): () => void {
     store.dispatch(setConnected(!!connected));
   };
 
-  NetInfo.fetch().then(handleState).catch(() => store.dispatch(setConnected(true)));
+  NetInfo.fetch()
+    .then(handleState)
+    .catch(() => store.dispatch(setConnected(true)));
   const unsubscribe = NetInfo.addEventListener(handleState);
-  intervalId = setInterval(() => NetInfo.fetch().then(handleState).catch(() => {}), 10000);
+  intervalId = setInterval(
+    () =>
+      NetInfo.fetch()
+        .then(handleState)
+        .catch(() => {}),
+    10000,
+  );
 
   return () => {
     unsubscribe();
-    if (intervalId) clearInterval(intervalId);
+    if (intervalId) {
+      clearInterval(intervalId);
+    }
   };
 }
