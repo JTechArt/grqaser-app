@@ -1,6 +1,6 @@
 {
   "name": "grqaser-app",
-  "version": "1.0.0",
+  "version": "2.0.0",
   "description": "Grqaser - Book Lover Audiobook App",
   "main": "index.js",
   "scripts": {

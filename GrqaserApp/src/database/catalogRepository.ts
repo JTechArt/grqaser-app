@@ -234,7 +234,11 @@ export const catalogRepository = {
     const books = rowsToArray(searchResults).map(row =>
       mapApiBookToBook({
         ...row,
-        author: String((row as ApiBook & {resolved_author?: string}).resolved_author ?? row.author ?? ''),
+        author: String(
+          (row as ApiBook & {resolved_author?: string}).resolved_author ??
+            row.author ??
+            '',
+        ),
         category: String(
           (row as ApiBook & {resolved_category?: string}).resolved_category ??
             row.category ??
