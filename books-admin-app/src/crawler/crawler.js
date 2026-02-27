@@ -4,6 +4,8 @@ const path = require('path');
 const fs = require('fs');
 const config = require('./config/crawler-config');
 const { CREATE_BOOKS_TABLE_SQL } = require('./schema/books-table');
+const { CREATE_AUTHORS_TABLE_SQL } = require('./schema/authors-table');
+const { CREATE_BOOK_CATEGORIES_TABLE_SQL } = require('./schema/book-categories-table');
 const { CREATE_CRAWL_LOGS_TABLE_SQL } = require('./schema/crawl-logs-table');
 const { normalizeDurationForStorage } = require('./utils/duration-parser');
 const { validateAudioUrl, filterValidUrls } = require('./utils/url-validator');
@@ -118,7 +120,9 @@ class GrqaserCrawler {
       // Initialize database
       await this.initializeDatabase();
 
-      // Create books table if not exists (schema aligned with models/database.js)
+      // Create normalized lookup tables and books table if not exists.
+      await this.createAuthorsTableIfNeeded();
+      await this.createBookCategoriesTableIfNeeded();
       await this.createBooksTableIfNeeded();
 
       // Ensure chapter_urls column exists for update modes (existing DBs may lack it)
@@ -170,6 +174,24 @@ class GrqaserCrawler {
   async createBooksTableIfNeeded() {
     return new Promise((resolve, reject) => {
       this.db.run(CREATE_BOOKS_TABLE_SQL, (err) => {
+        if (err) reject(err);
+        else resolve();
+      });
+    });
+  }
+
+  async createAuthorsTableIfNeeded() {
+    return new Promise((resolve, reject) => {
+      this.db.run(CREATE_AUTHORS_TABLE_SQL, (err) => {
+        if (err) reject(err);
+        else resolve();
+      });
+    });
+  }
+
+  async createBookCategoriesTableIfNeeded() {
+    return new Promise((resolve, reject) => {
+      this.db.run(CREATE_BOOK_CATEGORIES_TABLE_SQL, (err) => {
         if (err) reject(err);
         else resolve();
       });
@@ -1076,27 +1098,35 @@ class GrqaserCrawler {
   }
 
   async saveBookToDatabase(book) {
+    const authorName = normalizeAuthor(String(book.author || 'Unknown Author'));
+    const categoryName = normalizeCategory(String(book.category || 'Unknown'));
+    const authorRecord = await this.upsertAuthorByName(authorName);
+    const categoryRecord = await this.upsertCategoryByName(categoryName);
+    const authorId = authorRecord ? authorRecord.id : null;
+    const categoryId = categoryRecord ? categoryRecord.id : null;
     const chapterUrlsJson = book.chapter_urls != null
       ? (typeof book.chapter_urls === 'string' ? book.chapter_urls : JSON.stringify(book.chapter_urls))
       : null;
     return new Promise((resolve, reject) => {
       const sql = `
         INSERT OR REPLACE INTO books (
-          id, title, author, description, duration, duration_formatted, type, language, category,
+          id, title, author, author_id, description, duration, duration_formatted, type, language, category, category_id,
           rating, rating_count, cover_image_url, main_audio_url, download_url,
           file_size, published_at, crawl_status, has_chapters, chapter_count, chapter_urls, updated_at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
       `;
       const params = [
         book.id,
         book.title,
-        book.author,
+        authorName,
+        authorId,
         book.description ?? '',
         book.duration ?? null,
         book.duration_formatted ?? null,
         book.type || 'audiobook',
         book.language || 'hy',
-        book.category || 'Unknown',
+        categoryName || 'Unknown',
+        categoryId,
         book.rating ?? null,
         book.rating_count ?? null,
         book.cover_image_url ?? null,
@@ -1320,23 +1350,33 @@ class GrqaserCrawler {
   }
 
   async updateBookById(book) {
+    const authorName = normalizeAuthor(String(book.author || 'Unknown Author'));
+    const categoryName = normalizeCategory(String(book.category || 'Unknown'));
+    const authorRecord = await this.upsertAuthorByName(authorName);
+    const categoryRecord = await this.upsertCategoryByName(categoryName);
+    const authorId = authorRecord ? authorRecord.id : null;
+    const categoryId = categoryRecord ? categoryRecord.id : null;
     const chapterUrlsJson = book.chapter_urls != null
       ? (typeof book.chapter_urls === 'string' ? book.chapter_urls : JSON.stringify(book.chapter_urls))
       : null;
     return new Promise((resolve, reject) => {
       const sql = `
         UPDATE books SET
-          title = ?, author = ?, description = ?, duration = ?, duration_formatted = ?,
+          title = ?, author = ?, author_id = ?, description = ?, duration = ?, duration_formatted = ?,
+          category = ?, category_id = ?,
           cover_image_url = ?, main_audio_url = ?, download_url = ?,
           chapter_urls = ?, has_chapters = ?, chapter_count = ?, crawl_status = ?, updated_at = CURRENT_TIMESTAMP
         WHERE id = ?
       `;
       const params = [
         book.title,
-        book.author,
+        authorName,
+        authorId,
         book.description ?? '',
         book.duration ?? null,
         book.duration_formatted ?? null,
+        categoryName || 'Unknown',
+        categoryId,
         book.cover_image_url ?? null,
         book.main_audio_url ?? null,
         book.download_url ?? null,
@@ -1350,6 +1390,52 @@ class GrqaserCrawler {
         if (err) reject(err);
         else resolve(this.changes > 0);
       });
+    });
+  }
+
+  async upsertAuthorByName(name) {
+    const normalized = normalizeAuthor(String(name || 'Unknown Author')).trim();
+    if (!normalized || normalized === 'Unknown Author') {
+      return null;
+    }
+    await new Promise((resolve, reject) => {
+      this.db.run(
+        `INSERT INTO authors (name, created_at, updated_at)
+         VALUES (?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+         ON CONFLICT(name) DO UPDATE SET updated_at = CURRENT_TIMESTAMP`,
+        [normalized],
+        (err) => (err ? reject(err) : resolve())
+      );
+    });
+    return new Promise((resolve, reject) => {
+      this.db.get(
+        'SELECT id, name FROM authors WHERE name = ? LIMIT 1',
+        [normalized],
+        (err, row) => (err ? reject(err) : resolve(row || null))
+      );
+    });
+  }
+
+  async upsertCategoryByName(name) {
+    const normalized = normalizeCategory(String(name || 'Unknown')).trim();
+    if (!normalized || normalized === 'Unknown') {
+      return null;
+    }
+    await new Promise((resolve, reject) => {
+      this.db.run(
+        `INSERT INTO book_categories (name, created_at, updated_at)
+         VALUES (?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+         ON CONFLICT(name) DO UPDATE SET updated_at = CURRENT_TIMESTAMP`,
+        [normalized],
+        (err) => (err ? reject(err) : resolve())
+      );
+    });
+    return new Promise((resolve, reject) => {
+      this.db.get(
+        'SELECT id, name FROM book_categories WHERE name = ? LIMIT 1',
+        [normalized],
+        (err, row) => (err ? reject(err) : resolve(row || null))
+      );
     });
   }
 }

@@ -112,6 +112,80 @@ describe('GET /api/v1/categories', () => {
   });
 });
 
+describe('Authors CRUD', () => {
+  it('creates, updates and deletes an author', async () => {
+    const createRes = await request(app)
+      .post('/api/v1/authors')
+      .send({ name: 'Author Gamma' })
+      .expect(201);
+    expect(createRes.body.success).toBe(true);
+    const authorId = createRes.body.data.id;
+
+    const updateRes = await request(app)
+      .put(`/api/v1/authors/${authorId}`)
+      .send({ name: 'Author Gamma Updated' })
+      .expect(200);
+    expect(updateRes.body.success).toBe(true);
+    expect(updateRes.body.data.name).toBe('Author Gamma Updated');
+
+    const getRes = await request(app)
+      .get(`/api/v1/authors/${authorId}`)
+      .expect(200);
+    expect(getRes.body.success).toBe(true);
+    expect(getRes.body.data.name).toBe('Author Gamma Updated');
+
+    const deleteRes = await request(app)
+      .delete(`/api/v1/authors/${authorId}`)
+      .expect(200);
+    expect(deleteRes.body.success).toBe(true);
+  });
+
+  it('prevents deleting author in use', async () => {
+    const res = await request(app)
+      .delete('/api/v1/authors/1')
+      .expect(409);
+    expect(res.body.success).toBe(false);
+    expect(res.body.error.code).toBe('AUTHOR_IN_USE');
+  });
+});
+
+describe('Categories CRUD', () => {
+  it('creates, updates and deletes a category', async () => {
+    const createRes = await request(app)
+      .post('/api/v1/categories')
+      .send({ name: 'History' })
+      .expect(201);
+    expect(createRes.body.success).toBe(true);
+    const categoryId = createRes.body.data.id;
+
+    const updateRes = await request(app)
+      .put(`/api/v1/categories/${categoryId}`)
+      .send({ name: 'World History' })
+      .expect(200);
+    expect(updateRes.body.success).toBe(true);
+    expect(updateRes.body.data.name).toBe('World History');
+
+    const getRes = await request(app)
+      .get(`/api/v1/categories/${categoryId}`)
+      .expect(200);
+    expect(getRes.body.success).toBe(true);
+    expect(getRes.body.data.name).toBe('World History');
+
+    const deleteRes = await request(app)
+      .delete(`/api/v1/categories/${categoryId}`)
+      .expect(200);
+    expect(deleteRes.body.success).toBe(true);
+  });
+
+  it('prevents deleting category in use', async () => {
+    const res = await request(app)
+      .delete('/api/v1/categories/1')
+      .expect(409);
+    expect(res.body.success).toBe(false);
+    expect(res.body.error.code).toBe('CATEGORY_IN_USE');
+  });
+});
+
 describe('GET /api/v1/books/:id', () => {
   it('returns 200 and book when id exists', async () => {
     const res = await request(app)
