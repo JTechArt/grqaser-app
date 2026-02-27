@@ -364,6 +364,211 @@ class Database {
     `);
   }
 
+  async listAuthors(options = {}) {
+    const { search = '', page = 1, limit = config.pagination.defaultLimit } = options;
+    const safePage = Math.max(1, Number(page) || 1);
+    const safeLimit = Math.max(1, Math.min(Number(limit) || config.pagination.defaultLimit, 100));
+    const offset = (safePage - 1) * safeLimit;
+    const where = [];
+    const params = [];
+    if (typeof search === 'string' && search.trim()) {
+      where.push('a.name LIKE ?');
+      params.push(`%${search.trim()}%`);
+    }
+    const whereClause = where.length ? `WHERE ${where.join(' AND ')}` : '';
+    const count = await this.get(
+      `SELECT COUNT(*) as total FROM authors a ${whereClause}`,
+      params
+    );
+    const rows = await this.all(
+      `SELECT a.id, a.name, a.created_at, a.updated_at, COUNT(b.id) as book_count
+       FROM authors a
+       LEFT JOIN books b ON b.author_id = a.id
+       ${whereClause}
+       GROUP BY a.id, a.name
+       ORDER BY a.name ASC
+       LIMIT ? OFFSET ?`,
+      [...params, safeLimit, offset]
+    );
+    return {
+      items: rows,
+      pagination: {
+        page: safePage,
+        limit: safeLimit,
+        total: count.total,
+        pages: Math.ceil(count.total / safeLimit),
+      }
+    };
+  }
+
+  async listCategories(options = {}) {
+    const { search = '', page = 1, limit = config.pagination.defaultLimit } = options;
+    const safePage = Math.max(1, Number(page) || 1);
+    const safeLimit = Math.max(1, Math.min(Number(limit) || config.pagination.defaultLimit, 100));
+    const offset = (safePage - 1) * safeLimit;
+    const where = [];
+    const params = [];
+    if (typeof search === 'string' && search.trim()) {
+      where.push('c.name LIKE ?');
+      params.push(`%${search.trim()}%`);
+    }
+    const whereClause = where.length ? `WHERE ${where.join(' AND ')}` : '';
+    const count = await this.get(
+      `SELECT COUNT(*) as total FROM book_categories c ${whereClause}`,
+      params
+    );
+    const rows = await this.all(
+      `SELECT c.id, c.name, c.created_at, c.updated_at, COUNT(b.id) as book_count
+       FROM book_categories c
+       LEFT JOIN books b ON b.category_id = c.id
+       ${whereClause}
+       GROUP BY c.id, c.name
+       ORDER BY c.name ASC
+       LIMIT ? OFFSET ?`,
+      [...params, safeLimit, offset]
+    );
+    return {
+      items: rows,
+      pagination: {
+        page: safePage,
+        limit: safeLimit,
+        total: count.total,
+        pages: Math.ceil(count.total / safeLimit),
+      }
+    };
+  }
+
+  normalizeEntityName(value, fallbackLabel) {
+    const text = String(value ?? '').trim();
+    if (!text) {
+      throw new Error(`${fallbackLabel} name is required`);
+    }
+    return text;
+  }
+
+  async getAuthorById(id) {
+    return this.get('SELECT * FROM authors WHERE id = ? LIMIT 1', [id]);
+  }
+
+  async getCategoryById(id) {
+    return this.get('SELECT * FROM book_categories WHERE id = ? LIMIT 1', [id]);
+  }
+
+  async upsertAuthorByName(name) {
+    const trimmed = String(name ?? '').trim();
+    if (!trimmed || trimmed === 'Unknown Author') return null;
+    await this.run(
+      `INSERT INTO authors (name, created_at, updated_at)
+       VALUES (?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+       ON CONFLICT(name) DO UPDATE SET updated_at = CURRENT_TIMESTAMP`,
+      [trimmed]
+    );
+    const row = await this.get('SELECT id, name FROM authors WHERE name = ? LIMIT 1', [trimmed]);
+    return row || null;
+  }
+
+  async upsertCategoryByName(name) {
+    const trimmed = String(name ?? '').trim();
+    if (!trimmed || trimmed === 'Unknown') return null;
+    await this.run(
+      `INSERT INTO book_categories (name, created_at, updated_at)
+       VALUES (?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+       ON CONFLICT(name) DO UPDATE SET updated_at = CURRENT_TIMESTAMP`,
+      [trimmed]
+    );
+    const row = await this.get('SELECT id, name FROM book_categories WHERE name = ? LIMIT 1', [trimmed]);
+    return row || null;
+  }
+
+  async createAuthor(name) {
+    const normalized = this.normalizeEntityName(name, 'Author');
+    const existing = await this.get('SELECT id FROM authors WHERE name = ? LIMIT 1', [normalized]);
+    if (existing) {
+      throw new Error('Author already exists');
+    }
+    await this.run('INSERT INTO authors (name, created_at, updated_at) VALUES (?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)', [normalized]);
+    return this.get('SELECT * FROM authors WHERE name = ? LIMIT 1', [normalized]);
+  }
+
+  async updateAuthor(id, name) {
+    const normalized = this.normalizeEntityName(name, 'Author');
+    const exists = await this.get('SELECT id FROM authors WHERE id = ? LIMIT 1', [id]);
+    if (!exists) {
+      return null;
+    }
+    const duplicate = await this.get('SELECT id FROM authors WHERE name = ? AND id != ? LIMIT 1', [normalized, id]);
+    if (duplicate) {
+      throw new Error('Author already exists');
+    }
+    await this.run('UPDATE authors SET name = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?', [normalized, id]);
+    await this.run(
+      `UPDATE books
+       SET author = ?, updated_at = CURRENT_TIMESTAMP
+       WHERE author_id = ?`,
+      [normalized, id]
+    );
+    return this.get('SELECT * FROM authors WHERE id = ? LIMIT 1', [id]);
+  }
+
+  async deleteAuthor(id) {
+    const author = await this.get('SELECT * FROM authors WHERE id = ? LIMIT 1', [id]);
+    if (!author) {
+      return null;
+    }
+    const usage = await this.get('SELECT COUNT(*) as count FROM books WHERE author_id = ?', [id]);
+    if ((usage?.count || 0) > 0) {
+      throw new Error('Author is used by existing books');
+    }
+    await this.run('DELETE FROM authors WHERE id = ?', [id]);
+    return author;
+  }
+
+  async createCategory(name) {
+    const normalized = this.normalizeEntityName(name, 'Category');
+    const existing = await this.get('SELECT id FROM book_categories WHERE name = ? LIMIT 1', [normalized]);
+    if (existing) {
+      throw new Error('Category already exists');
+    }
+    await this.run(
+      'INSERT INTO book_categories (name, created_at, updated_at) VALUES (?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)',
+      [normalized]
+    );
+    return this.get('SELECT * FROM book_categories WHERE name = ? LIMIT 1', [normalized]);
+  }
+
+  async updateCategory(id, name) {
+    const normalized = this.normalizeEntityName(name, 'Category');
+    const exists = await this.get('SELECT id FROM book_categories WHERE id = ? LIMIT 1', [id]);
+    if (!exists) {
+      return null;
+    }
+    const duplicate = await this.get('SELECT id FROM book_categories WHERE name = ? AND id != ? LIMIT 1', [normalized, id]);
+    if (duplicate) {
+      throw new Error('Category already exists');
+    }
+    await this.run('UPDATE book_categories SET name = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?', [normalized, id]);
+    await this.run(
+      `UPDATE books
+       SET category = ?, updated_at = CURRENT_TIMESTAMP
+       WHERE category_id = ?`,
+      [normalized, id]
+    );
+    return this.get('SELECT * FROM book_categories WHERE id = ? LIMIT 1', [id]);
+  }
+
+  async deleteCategory(id) {
+    const category = await this.get('SELECT * FROM book_categories WHERE id = ? LIMIT 1', [id]);
+    if (!category) {
+      return null;
+    }
+    const usage = await this.get('SELECT COUNT(*) as count FROM books WHERE category_id = ?', [id]);
+    if ((usage?.count || 0) > 0) {
+      throw new Error('Category is used by existing books');
+    }
+    await this.run('DELETE FROM book_categories WHERE id = ?', [id]);
+    return category;
+  }
+
   async getCrawlStats() {
     const stats = {};
     const totalBooks = await this.get('SELECT COUNT(*) as count FROM books');
@@ -511,7 +716,7 @@ class Database {
   async updateBook(id, fields) {
     const allowed = [
       'title', 'author', 'description', 'duration', 'duration_formatted', 'type', 'language',
-      'category', 'rating', 'rating_count', 'cover_image_url', 'main_audio_url', 'download_url',
+      'category', 'author_id', 'category_id', 'rating', 'rating_count', 'cover_image_url', 'main_audio_url', 'download_url',
       'file_size', 'published_at', 'has_chapters', 'chapter_count', 'chapter_urls', 'crawl_status', 'is_active'
     ];
     const errors = [];
@@ -529,6 +734,14 @@ class Database {
     if (fields.language !== undefined && fields.language !== null) {
       if (String(fields.language).length > 10) errors.push('language max length 10');
     }
+    if (fields.author_id !== undefined && fields.author_id !== null) {
+      const aid = Number(fields.author_id);
+      if (!Number.isInteger(aid) || aid <= 0) errors.push('author_id must be a positive integer');
+    }
+    if (fields.category_id !== undefined && fields.category_id !== null) {
+      const cid = Number(fields.category_id);
+      if (!Number.isInteger(cid) || cid <= 0) errors.push('category_id must be a positive integer');
+    }
     const urlFields = ['main_audio_url', 'download_url', 'cover_image_url'];
     for (const key of urlFields) {
       if (fields[key] !== undefined && fields[key] !== null && String(fields[key]).trim() !== '') {
@@ -542,6 +755,40 @@ class Database {
       }
     }
     if (errors.length > 0) throw new Error(errors.join('; '));
+
+    if (fields.author_id !== undefined) {
+      if (fields.author_id === null || fields.author_id === '') {
+        fields.author_id = null;
+      } else {
+        const author = await this.getAuthorById(Number(fields.author_id));
+        if (!author) throw new Error('author_id not found');
+        fields.author_id = Number(fields.author_id);
+        fields.author = author.name;
+      }
+    } else if (fields.author !== undefined && fields.author !== null && String(fields.author).trim() !== '') {
+      const createdAuthor = await this.upsertAuthorByName(fields.author);
+      if (createdAuthor) {
+        fields.author_id = createdAuthor.id;
+        fields.author = createdAuthor.name;
+      }
+    }
+
+    if (fields.category_id !== undefined) {
+      if (fields.category_id === null || fields.category_id === '') {
+        fields.category_id = null;
+      } else {
+        const category = await this.getCategoryById(Number(fields.category_id));
+        if (!category) throw new Error('category_id not found');
+        fields.category_id = Number(fields.category_id);
+        fields.category = category.name;
+      }
+    } else if (fields.category !== undefined && fields.category !== null && String(fields.category).trim() !== '') {
+      const createdCategory = await this.upsertCategoryByName(fields.category);
+      if (createdCategory) {
+        fields.category_id = createdCategory.id;
+        fields.category = createdCategory.name;
+      }
+    }
 
     await this.ensureLastEditedAtColumn();
 

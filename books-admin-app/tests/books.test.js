@@ -196,6 +196,24 @@ describe('PATCH /api/v1/books/:id', () => {
     expect(getRes.body.data.last_edited_at).toBeDefined();
   });
 
+  it('updates author/category through author_id/category_id', async () => {
+    const authorRes = await request(app).get('/api/v1/authors').expect(200);
+    const authorBeta = authorRes.body.data.find((author) => author.name === 'Author Beta');
+    const categoryRes = await request(app).get('/api/v1/categories').expect(200);
+    const nonFiction = categoryRes.body.data.find((category) => category.name === 'Non-Fiction');
+
+    const patchRes = await request(app)
+      .patch('/api/v1/books/1')
+      .send({ title: 'First Audiobook', author_id: authorBeta.id, category_id: nonFiction.id })
+      .expect(200);
+
+    expect(patchRes.body.success).toBe(true);
+    expect(patchRes.body.data.author_id).toBe(authorBeta.id);
+    expect(patchRes.body.data.category_id).toBe(nonFiction.id);
+    expect(patchRes.body.data.author).toBe('Author Beta');
+    expect(patchRes.body.data.category).toBe('Non-Fiction');
+  });
+
   it('returns 400 when title is empty', async () => {
     const res = await request(app)
       .patch('/api/v1/books/1')
