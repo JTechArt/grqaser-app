@@ -16,6 +16,8 @@ const config = require('./config/config');
 const Database = require('./models/database');
 const dbRegistry = require('./models/db-registry');
 const createBooksRouter = require('./routes/books');
+const createAuthorsRouter = require('./routes/authors');
+const createCategoriesRouter = require('./routes/categories');
 const createStatsRouter = require('./routes/stats');
 const createCrawlerRouter = require('./routes/crawler');
 const createDatabasesRouter = require('./routes/databases');
@@ -47,6 +49,8 @@ app.use('/api/', limiter);
 app.use(express.static(path.join(__dirname, '../public')));
 
 app.use(`${config.api.basePath}/books`, createBooksRouter(dbHolder));
+app.use(`${config.api.basePath}/authors`, createAuthorsRouter(dbHolder));
+app.use(`${config.api.basePath}/categories`, createCategoriesRouter(dbHolder));
 app.use(`${config.api.basePath}/stats`, createStatsRouter(dbHolder));
 app.use(`${config.api.basePath}/crawler`, createCrawlerRouter(dbHolder, dbRegistry));
 app.use(`${config.api.basePath}/databases`, createDatabasesRouter(dbHolder, dbRegistry));
@@ -80,6 +84,8 @@ app.get('/', (req, res) => {
     version: '1.0.0',
     endpoints: {
       books: `${config.api.basePath}/books`,
+      authors: `${config.api.basePath}/authors`,
+      categories: `${config.api.basePath}/categories`,
       stats: `${config.api.basePath}/stats`,
       crawler: `${config.api.basePath}/crawler`,
       databases: `${config.api.basePath}/databases`,

@@ -14,14 +14,18 @@ let app;
 function seedBooksForApiTest(dbPath) {
   const db = new Database(dbPath);
   const now = new Date().toISOString();
+  db.prepare(`INSERT OR IGNORE INTO authors (id, name) VALUES (?, ?)`).run(1, 'Author Alpha');
+  db.prepare(`INSERT OR IGNORE INTO authors (id, name) VALUES (?, ?)`).run(2, 'Author Beta');
+  db.prepare(`INSERT OR IGNORE INTO book_categories (id, name) VALUES (?, ?)`).run(1, 'Fiction');
+  db.prepare(`INSERT OR IGNORE INTO book_categories (id, name) VALUES (?, ?)`).run(2, 'Non-Fiction');
   db.prepare(
-    `INSERT OR REPLACE INTO books (id, title, author, description, crawl_status, category, language, duration, created_at, updated_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
-  ).run(1, 'First Audiobook', 'Author Alpha', 'Desc one', 'completed', 'Fiction', 'hy', 3600, now, now);
+    `INSERT OR REPLACE INTO books (id, title, author, author_id, description, crawl_status, category, category_id, language, duration, created_at, updated_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+  ).run(1, 'First Audiobook', 'Author Alpha', 1, 'Desc one', 'completed', 'Fiction', 1, 'hy', 3600, now, now);
   db.prepare(
-    `INSERT OR REPLACE INTO books (id, title, author, crawl_status, created_at, updated_at)
-     VALUES (?, ?, ?, ?, ?, ?)`
-  ).run(2, 'Second Book', 'Author Beta', 'discovered', now, now);
+    `INSERT OR REPLACE INTO books (id, title, author, author_id, crawl_status, category, category_id, created_at, updated_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
+  ).run(2, 'Second Book', 'Author Beta', 2, 'discovered', 'Non-Fiction', 2, now, now);
   db.close();
 }
 
@@ -71,12 +75,12 @@ describe('GET /api/v1/books', () => {
 });
 
 describe('GET /api/v1/books/search', () => {
-  it('returns 400 when q is missing', async () => {
+  it('returns 200 when q is missing (empty filters)', async () => {
     const res = await request(app)
       .get('/api/v1/books/search')
-      .expect(400);
-    expect(res.body.success).toBe(false);
-    expect(res.body.error.code).toBe('MISSING_QUERY');
+      .expect(200);
+    expect(res.body.success).toBe(true);
+    expect(Array.isArray(res.body.data.books)).toBe(true);
   });
 
   it('returns 200 and results when q provided', async () => {
@@ -85,6 +89,26 @@ describe('GET /api/v1/books/search', () => {
       .expect(200);
     expect(res.body.success).toBe(true);
     expect(Array.isArray(res.body.data.books)).toBe(true);
+  });
+});
+
+describe('GET /api/v1/authors', () => {
+  it('returns 200 and authors list', async () => {
+    const res = await request(app)
+      .get('/api/v1/authors')
+      .expect(200);
+    expect(res.body.success).toBe(true);
+    expect(Array.isArray(res.body.data)).toBe(true);
+  });
+});
+
+describe('GET /api/v1/categories', () => {
+  it('returns 200 and categories list', async () => {
+    const res = await request(app)
+      .get('/api/v1/categories')
+      .expect(200);
+    expect(res.body.success).toBe(true);
+    expect(Array.isArray(res.body.data)).toBe(true);
   });
 });
 

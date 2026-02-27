@@ -4,6 +4,15 @@
 
 const express = require('express');
 
+function parseMultiIdParam(value) {
+  if (value == null || value === '') return [];
+  const raw = Array.isArray(value) ? value : String(value).split(',');
+  return raw
+    .flatMap((item) => String(item).split(','))
+    .map((item) => Number.parseInt(String(item).trim(), 10))
+    .filter((id) => Number.isInteger(id) && id > 0);
+}
+
 function createBooksRouter(dbHolder) {
   const router = express.Router();
 
@@ -52,15 +61,26 @@ function createBooksRouter(dbHolder) {
   router.get('/search', async (req, res) => {
     const db = dbHolder.getDb();
     try {
-      const { q, page = 1, limit = 20 } = req.query;
-      if (!q) {
-        return res.status(400).json({
-          success: false,
-          error: { code: 'MISSING_QUERY', message: 'Search query is required', details: { query: q } }
-        });
-      }
-      const options = { page: parseInt(page), limit: Math.min(parseInt(limit), 100) };
-      const result = await db.searchBooks(q, options);
+      const {
+        q,
+        text,
+        author_ids,
+        category_ids,
+        duration_range,
+        page = 1,
+        limit = 20
+      } = req.query;
+
+      const options = {
+        text: typeof text === 'string' && text.trim() ? text.trim() : (typeof q === 'string' && q.trim() ? q.trim() : null),
+        authorIds: parseMultiIdParam(author_ids),
+        categoryIds: parseMultiIdParam(category_ids),
+        durationRange: typeof duration_range === 'string' && duration_range.trim() ? duration_range.trim() : null,
+        page: Math.max(parseInt(page, 10) || 1, 1),
+        limit: Math.min(Math.max(parseInt(limit, 10) || 20, 1), 100)
+      };
+
+      const result = await db.searchBooks(options);
       res.json({ success: true, data: result });
     } catch (error) {
       console.error('Error searching books:', error);
