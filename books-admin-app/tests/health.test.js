@@ -34,7 +34,7 @@ describe('GET /api/v1/health', () => {
 
   it('returns JSON with version and uptime', async () => {
     const res = await request(app).get('/api/v1/health').expect(200);
-    expect(res.body.data.version).toBe('1.0.0');
+    expect(res.body.data.version).toBe('2.0.0');
     expect(typeof res.body.data.uptime).toBe('number');
   });
 });
