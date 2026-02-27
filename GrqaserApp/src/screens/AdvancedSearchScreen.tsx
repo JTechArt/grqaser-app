@@ -212,14 +212,18 @@ const AdvancedSearchScreen: React.FC = () => {
                 </Button>
               </View>
             ) : null}
-            <Text style={styles.resultCount}>{advancedTotalCount} books found</Text>
+            <Text style={styles.resultCount}>
+              {advancedTotalCount} books found
+            </Text>
           </View>
         }
         ListEmptyComponent={
           advancedLoading ? (
             <ActivityIndicator style={styles.loader} />
           ) : (
-            <Text style={styles.emptyText}>No books matched these filters.</Text>
+            <Text style={styles.emptyText}>
+              No books matched these filters.
+            </Text>
           )
         }
       />

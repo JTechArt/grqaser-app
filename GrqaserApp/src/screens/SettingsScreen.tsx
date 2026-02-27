@@ -538,6 +538,35 @@ const SettingsScreen: React.FC = () => {
         </RadioButton.Group>
       </List.Section>
 
+      {/* App Info */}
+      <List.Section>
+        <List.Subheader>APP INFO</List.Subheader>
+        <List.Item
+          title="Grqaser"
+          description="Audiobook listening app"
+          left={props => (
+            <Icon
+              {...props}
+              name="bookshelf"
+              size={24}
+              color={theme.colors.primary}
+            />
+          )}
+        />
+        <List.Item
+          title="Version"
+          description="2.0.0"
+          left={props => (
+            <Icon
+              {...props}
+              name="tag"
+              size={24}
+              color={theme.colors.primary}
+            />
+          )}
+        />
+      </List.Section>
+
       {/* URL Input Modal */}
       <Modal
         visible={urlModalVisible}
