@@ -1,5 +1,10 @@
 import {createSlice, createAsyncThunk, PayloadAction} from '@reduxjs/toolkit';
-import {Book, BookFilter} from '../../types/book';
+import {
+  Book,
+  BookFilter,
+  AdvancedSearchFilters,
+  CatalogFilterOption,
+} from '../../types/book';
 import {
   booksApi,
   getErrorMessage,
@@ -21,6 +26,15 @@ interface BooksState {
   error: string | null;
   searchLoading: boolean;
   searchError: string | null;
+  advancedFilters: AdvancedSearchFilters;
+  advancedResults: Book[];
+  advancedTotalCount: number;
+  advancedLoading: boolean;
+  advancedError: string | null;
+  authorOptions: CatalogFilterOption[];
+  categoryOptions: CatalogFilterOption[];
+  filterOptionsLoading: boolean;
+  filterOptionsError: string | null;
   filters: BookFilter;
   searchQuery: string;
 }
@@ -37,6 +51,20 @@ const initialState: BooksState = {
   error: null,
   searchLoading: false,
   searchError: null,
+  advancedFilters: {
+    authorIds: [],
+    categoryIds: [],
+    durationRange: null,
+    text: '',
+  },
+  advancedResults: [],
+  advancedTotalCount: 0,
+  advancedLoading: false,
+  advancedError: null,
+  authorOptions: [],
+  categoryOptions: [],
+  filterOptionsLoading: false,
+  filterOptionsError: null,
   filters: {
     type: 'all',
     language: 'all',
@@ -125,6 +153,45 @@ export const searchBooks = createAsyncThunk(
   },
 );
 
+export const fetchAdvancedFilterOptions = createAsyncThunk(
+  'books/fetchAdvancedFilterOptions',
+  async (_, {rejectWithValue}) => {
+    try {
+      const [authors, categories] = await Promise.all([
+        booksApi.getAuthors(),
+        booksApi.getCategories(),
+      ]);
+      return {authors, categories};
+    } catch (error) {
+      return rejectWithValue(getErrorMessage(error));
+    }
+  },
+);
+
+export const advancedSearchBooks = createAsyncThunk(
+  'books/advancedSearchBooks',
+  async (
+    params: Partial<AdvancedSearchFilters> & {page?: number; limit?: number},
+    {getState, rejectWithValue},
+  ) => {
+    try {
+      const state = getState() as {books: BooksState};
+      const mergedFilters: AdvancedSearchFilters = {
+        ...state.books.advancedFilters,
+        ...params,
+      };
+      const result = await booksApi.advancedSearch({
+        ...mergedFilters,
+        page: params.page ?? 1,
+        limit: params.limit ?? 100,
+      });
+      return {result, filters: mergedFilters};
+    } catch (error) {
+      return rejectWithValue(getErrorMessage(error));
+    }
+  },
+);
+
 const booksSlice = createSlice({
   name: 'books',
   initialState,
@@ -173,6 +240,16 @@ const booksSlice = createSlice({
     },
     clearSearchError: state => {
       state.searchError = null;
+    },
+    setAdvancedFilters: (
+      state,
+      action: PayloadAction<Partial<AdvancedSearchFilters>>,
+    ) => {
+      state.advancedFilters = {...state.advancedFilters, ...action.payload};
+    },
+    clearAdvancedSearchError: state => {
+      state.advancedError = null;
+      state.filterOptionsError = null;
     },
     mergePlayProgress: (
       state,
@@ -266,6 +343,37 @@ const booksSlice = createSlice({
         state.searchLoading = false;
         state.searchError =
           (action.payload as string) ?? 'Search failed. Please try again.';
+      })
+      .addCase(fetchAdvancedFilterOptions.pending, state => {
+        state.filterOptionsLoading = true;
+        state.filterOptionsError = null;
+      })
+      .addCase(fetchAdvancedFilterOptions.fulfilled, (state, action) => {
+        state.filterOptionsLoading = false;
+        state.authorOptions = action.payload.authors;
+        state.categoryOptions = action.payload.categories;
+      })
+      .addCase(fetchAdvancedFilterOptions.rejected, (state, action) => {
+        state.filterOptionsLoading = false;
+        state.filterOptionsError =
+          (action.payload as string) ?? 'Failed to load filter options.';
+      })
+      .addCase(advancedSearchBooks.pending, state => {
+        state.advancedLoading = true;
+        state.advancedError = null;
+      })
+      .addCase(advancedSearchBooks.fulfilled, (state, action) => {
+        state.advancedLoading = false;
+        state.advancedError = null;
+        state.advancedFilters = action.payload.filters;
+        state.advancedResults = action.payload.result.books;
+        state.advancedTotalCount = action.payload.result.totalCount;
+      })
+      .addCase(advancedSearchBooks.rejected, (state, action) => {
+        state.advancedLoading = false;
+        state.advancedError =
+          (action.payload as string) ??
+          'Advanced search failed. Please try again.';
       });
   },
 });
@@ -322,6 +430,8 @@ export const {
   addToRecentlyPlayed,
   clearError,
   clearSearchError,
+  setAdvancedFilters,
+  clearAdvancedSearchError,
   mergePlayProgress,
 } = booksSlice.actions;
 

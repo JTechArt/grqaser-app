@@ -15,6 +15,7 @@ import FavoritesScreen from '../screens/FavoritesScreen';
 import ProfileScreen from '../screens/ProfileScreen';
 import BookDetailScreen from '../screens/BookDetailScreen';
 import SearchScreen from '../screens/SearchScreen';
+import AdvancedSearchScreen from '../screens/AdvancedSearchScreen';
 import SettingsScreen from '../screens/SettingsScreen';
 import MiniPlayer from '../components/MiniPlayer';
 
@@ -169,6 +170,14 @@ const RootNavigator: React.FC = () => {
         component={SearchScreen}
         options={{
           title: 'Search Books',
+          headerBackTitle: 'Back',
+        }}
+      />
+      <Stack.Screen
+        name="AdvancedSearch"
+        component={AdvancedSearchScreen}
+        options={{
+          title: 'Advanced Search',
           headerBackTitle: 'Back',
         }}
       />

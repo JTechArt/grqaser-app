@@ -4,7 +4,12 @@
  * Audio streaming URLs are resolved from the local DB fields (main_audio_url,
  * chapter_urls).
  */
-import {Book, BookSearchResult} from '../types/book';
+import {
+  Book,
+  BookSearchResult,
+  AdvancedSearchFilters,
+  CatalogFilterOption,
+} from '../types/book';
 import {catalogRepository} from '../database/catalogRepository';
 
 function getErrorMessage(error: unknown): string {
@@ -37,6 +42,14 @@ export const booksApi = {
     return catalogRepository.getStats();
   },
 
+  async getAuthors(): Promise<CatalogFilterOption[]> {
+    return catalogRepository.getAuthors();
+  },
+
+  async getCategories(): Promise<CatalogFilterOption[]> {
+    return catalogRepository.getCategories();
+  },
+
   async getBookById(id: string): Promise<Book> {
     const book = await catalogRepository.getBookById(id);
     if (!book) {
@@ -60,6 +73,19 @@ export const booksApi = {
       hasMore: books.length >= limit,
       page: 1,
       limit,
+    };
+  },
+
+  async advancedSearch(
+    filters: AdvancedSearchFilters & {page?: number; limit?: number},
+  ): Promise<BookSearchResult> {
+    const result = await catalogRepository.advancedSearch(filters);
+    return {
+      books: result.books,
+      totalCount: result.total,
+      hasMore: result.page * result.limit < result.total,
+      page: result.page,
+      limit: result.limit,
     };
   },
 };

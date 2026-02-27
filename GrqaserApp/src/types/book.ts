@@ -52,6 +52,19 @@ export interface BookSearchResult {
   limit: number;
 }
 
+export interface AdvancedSearchFilters {
+  authorIds: number[];
+  categoryIds: number[];
+  durationRange: '<30' | '30-60' | '60-120' | '120-300' | '300+' | null;
+  text: string;
+}
+
+export interface CatalogFilterOption {
+  id: number;
+  name: string;
+  bookCount: number;
+}
+
 export interface BookProgress {
   bookId: string;
   chapterId?: string;
