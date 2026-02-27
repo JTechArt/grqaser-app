@@ -10,6 +10,15 @@ Testing and deployment follow the same phase order as development. **After Epic 
 - **Integration tests:** DB writes (crawler); API + DB (read and write); optional UI tests. Verify crawler output and viewer/API behavior through the single app.
 - **Run:** e.g. `npm test` from `books-admin-app/`. Phase 1 and 2 sign-off is achieved via books-admin-app (crawler behavior validated, then viewer/API used to verify data).
 
+#### Epic 9 test coverage requirements
+
+- **Migration coverage:** Validate migration on seeded DB, verify row counts and FK links (`books.author_id`, `books.category_id`), and verify rollback path.
+- **API coverage:** Verify `/api/v1/authors`, `/api/v1/categories`, and `/api/v1/books/search` for:
+  - empty filters
+  - combined filters (AND logic)
+  - invalid IDs and special-character query inputs
+- **Crawler integration coverage:** Verify crawler upserts authors/categories and persists `author_id`/`category_id` during insert/update flows.
+
 ### GrqaserApp (Phase 3; updated for Epic 8)
 
 - **Unit / integration:** Components, state, services. Redux slices (books, audio, user, search, downloads, databaseManagement, library). Local SQLite repository tests (catalog reads, metadata writes). Key flows (browse, search, book detail, library auto-add).
@@ -18,6 +27,16 @@ Testing and deployment follow the same phase order as development. **After Epic 
 - **Download manager tests (Epic 8):** Test MP3 download, progress tracking, cleanup (all and per-book); verify storage metrics update correctly.
 - **E2E:** Critical path (e.g. play a book, download for offline, switch DB) where feasible. iOS and Android.
 - **Run:** e.g. `npm test`, `npm run lint` from `GrqaserApp/`. Builds: iOS and Android from repo; signing and env documented.
+
+#### Epic 9 test coverage requirements
+
+- **Component tests:** AdvancedSearchScreen controls (text, author/category multi-select, duration chips, apply flow).
+- **State tests:** Advanced filter state persistence and result state updates in `booksSlice`.
+- **Integration tests:** End-to-end app-layer flow:
+  - load filter options
+  - set filter combination
+  - run advanced search
+  - verify result list and total count update.
 
 ## CI (post–Epic 7)
 
