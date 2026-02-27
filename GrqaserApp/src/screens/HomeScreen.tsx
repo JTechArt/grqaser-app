@@ -90,6 +90,10 @@ const HomeScreen: React.FC = () => {
     navigation.navigate('Search', {initialQuery: searchQuery});
   };
 
+  const handleAdvancedSearchPress = () => {
+    navigation.navigate('AdvancedSearch');
+  };
+
   const displayError = dbError || error;
 
   const renderHeader = () => (
@@ -110,6 +114,15 @@ const HomeScreen: React.FC = () => {
         iconColor={theme.colors.primary}
         inputStyle={styles.searchInput}
       />
+      <View style={styles.headerActions}>
+        <Button
+          mode="outlined"
+          icon="tune"
+          onPress={handleAdvancedSearchPress}
+          textColor={theme.colors.primary}>
+          Advanced Search
+        </Button>
+      </View>
     </LinearGradient>
   );
 
@@ -267,6 +280,10 @@ const styles = StyleSheet.create({
   },
   searchInput: {
     fontSize: 16,
+  },
+  headerActions: {
+    marginTop: 10,
+    alignItems: 'flex-end',
   },
   statsContainer: {
     flexDirection: 'row',

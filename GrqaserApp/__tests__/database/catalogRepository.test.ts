@@ -135,6 +135,88 @@ describe('catalogRepository', () => {
     });
   });
 
+  describe('advanced search helpers', () => {
+    it('returns author filter options with book counts', async () => {
+      await initCatalogDb('test.db');
+      mockExecuteSql.mockResolvedValueOnce(
+        makeRows([{id: 1, name: 'Author A', book_count: 4}]),
+      );
+      const authors = await catalogRepository.getAuthors();
+      expect(authors).toEqual([{id: 1, name: 'Author A', bookCount: 4}]);
+    });
+
+    it('returns category filter options with book counts', async () => {
+      await initCatalogDb('test.db');
+      mockExecuteSql.mockResolvedValueOnce(
+        makeRows([{id: 2, name: 'Fiction', book_count: 9}]),
+      );
+      const categories = await catalogRepository.getCategories();
+      expect(categories).toEqual([{id: 2, name: 'Fiction', bookCount: 9}]);
+    });
+
+    it('applies combined filters and returns paged result', async () => {
+      await initCatalogDb('test.db');
+      mockExecuteSql
+        .mockResolvedValueOnce(makeRows([{total: 1}]))
+        .mockResolvedValueOnce(
+          makeRows([
+            {
+              ...sampleRow,
+              author: 'Fallback Author',
+              category: 'Fallback Category',
+              resolved_author: 'Resolved Author',
+              resolved_category: 'Resolved Category',
+            },
+          ]),
+        );
+
+      const result = await catalogRepository.advancedSearch({
+        authorIds: [1],
+        categoryIds: [2],
+        durationRange: '300+',
+        text: 'test',
+        page: 2,
+        limit: 10,
+      });
+
+      expect(mockExecuteSql).toHaveBeenNthCalledWith(
+        1,
+        expect.stringContaining('COUNT(*) as total'),
+        [1, 2, '%test%', '%test%', '%test%'],
+      );
+      expect(mockExecuteSql).toHaveBeenNthCalledWith(
+        2,
+        expect.stringContaining('LIMIT ? OFFSET ?'),
+        [1, 2, '%test%', '%test%', '%test%', 10, 10],
+      );
+      expect(result.total).toBe(1);
+      expect(result.page).toBe(2);
+      expect(result.limit).toBe(10);
+      expect(result.books[0].author).toBe('Resolved Author');
+      expect(result.books[0].category).toBe('Resolved Category');
+    });
+
+    it('ignores empty filters and returns all rows page', async () => {
+      await initCatalogDb('test.db');
+      mockExecuteSql
+        .mockResolvedValueOnce(makeRows([{total: 2}]))
+        .mockResolvedValueOnce(makeRows([sampleRow]));
+
+      await catalogRepository.advancedSearch({
+        authorIds: [],
+        categoryIds: [],
+        durationRange: null,
+        text: '',
+      });
+
+      expect(mockExecuteSql).toHaveBeenNthCalledWith(
+        1,
+        expect.not.stringContaining('WHERE'),
+        [],
+      );
+    });
+  });
+
   describe('getBooksPage', () => {
     it('returns a page of books with LIMIT and OFFSET', async () => {
       await initCatalogDb('test.db');

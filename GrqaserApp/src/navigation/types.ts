@@ -16,6 +16,7 @@ export type RootStackParamList = {
   Search: {
     initialQuery?: string;
   };
+  AdvancedSearch: undefined;
   Settings: undefined;
   Player: {
     book?: Book;

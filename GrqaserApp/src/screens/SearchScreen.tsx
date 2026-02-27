@@ -40,6 +40,10 @@ const SearchScreen: React.FC = () => {
     }
   };
 
+  const handleAdvancedSearch = () => {
+    navigation.navigate('AdvancedSearch');
+  };
+
   const handleBookPress = (book: Book) => {
     navigation.navigate('BookDetail', {book});
   };
@@ -59,6 +63,15 @@ const SearchScreen: React.FC = () => {
         onSubmitEditing={handleSearch}
         style={styles.searchBar}
       />
+      <View style={styles.actionsRow}>
+        <Button
+          mode="outlined"
+          icon="tune"
+          onPress={handleAdvancedSearch}
+          compact>
+          Advanced Search
+        </Button>
+      </View>
       <View style={styles.results}>
         {searchError ? (
           <View style={styles.errorBox}>
@@ -98,6 +111,12 @@ const SearchScreen: React.FC = () => {
 const styles = StyleSheet.create({
   container: {flex: 1},
   searchBar: {margin: 8},
+  actionsRow: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    paddingHorizontal: 8,
+    paddingBottom: 4,
+  },
   results: {flex: 1},
   loader: {marginTop: 24},
   errorBox: {padding: 16, alignItems: 'center'},

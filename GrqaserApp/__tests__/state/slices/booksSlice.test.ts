@@ -6,6 +6,7 @@
 import reducer, {
   mergePlayProgress,
   setFilters,
+  setAdvancedFilters,
 } from '../../../src/state/slices/booksSlice';
 import {Book} from '../../../src/types/book';
 
@@ -38,6 +39,8 @@ describe('booksSlice', () => {
     expect(initialState.catalogStats).toBeNull();
     expect(initialState.filteredBooks).toEqual([]);
     expect(initialState.filters.type).toBe('all');
+    expect(initialState.advancedFilters.authorIds).toEqual([]);
+    expect(initialState.advancedResults).toEqual([]);
   });
 
   describe('mergePlayProgress', () => {
@@ -105,6 +108,24 @@ describe('booksSlice', () => {
       const state = reducer(stateWithBooks, setFilters({type: 'all'}));
       expect(state.filters.type).toBe('all');
       expect(state.filteredBooks.length).toBe(2);
+    });
+  });
+
+  describe('advanced filters', () => {
+    it('persists advanced filter state in session store', () => {
+      const state = reducer(
+        initialState,
+        setAdvancedFilters({
+          text: 'alpha',
+          authorIds: [1, 2],
+          categoryIds: [3],
+          durationRange: '60-120',
+        }),
+      );
+      expect(state.advancedFilters.text).toBe('alpha');
+      expect(state.advancedFilters.authorIds).toEqual([1, 2]);
+      expect(state.advancedFilters.categoryIds).toEqual([3]);
+      expect(state.advancedFilters.durationRange).toBe('60-120');
     });
   });
 
