@@ -8,6 +8,7 @@ import renderer, {act} from 'react-test-renderer';
 
 const mockDispatch = jest.fn();
 const mockInitializeDatabases = jest.fn(() => ({type: 'database/initialize'}));
+const mockStartNetworkMonitor = jest.fn(() => jest.fn());
 const baseState = {
   user: {preferences: {theme: 'light'}},
   books: {favorites: []},
@@ -73,11 +74,17 @@ jest.mock('../src/state/slices/databaseSlice', () => ({
   initializeDatabases: () => mockInitializeDatabases(),
 }));
 
+jest.mock('../src/services/networkMonitor', () => ({
+  startNetworkMonitor: () => mockStartNetworkMonitor(),
+}));
+
 import {AppContent} from '../App';
 
 beforeEach(() => {
   mockDispatch.mockClear();
   mockInitializeDatabases.mockClear();
+  mockStartNetworkMonitor.mockClear();
+  jest.useRealTimers();
 });
 
 it('dispatches initializeDatabases on mount', async () => {
@@ -87,4 +94,20 @@ it('dispatches initializeDatabases on mount', async () => {
 
   expect(mockInitializeDatabases).toHaveBeenCalledTimes(1);
   expect(mockDispatch).toHaveBeenCalledWith({type: 'database/initialize'});
+});
+
+it('defers network monitor startup by 2 seconds', async () => {
+  jest.useFakeTimers();
+
+  await act(async () => {
+    renderer.create(<AppContent />);
+  });
+
+  expect(mockStartNetworkMonitor).not.toHaveBeenCalled();
+
+  await act(async () => {
+    jest.advanceTimersByTime(2000);
+  });
+
+  expect(mockStartNetworkMonitor).toHaveBeenCalledTimes(1);
 });

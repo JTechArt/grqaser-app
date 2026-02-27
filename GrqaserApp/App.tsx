@@ -73,8 +73,17 @@ export const AppContent: React.FC = () => {
   const prevThemeRef = useRef(themeMode);
 
   useEffect(() => {
-    const stop = startNetworkMonitor();
-    return stop;
+    let stopMonitor: (() => void) | null = null;
+    const timerId = setTimeout(() => {
+      stopMonitor = startNetworkMonitor();
+    }, 2000);
+
+    return () => {
+      clearTimeout(timerId);
+      if (stopMonitor) {
+        stopMonitor();
+      }
+    };
   }, []);
 
   useEffect(() => {
