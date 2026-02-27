@@ -43,6 +43,7 @@
   - **DB versioning:** List DBs, set active, delete backup (e.g. `GET /api/v1/databases`, `PUT /api/v1/databases/active`, `DELETE /api/v1/databases/:id` or equivalent).
   - **Crawler control:** Start/stop (e.g. `POST /api/v1/crawler/start`, `POST /api/v1/crawler/stop`), get/update crawler config (e.g. `GET /api/v1/crawler/config`, `PUT /api/v1/crawler/config`).
   - **Data edit:** Update a book (e.g. `PATCH /api/v1/books/:id` or `PUT /api/v1/books/:id`) with body containing editable fields; persist to active DB and return updated resource.
+  - **Epic 9:** Authors and categories CRUD (list, add, edit, delete); `GET /api/v1/authors`, `GET /api/v1/categories`; advanced search on book list (author_ids, category_ids, duration_range, text); book edit form uses author/category dropdowns; crawler populates authors and book_categories tables.
 
 ## Project structure (books-admin-app)
 
@@ -75,6 +76,7 @@
 
 - [Epic 6](../prd/epic-6.md) — Books Admin App (merge crawler + database-viewer, data management).
 - [Epic 7](../prd/epic-7.md) — Remove crawler and database-viewer; design system and UI/UX for books-admin-app and GrqaserApp.
+- [Epic 9](../prd/epic-9.md) — Authors/categories management, advanced search, schema normalization.
 - [Delivery order and application boundaries](./delivery-order-and-application-boundaries.md) — books-admin-app is the single admin app (post–Epic 7).
 - [Crawler pipeline and data contract](./crawler-pipeline-and-data-contract.md) — Crawler behavior preserved in books-admin-app.
 - [Database-viewer API and deployment](./database-viewer-api-and-deployment.md) — Viewer/API behavior preserved in books-admin-app.

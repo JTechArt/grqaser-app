@@ -14,7 +14,7 @@ Shared data contract for the crawler (writer), database-viewer (reader), and Grq
 
 - **Purpose:** Audiobook catalog entry from grqaser.org.
 - **Key attributes (align with crawler implementation):** id, title, author, description, duration (structured or formatted), type, language, category, rating, cover_image_url, main_audio_url, download_url, crawl_status, has_chapters, chapter_count, chapter_urls (Story 1.5). Normalized: no HTML in text fields, consistent encoding, unique IDs.
-- **Relationships:** Categories and authors may be normalized into separate tables or stored as columns per PRD/Epic 1; relationships must support filtering and stats in database-viewer and GrqaserApp.
+- **Relationships (Epic 9):** Authors and categories are normalized into separate tables `authors` and `book_categories`. Books reference them via `author_id` and `category_id` foreign keys. Original `author` and `category` columns are kept temporarily for backward compatibility. See [Epic 9 schema changes](./epic-9-schema-changes.md).
 
 ### URL queue (crawler-internal)
 
@@ -26,23 +26,47 @@ Shared data contract for the crawler (writer), database-viewer (reader), and Grq
 - **Purpose:** Crawl run logs for debugging and monitoring.
 - **Key attributes:** level, message, book_id, url, error_details. Exposed via database-viewer crawler logs API if required.
 
+## Authors table (Epic 9)
+
+| Column | Type | Constraints | Notes |
+|--------|------|--------------|--------|
+| id | INTEGER | PRIMARY KEY AUTOINCREMENT | |
+| name | VARCHAR(200) | UNIQUE NOT NULL | Normalized author name. |
+| created_at | TIMESTAMP | DEFAULT CURRENT_TIMESTAMP | |
+| updated_at | TIMESTAMP | DEFAULT CURRENT_TIMESTAMP | |
+
+**Indexes:** `idx_authors_name ON authors(name)`.
+
+## Book categories table (Epic 9)
+
+| Column | Type | Constraints | Notes |
+|--------|------|--------------|--------|
+| id | INTEGER | PRIMARY KEY AUTOINCREMENT | |
+| name | VARCHAR(100) | UNIQUE NOT NULL | Normalized category name. |
+| created_at | TIMESTAMP | DEFAULT CURRENT_TIMESTAMP | |
+| updated_at | TIMESTAMP | DEFAULT CURRENT_TIMESTAMP | |
+
+**Indexes:** `idx_categories_name ON book_categories(name)`.
+
 ## Books table (DDL)
 
 **Single source of truth:** `crawler/src/schema/books-table.js` — both `crawler/src/models/database.js` and `crawler/src/crawler.js` use this module to create the books table and avoid schema drift.
 
-Current canonical schema:
+Current canonical schema (Epic 9 adds `author_id` and `category_id`; original columns kept temporarily):
 
 | Column | Type | Constraints | Notes |
 |--------|------|--------------|--------|
 | id | INTEGER | PRIMARY KEY | Unique book ID from source (numeric or string coerced). |
 | title | VARCHAR(500) | NOT NULL | No HTML; cleaned before write. |
-| author | VARCHAR(200) | DEFAULT 'Unknown Author' | No HTML. |
+| author | VARCHAR(200) | DEFAULT 'Unknown Author' | No HTML. Kept temporarily (Epic 9 migration). |
+| author_id | INTEGER | REFERENCES authors(id) | **Epic 9:** FK to normalized authors table. |
 | description | TEXT | | No HTML; cleaned. |
 | duration | INTEGER | | Total minutes (from duration parser). |
 | duration_formatted | TEXT | | Display string (e.g. "0ժ 51ր"). |
 | type | VARCHAR(50) | DEFAULT 'audiobook' | |
 | language | VARCHAR(10) | DEFAULT 'hy' | |
-| category | VARCHAR(100) | DEFAULT 'Unknown' | Genre/category; no HTML. |
+| category | VARCHAR(100) | DEFAULT 'Unknown' | Genre/category; no HTML. Kept temporarily (Epic 9 migration). |
+| category_id | INTEGER | REFERENCES book_categories(id) | **Epic 9:** FK to normalized book_categories table. |
 | rating | DECIMAL(3,2) | | |
 | rating_count | INTEGER | | |
 | cover_image_url | TEXT | | |
@@ -63,7 +87,9 @@ Current canonical schema:
 
 **Validation before write (Story 1.6):** The crawler enforces: non-empty `main_audio_url`, duration ≥ 0, rating in 0–5, `rating_count` non-negative integer, language length ≤ 10, non-empty title. Invalid rows are skipped with reasons logged. Deduplication is by book id and by (title|author); duplicates are skipped and counted.
 
-**Filtering and stats (Story 1.3):** Category and author columns support filtering (e.g. `WHERE category = ?`, `WHERE author = ?`) and aggregates (e.g. `GROUP BY category`, `GROUP BY author`). The Database model exposes `getBooksByCategory`, `getBooksByAuthor`, `getCategoryCounts`, `getAuthorCounts` for database-viewer and GrqaserApp.
+**Filtering and stats (Story 1.3, Epic 9):** After Epic 9, use `author_id` and `category_id` for filtering and joins. The Database model exposes `getBooksByCategory`, `getBooksByAuthor`, `getCategoryCounts`, `getAuthorCounts`. **Epic 9** adds `GET /api/v1/authors`, `GET /api/v1/categories`, and advanced search with multi-select filters (author_ids, category_ids, duration_range, text). See [Epic 9 schema changes](./epic-9-schema-changes.md) and [database-viewer API](./database-viewer-api-and-deployment.md).
+
+**Books table indexes (Epic 9):** `idx_books_author_id`, `idx_books_category_id`, `idx_books_duration`, `idx_books_author_category`.
 
 ## Schema documentation and versioning
 
@@ -133,7 +159,8 @@ Tracks books auto-added to the Library when the user opens them.
 
 ## References
 
-- PRD FR1–FR5 (crawler), FR6–FR7 (database-viewer), FR8–FR13 (GrqaserApp), **Epic 8** (local data, offline, settings).
+- PRD FR1–FR5 (crawler), FR6–FR7 (database-viewer), FR8–FR13 (GrqaserApp), **Epic 8** (local data, offline, settings), **Epic 9** (schema normalization, advanced search).
+- [Epic 9 schema changes](./epic-9-schema-changes.md) — Authors and book_categories tables, migration, advanced search queries.
 - [Crawler pipeline and data contract](./crawler-pipeline-and-data-contract.md) — How the crawler fills this schema.
 - [Database-viewer API and deployment](./database-viewer-api-and-deployment.md) — How the viewer exposes books/stats/crawler.
 - [GrqaserApp data integration and audio](./grqaserapp-data-integration-and-audio.md) — How the app consumes this data (local SQLite after Epic 8).

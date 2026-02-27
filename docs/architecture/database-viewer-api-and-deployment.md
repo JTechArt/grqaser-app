@@ -10,7 +10,19 @@
 
 ## API
 
-- **Base:** `/api/v1`. **Books:** `GET /api/v1/books` (list, pagination/filters), `GET /api/v1/books/:id`, `GET /api/v1/books/search?q=...`. **Stats:** Overview, authors, categories (counts/aggregates consistent with schema). **Crawler:** Status, URL queue, logs (e.g. `/api/v1/crawler/status`, `/urls`, `/logs`). **Health:** `GET /api/v1/health` (service and DB connectivity).
+- **Base:** `/api/v1`. **Books:** `GET /api/v1/books` (list, pagination/filters), `GET /api/v1/books/:id`, `GET /api/v1/books/search` (see below). **Stats:** Overview, authors, categories (counts/aggregates consistent with schema). **Crawler:** Status, URL queue, logs (e.g. `/api/v1/crawler/status`, `/urls`, `/logs`). **Health:** `GET /api/v1/health` (service and DB connectivity).
+
+### Epic 9: Advanced search and normalized entities
+
+- **`GET /api/v1/authors`** — Returns all unique authors with `id`, `name`, `book_count`. Used for filter dropdowns.
+- **`GET /api/v1/categories`** — Returns all unique categories with `id`, `name`, `book_count`. Used for filter dropdowns.
+- **`GET /api/v1/books/search`** — Advanced search with query params:
+  - `author_ids` — Comma-separated IDs or array; multi-select author filter.
+  - `category_ids` — Comma-separated IDs or array; multi-select category filter.
+  - `duration_range` — Enum: `"<30"`, `"30-60"`, `"60-120"`, `"120-300"`, `"300+"` (minutes).
+  - `text` — Search in title, description, author name.
+  - `page`, `limit` — Pagination (default limit 20).
+  - All filters use AND logic; empty/null filters are ignored.
 - **Config:** Port, DB path, CORS, rate limit, logging externalized (env or config file). Optional file logging (e.g. `logs/`).
 
 ## Web UI
@@ -29,7 +41,7 @@
 
 ## References
 
-- Epic 2 (Database-viewer); Stories 2.1–2.3. PRD FR6, FR7, NFR2.
+- Epic 2 (Database-viewer); Stories 2.1–2.3. PRD FR6, FR7, NFR2. **Epic 9** (authors/categories endpoints, advanced search).
 - [Data models and schema](./data-models-and-schema.md) — Schema consumed by API.
 - [Tech stack](./tech-stack.md) — Database-viewer row.
 - [Testing and deployment strategy](./testing-and-deployment-strategy.md) — Viewer tests and runbooks.
