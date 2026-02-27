@@ -1,6 +1,6 @@
 # Quality Gate: 9.2
 schema: 1
-story: "9.2"
+story: "8.7"
 story_title: "Player Speed Control"
 gate: PASS
 status_reason: "All six ACs implemented: speed UI, TrackPlayer.setRate integration, AsyncStorage persistence, default 1x, active-speed highlight, no regression; tests pass; modified files lint-clean."

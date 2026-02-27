@@ -1,6 +1,6 @@
 # Quality Gate: 9.4
 schema: 1
-story: "9.4"
+story: "8.9"
 story_title: "Library In-Progress Filter and Download Progress Fixes"
 gate: PASS
 status_reason: "All five ACs addressed: playProgress synced from preferencesStorage into books (fetchBooks + mergePlayProgress + syncPlayProgress), In Progress filter fixed with duration fallback, download progress/completion on Book Detail verified reactive; tests added for booksSlice; no regressions."
@@ -32,5 +32,5 @@ nfr_validation:
 recommendations:
   immediate: []
   future:
-    - action: "If search results are ever shown with progress, consider merging playProgress into searchBooks.fulfilled payload (out of scope for 9.4)."
+    - action: "If search results are ever shown with progress, consider merging playProgress into searchBooks.fulfilled payload (out of scope for 8.9)."
       refs: ["GrqaserApp/src/state/slices/booksSlice.ts"]

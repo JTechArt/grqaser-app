@@ -1,6 +1,6 @@
 # Quality Gate: 9.1
 schema: 1
-story: "9.1"
+story: "8.6"
 story_title: "UI Safe Area and Duplicate MiniPlayer Fixes"
 gate: PASS
 status_reason: "All four ACs implemented; safe area insets and single MiniPlayer applied consistently; no regressions; modified files are lint-clean and full test suite passes."

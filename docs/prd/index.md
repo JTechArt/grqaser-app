@@ -150,8 +150,10 @@ Grqaser (“book lover” in Armenian) is an ecosystem of three applications aro
 5. **[Epic 5: Quality, release, and operations](./epic-5.md)** — Testing, build, and deployment for all three applications. Can be planned per application but follows the same phase order (crawler first, then viewer, then app).
 6. **[Epic 6: Books Admin App (merge + data management)](./epic-6.md)** — Brownfield: merge crawler and database-viewer into **books-admin-app**; add DB versioning (active/backup), crawler start/stop and config management, and data management (view + edit any field). Local-only; no auth.
 7. **[Epic 7: Remove crawler and database-viewer; UI/UX](./epic-7.md)** — Verify books-admin-app parity, remove standalone crawler/database-viewer; design system and UI/UX for books-admin-app and GrqaserApp.
-8. **[Epic 8: GrqaserApp local data, offline playback, and settings](./epic-8.md)** — Local SQLite catalog, MP3 download/offline, DB management from internet, Library auto-add, Settings storage and data usage.
-9. **[Epic 10: Library, Performance, and Offline Experience](./epic-10.md)** — App launch performance and lazy load; Library section layout and download progress; Favorites layout aligned with Search; full offline support and connection status; performance testing plan (2000 books) and optimization; book cover lazy load and memory cleanup.
+8. **[Epic 8: GrqaserApp local data, offline playback, and settings](./epic-8.md)** — Local SQLite catalog, MP3 download/offline, DB management from internet, Library auto-add, Settings storage and data usage. Includes Stories 8.6–8.9 (post-8 polish: safe area, player speed, settings accuracy, library in-progress).
+9. **[Epic 9: Advanced Book Search and Data Normalization](./epic-9.md)** — Normalize DB schema (authors, book_categories); advanced search backend and UI; home page redesign; books-admin-app integration.
+10. **[Epic 10: Library, Performance, and Offline Experience](./epic-10.md)** — App launch performance and lazy load; Library section layout and download progress; Favorites layout aligned with Search; full offline support and connection status; performance testing plan (2000 books) and optimization; book cover lazy load and memory cleanup.
+11. **[Epic 11: App Startup Performance Optimization](./epic-11.md)** — Fix slow startup (~30s) by deferring DB init to App.tsx; optimize network checks; add startup performance monitoring.
 
 ---
 
