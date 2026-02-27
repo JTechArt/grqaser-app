@@ -293,6 +293,7 @@
                 </div>
                 <button class="btn" id="loadBooksBtn">🔍 Load Books</button>
                 <button class="btn btn-secondary" id="searchBooksBtn">Search</button>
+                <button class="btn btn-secondary" id="resetBooksFiltersBtn">Reset Filters</button>
             </div>
 
             <div class="books-container">
@@ -502,6 +503,23 @@
             return Array.from(document.getElementById(selectId).selectedOptions || [])
                 .map(function(option) { return option.value; })
                 .filter(function(value) { return value !== ''; });
+        }
+
+        function resetBooksFilters() {
+            document.getElementById('textFilter').value = '';
+            document.getElementById('durationRangeFilter').value = '';
+            document.getElementById('statusFilter').value = '';
+            document.getElementById('typeFilter').value = '';
+            document.getElementById('sortBy').value = 'created_at';
+
+            ['authorFilter', 'categoryFilter'].forEach(function(selectId) {
+                const select = document.getElementById(selectId);
+                Array.from(select.options || []).forEach(function(option) {
+                    option.selected = false;
+                });
+            });
+
+            loadBooks(1);
         }
 
         // Load statistics
@@ -1532,6 +1550,7 @@
             document.getElementById('searchBooksBtn').addEventListener('click', function() {
                 loadBooks(1);
             });
+            document.getElementById('resetBooksFiltersBtn').addEventListener('click', resetBooksFilters);
             document.getElementById('textFilter').addEventListener('keydown', function(e) {
                 if (e.key === 'Enter') loadBooks(1);
             });
