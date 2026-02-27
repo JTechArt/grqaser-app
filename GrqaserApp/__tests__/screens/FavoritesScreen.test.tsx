@@ -6,6 +6,7 @@ import React from 'react';
 import renderer from 'react-test-renderer';
 import {act} from 'react-test-renderer';
 import {Provider} from 'react-redux';
+import {SafeAreaProvider} from 'react-native-safe-area-context';
 import {store} from '../../src/state';
 import {fetchBooksByIds} from '../../src/state/slices/booksSlice';
 import FavoritesScreen from '../../src/screens/FavoritesScreen';
@@ -46,7 +47,13 @@ jest.mock('react-native-fast-image', () => {
 jest.mock('react-native-paper', () => {
   const {View} = require('react-native');
   const CardWithContent = Object.assign(View, {Content: View});
-  return {Text: 'Text', Card: CardWithContent};
+  return {
+    Text: 'Text',
+    Card: CardWithContent,
+    Searchbar: View,
+    ActivityIndicator: View,
+    Button: View,
+  };
 });
 jest.mock('@react-navigation/native', () => ({
   useNavigation: () => ({navigate: jest.fn()}),
@@ -71,12 +78,25 @@ jest.mock('../../src/services/preferencesStorage', () => ({
   getPlaybackPositions: jest.fn().mockResolvedValue({}),
 }));
 
+const initialMetrics = {
+  frame: {x: 0, y: 0, width: 320, height: 640},
+  insets: {top: 0, left: 0, right: 0, bottom: 0},
+};
+
+const TestWrapper: React.FC<{children: React.ReactNode}> = ({children}) => (
+  <Provider store={store}>
+    <SafeAreaProvider initialMetrics={initialMetrics}>
+      {children}
+    </SafeAreaProvider>
+  </Provider>
+);
+
 describe('FavoritesScreen', () => {
   it('renders empty state when no favorites', () => {
     const tree = renderer.create(
-      <Provider store={store}>
+      <TestWrapper>
         <FavoritesScreen />
-      </Provider>,
+      </TestWrapper>,
     );
     const json = tree.toJSON();
     expect(json).toBeDefined();
@@ -91,9 +111,9 @@ describe('FavoritesScreen', () => {
     let tree: renderer.ReactTestRenderer;
     await act(async () => {
       tree = renderer.create(
-        <Provider store={store}>
+        <TestWrapper>
           <FavoritesScreen />
-        </Provider>,
+        </TestWrapper>,
       );
     });
 

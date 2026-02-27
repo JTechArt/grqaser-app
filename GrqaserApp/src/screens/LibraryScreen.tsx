@@ -339,7 +339,7 @@ const LibraryScreen: React.FC = () => {
   );
 };
 
-const SECTION_BUTTONS_HEIGHT = 52;
+const SECTION_BUTTONS_HEIGHT = 64;
 
 const styles = StyleSheet.create({
   container: {flex: 1, backgroundColor: theme.colors.background},
@@ -360,29 +360,30 @@ const styles = StyleSheet.create({
     marginTop: 2,
   } as TextStyle,
   sectionButtonsWrap: {
-    height: SECTION_BUTTONS_HEIGHT,
+    minHeight: SECTION_BUTTONS_HEIGHT,
     flexShrink: 0,
+    justifyContent: 'center',
   },
   pillScroll: {
     flexGrow: 0,
-    height: SECTION_BUTTONS_HEIGHT,
+    minHeight: SECTION_BUTTONS_HEIGHT,
   },
   pillRow: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 20,
-    paddingVertical: 12,
+    paddingVertical: 14,
     gap: 10,
     minHeight: SECTION_BUTTONS_HEIGHT,
   },
   pill: {
-    paddingHorizontal: 18,
-    paddingVertical: 10,
-    borderRadius: 20,
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    borderRadius: 22,
     backgroundColor: theme.colors.surface,
     borderWidth: 1,
     borderColor: theme.colors.outline,
-    minWidth: 96,
+    minWidth: 100,
     flexShrink: 0,
   },
   pillActive: {
