@@ -16,9 +16,10 @@ import {
   setSearchQuery,
   clearError,
 } from '../state/slices/booksSlice';
-import {initializeDatabases} from '../state/slices/databaseSlice';
+import {initializeDatabases, setError} from '../state/slices/databaseSlice';
 import {Book} from '../types/book';
 import BookCard from '../components/BookCard';
+import AppLoadingScreen from '../components/AppLoadingScreen';
 import {theme} from '../theme';
 import {Button} from 'react-native-paper';
 
@@ -50,14 +51,7 @@ const HomeScreen: React.FC = () => {
   );
 
   useEffect(() => {
-    if (!dbInitialized) {
-      dispatch(initializeDatabases()).then(action => {
-        if (action.meta.requestStatus === 'fulfilled') {
-          dispatch(fetchBooksPage({limit: 20, offset: 0}));
-          dispatch(fetchCatalogStats());
-        }
-      });
-    } else {
+    if (dbInitialized) {
       dispatch(fetchBooksPage({limit: 20, offset: 0}));
       dispatch(fetchCatalogStats());
     }
@@ -70,6 +64,9 @@ const HomeScreen: React.FC = () => {
   }, [dispatch, recentlyPlayed]);
 
   const onRefresh = async () => {
+    if (!dbInitialized) {
+      return;
+    }
     setRefreshing(true);
     await Promise.all([
       dispatch(fetchBooksPage({limit: 20, offset: 0})),
@@ -90,11 +87,12 @@ const HomeScreen: React.FC = () => {
     navigation.navigate('Search', {initialQuery: searchQuery});
   };
 
-  const handleAdvancedSearchPress = () => {
-    navigation.navigate('AdvancedSearch');
+  const handleRetryDatabaseInit = () => {
+    dispatch(setError(null));
+    dispatch(initializeDatabases());
   };
 
-  const displayError = dbError || error;
+  const showDbLoadingState = !dbInitialized;
 
   const renderHeader = () => (
     <LinearGradient
@@ -218,9 +216,9 @@ const HomeScreen: React.FC = () => {
 
   return (
     <View style={styles.container}>
-      {displayError ? (
+      {error ? (
         <Banner
-          visible={!!displayError}
+          visible={!!error}
           actions={[
             {
               label: 'Dismiss',
@@ -228,7 +226,7 @@ const HomeScreen: React.FC = () => {
             },
           ]}
           icon="alert">
-          {displayError}
+          {error}
         </Banner>
       ) : null}
       <ScrollView
@@ -238,9 +236,15 @@ const HomeScreen: React.FC = () => {
         }
         showsVerticalScrollIndicator={false}>
         {renderHeader()}
-        {renderStats()}
-        {renderRecentBooks()}
-        {renderBooks()}
+        {showDbLoadingState ? (
+          <AppLoadingScreen
+            error={dbError}
+            onRetry={dbError ? handleRetryDatabaseInit : undefined}
+          />
+        ) : null}
+        {dbInitialized ? renderStats() : null}
+        {dbInitialized ? renderRecentBooks() : null}
+        {dbInitialized ? renderBooks() : null}
       </ScrollView>
     </View>
   );

@@ -15,6 +15,7 @@ import ConnectionBanner from './src/components/ConnectionBanner';
 import {startNetworkMonitor} from './src/services/networkMonitor';
 import {setFavorites} from './src/state/slices/booksSlice';
 import {updatePreferences} from './src/state/slices/userSlice';
+import {initializeDatabases} from './src/state/slices/databaseSlice';
 import {
   getFavorites,
   setFavoritesStorage,
@@ -64,7 +65,7 @@ const styles = StyleSheet.create({
   content: {flex: 1},
 });
 
-const AppContent: React.FC = () => {
+export const AppContent: React.FC = () => {
   const dispatch = useDispatch();
   const themeMode = useSelector((s: RootState) => s.user.preferences.theme);
   const favorites = useSelector((s: RootState) => s.books.favorites);
@@ -75,6 +76,11 @@ const AppContent: React.FC = () => {
     const stop = startNetworkMonitor();
     return stop;
   }, []);
+
+  useEffect(() => {
+    // Fire-and-forget DB initialization so first UI render is never blocked.
+    dispatch(initializeDatabases());
+  }, [dispatch]);
 
   useEffect(() => {
     const sub = AppState.addEventListener('change', nextState => {
