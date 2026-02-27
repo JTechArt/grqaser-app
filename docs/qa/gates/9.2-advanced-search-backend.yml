@@ -1,0 +1,39 @@
+schema: 1
+story: '9.2'
+story_title: 'Advanced Search Backend'
+gate: PASS
+status_reason: 'Advanced search backend endpoints and filter logic satisfy all acceptance criteria; targeted integration tests passed.'
+reviewer: 'Quinn (Test Architect)'
+updated: '2026-02-27T00:00:00Z'
+
+top_issues: []
+waiver: { active: false }
+
+quality_score: 95
+expires: '2026-03-13T00:00:00Z'
+
+evidence:
+  tests_reviewed: 35
+  risks_identified: 0
+  trace:
+    ac_covered: [1, 2, 3, 4, 5, 6, 7, 8]
+    ac_gaps: []
+
+nfr_validation:
+  _assessed: [security, performance, reliability, maintainability]
+  security:
+    status: PASS
+    notes: 'Parameterized SQL is used for user-supplied search inputs; no injection-prone query concatenation observed.'
+  performance:
+    status: PASS
+    notes: 'Search uses indexed filter columns and bounded pagination; index creation is idempotent.'
+  reliability:
+    status: PASS
+    notes: 'Filter parsing handles empty/null values safely, and combined filters behave deterministically with AND logic.'
+  maintainability:
+    status: PASS
+    notes: 'Route-level parsing and DB-layer query construction are separated cleanly and covered by integration tests.'
+
+recommendations:
+  immediate: []
+  future: []
