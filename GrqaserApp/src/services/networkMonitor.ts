@@ -1,52 +1,39 @@
 /**
  * Network monitor service. Subscribes to NetInfo and periodically
  * re-checks connection state (e.g. every 10s) for AC4.
+ *
+ * NetInfo is temporarily disabled (native module issues with RN 0.72 / newer Xcode).
+ * App assumes connected; ConnectionBanner offline detection will not show.
+ * TODO: Re-enable when @react-native-community/netinfo is compatible.
  */
-import NetInfo, {NetInfoState} from '@react-native-community/netinfo';
 import {store} from '../state';
 import {setConnected} from '../state/slices/networkStatusSlice';
 
-const PING_INTERVAL_MS = 10000; // 10 seconds per story
-
-let intervalId: ReturnType<typeof setInterval> | null = null;
-
-function isConnected(state: NetInfoState): boolean {
-  if (state.isConnected == null) {
-    return false;
-  }
-  if (!state.isConnected) {
-    return false;
-  }
-  if (state.type === 'none') {
-    return false;
-  }
-  if (state.type === 'unknown' && state.isInternetReachable === false) {
-    return false;
-  }
-  return true;
-}
-
-function handleState(state: NetInfoState): void {
-  const connected = isConnected(state);
-  store.dispatch(setConnected(connected));
-}
+const USE_NETINFO = false; // Set true when netinfo native module works
 
 export function startNetworkMonitor(): () => void {
-  NetInfo.fetch().then(handleState);
-  const unsubscribe = NetInfo.addEventListener(handleState);
-
-  if (intervalId) {
-    clearInterval(intervalId);
+  if (!USE_NETINFO) {
+    store.dispatch(setConnected(true));
+    return () => {};
   }
-  intervalId = setInterval(() => {
-    NetInfo.fetch().then(handleState);
-  }, PING_INTERVAL_MS);
+
+  const NetInfo = require('@react-native-community/netinfo').default;
+  let intervalId: ReturnType<typeof setInterval> | null = null;
+
+  const handleState = (state: {isConnected?: boolean | null; type?: string; isInternetReachable?: boolean | null}) => {
+    const connected =
+      state.isConnected !== false &&
+      state.type !== 'none' &&
+      !(state.type === 'unknown' && state.isInternetReachable === false);
+    store.dispatch(setConnected(!!connected));
+  };
+
+  NetInfo.fetch().then(handleState).catch(() => store.dispatch(setConnected(true)));
+  const unsubscribe = NetInfo.addEventListener(handleState);
+  intervalId = setInterval(() => NetInfo.fetch().then(handleState).catch(() => {}), 10000);
 
   return () => {
     unsubscribe();
-    if (intervalId) {
-      clearInterval(intervalId);
-      intervalId = null;
-    }
+    if (intervalId) clearInterval(intervalId);
   };
 }
