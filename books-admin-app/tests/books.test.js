@@ -72,10 +72,13 @@ describe('GET /api/v1/books/:id', () => {
 });
 
 describe('GET /api/v1/books/search', () => {
-  it('returns 400 when q is missing', async () => {
-    await request(app)
+  it('returns 200 and all books when filters are missing', async () => {
+    const res = await request(app)
       .get('/api/v1/books/search')
-      .expect(400);
+      .expect(200);
+    expect(res.body.success).toBe(true);
+    expect(Array.isArray(res.body.data.books)).toBe(true);
+    expect(res.body.data.total).toBeGreaterThanOrEqual(3);
   });
 
   it('returns 200 and matching books when q provided', async () => {
@@ -85,6 +88,95 @@ describe('GET /api/v1/books/search', () => {
     expect(res.body.success).toBe(true);
     expect(Array.isArray(res.body.data.books)).toBe(true);
     expect(res.body.data.pagination).toBeDefined();
+  });
+
+  it('supports filtering by author_ids', async () => {
+    const authorRes = await request(app).get('/api/v1/authors').expect(200);
+    const authorAlpha = authorRes.body.data.find((author) => author.name === 'Author Alpha');
+    const res = await request(app)
+      .get(`/api/v1/books/search?author_ids=${authorAlpha.id}`)
+      .expect(200);
+    expect(res.body.success).toBe(true);
+    expect(res.body.data.books.length).toBeGreaterThan(0);
+    res.body.data.books.forEach((book) => {
+      expect(book.author).toBe('Author Alpha');
+    });
+  });
+
+  it('supports filtering by category_ids', async () => {
+    const categoryRes = await request(app).get('/api/v1/categories').expect(200);
+    const fiction = categoryRes.body.data.find((category) => category.name === 'Fiction');
+    const res = await request(app)
+      .get(`/api/v1/books/search?category_ids=${fiction.id}`)
+      .expect(200);
+    expect(res.body.success).toBe(true);
+    expect(res.body.data.books.length).toBeGreaterThan(0);
+    res.body.data.books.forEach((book) => {
+      expect(book.category).toBe('Fiction');
+    });
+  });
+
+  it('supports duration_range filter', async () => {
+    const res = await request(app)
+      .get('/api/v1/books/search?duration_range=300+')
+      .expect(200);
+    expect(res.body.success).toBe(true);
+    expect(res.body.data.books.length).toBe(1);
+    expect(res.body.data.books[0].title).toBe('Third Title');
+  });
+
+  it('supports text filter over title and description', async () => {
+    const res = await request(app)
+      .get('/api/v1/books/search?text=Another')
+      .expect(200);
+    expect(res.body.success).toBe(true);
+    expect(res.body.data.books.length).toBe(1);
+    expect(res.body.data.books[0].title).toBe('Third Title');
+  });
+
+  it('applies AND logic when filters are combined', async () => {
+    const authorRes = await request(app).get('/api/v1/authors').expect(200);
+    const authorAlpha = authorRes.body.data.find((author) => author.name === 'Author Alpha');
+    const categoryRes = await request(app).get('/api/v1/categories').expect(200);
+    const fiction = categoryRes.body.data.find((category) => category.name === 'Fiction');
+    const res = await request(app)
+      .get(`/api/v1/books/search?author_ids=${authorAlpha.id}&category_ids=${fiction.id}&duration_range=300+&text=Third`)
+      .expect(200);
+    expect(res.body.success).toBe(true);
+    expect(res.body.data.books.length).toBe(1);
+    expect(res.body.data.books[0].title).toBe('Third Title');
+  });
+});
+
+describe('GET /api/v1/authors', () => {
+  it('returns 200 and author list with book counts', async () => {
+    const res = await request(app)
+      .get('/api/v1/authors')
+      .expect(200);
+    expect(res.body.success).toBe(true);
+    expect(Array.isArray(res.body.data)).toBe(true);
+    expect(res.body.data).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ name: 'Author Alpha', book_count: 2 }),
+        expect.objectContaining({ name: 'Author Beta', book_count: 1 })
+      ])
+    );
+  });
+});
+
+describe('GET /api/v1/categories', () => {
+  it('returns 200 and category list with book counts', async () => {
+    const res = await request(app)
+      .get('/api/v1/categories')
+      .expect(200);
+    expect(res.body.success).toBe(true);
+    expect(Array.isArray(res.body.data)).toBe(true);
+    expect(res.body.data).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ name: 'Fiction', book_count: 2 }),
+        expect.objectContaining({ name: 'Non-Fiction', book_count: 1 })
+      ])
+    );
   });
 });
 

@@ -63,6 +63,21 @@ function getTestDbPath() {
 
 async function seedBooks(db) {
   const now = new Date().toISOString();
+  const authors = ['Author Alpha', 'Author Beta'];
+  const categories = ['Fiction', 'Non-Fiction'];
+
+  for (const author of authors) {
+    await db.run('INSERT OR IGNORE INTO authors (name) VALUES (?)', [author]);
+  }
+  for (const category of categories) {
+    await db.run('INSERT OR IGNORE INTO book_categories (name) VALUES (?)', [category]);
+  }
+
+  const authorRows = await db.all('SELECT id, name FROM authors');
+  const categoryRows = await db.all('SELECT id, name FROM book_categories');
+  const authorIds = Object.fromEntries(authorRows.map((row) => [row.name, row.id]));
+  const categoryIds = Object.fromEntries(categoryRows.map((row) => [row.name, row.id]));
+
   const rows = [
     {
       id: 1,
@@ -72,9 +87,11 @@ async function seedBooks(db) {
       crawl_status: 'completed',
       category: 'Fiction',
       language: 'hy',
-      duration: 3600,
+      duration: 20,
       duration_formatted: '60ժ 0ր',
       main_audio_url: 'https://example.com/audio1.mp3',
+      author_id: authorIds['Author Alpha'],
+      category_id: categoryIds.Fiction,
       created_at: now,
       updated_at: now
     },
@@ -86,9 +103,11 @@ async function seedBooks(db) {
       crawl_status: 'completed',
       category: 'Non-Fiction',
       language: 'hy',
-      duration: 7200,
+      duration: 80,
       duration_formatted: '120ժ 0ր',
       main_audio_url: 'https://example.com/audio2.mp3',
+      author_id: authorIds['Author Beta'],
+      category_id: categoryIds['Non-Fiction'],
       created_at: now,
       updated_at: now
     },
@@ -100,9 +119,11 @@ async function seedBooks(db) {
       crawl_status: 'discovered',
       category: 'Fiction',
       language: 'en',
-      duration: 1800,
+      duration: 340,
       duration_formatted: '30ժ 0ր',
       main_audio_url: 'https://example.com/audio3.mp3',
+      author_id: authorIds['Author Alpha'],
+      category_id: categoryIds.Fiction,
       created_at: now,
       updated_at: now
     }
@@ -110,12 +131,12 @@ async function seedBooks(db) {
   for (const row of rows) {
     await db.run(
       `INSERT OR REPLACE INTO books (
-        id, title, author, description, crawl_status, category, language,
+        id, title, author, author_id, description, crawl_status, category, category_id, language,
         duration, duration_formatted, main_audio_url, created_at, updated_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
-        row.id, row.title, row.author, row.description, row.crawl_status,
-        row.category, row.language, row.duration, row.duration_formatted,
+        row.id, row.title, row.author, row.author_id, row.description, row.crawl_status,
+        row.category, row.category_id, row.language, row.duration, row.duration_formatted,
         row.main_audio_url, row.created_at, row.updated_at
       ]
     );

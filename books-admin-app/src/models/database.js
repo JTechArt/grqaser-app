@@ -30,6 +30,7 @@ class Database {
       this.db = new DatabaseNative(this.dbPath, { readonly: false });
       await this.ensureCrawlerTables();
       await this.ensureBooksFilterColumns();
+      await this.ensureSearchIndexes();
       return Promise.resolve();
     } catch (err) {
       console.error('❌ Database connection failed:', err);
@@ -79,6 +80,16 @@ class Database {
     if (!names.includes('type')) {
       await this.run("ALTER TABLE books ADD COLUMN type VARCHAR(50) DEFAULT 'audiobook'");
     }
+  }
+
+  /** Ensure indexes used by advanced search exist. Idempotent. */
+  async ensureSearchIndexes() {
+    await this.run('CREATE INDEX IF NOT EXISTS idx_books_author_id ON books(author_id)');
+    await this.run('CREATE INDEX IF NOT EXISTS idx_books_category_id ON books(category_id)');
+    await this.run('CREATE INDEX IF NOT EXISTS idx_books_duration ON books(duration)');
+    await this.run('CREATE INDEX IF NOT EXISTS idx_books_author_category ON books(author_id, category_id)');
+    await this.run('CREATE INDEX IF NOT EXISTS idx_books_title ON books(title)');
+    await this.run('CREATE INDEX IF NOT EXISTS idx_books_description ON books(description)');
   }
 
   async close() {
@@ -214,28 +225,76 @@ class Database {
     return null;
   }
 
-  async searchBooks(query, options = {}) {
-    const { page = 1, limit = config.pagination.defaultLimit } = options;
-    const offset = (page - 1) * limit;
+  async searchBooks(queryOrOptions, maybeOptions = {}) {
+    const isLegacyCall = typeof queryOrOptions === 'string';
+    const input = isLegacyCall ? { ...(maybeOptions || {}), text: queryOrOptions } : (queryOrOptions || {});
+    const {
+      authorIds = [],
+      categoryIds = [],
+      durationRange = null,
+      text = null,
+      page = 1,
+      limit = config.pagination.defaultLimit
+    } = input;
+
+    const whereConditions = [];
+    const params = [];
+
+    if (Array.isArray(authorIds) && authorIds.length > 0) {
+      whereConditions.push(`books.author_id IN (${authorIds.map(() => '?').join(', ')})`);
+      params.push(...authorIds);
+    }
+
+    if (Array.isArray(categoryIds) && categoryIds.length > 0) {
+      whereConditions.push(`books.category_id IN (${categoryIds.map(() => '?').join(', ')})`);
+      params.push(...categoryIds);
+    }
+
+    const durationSql = this.buildDurationRangeCondition(durationRange);
+    if (durationSql) {
+      whereConditions.push(durationSql);
+    }
+
+    if (typeof text === 'string' && text.trim()) {
+      whereConditions.push('(books.title LIKE ? OR books.description LIKE ? OR COALESCE(authors.name, books.author) LIKE ?)');
+      const pattern = `%${text.trim()}%`;
+      params.push(pattern, pattern, pattern);
+    }
+
+    const whereClause = whereConditions.length > 0 ? `WHERE ${whereConditions.join(' AND ')}` : '';
+    const safeLimit = Math.max(1, Number(limit) || config.pagination.defaultLimit);
+    const safePage = Math.max(1, Number(page) || 1);
+    const offset = (safePage - 1) * safeLimit;
+
+    const baseFromClause = `
+      FROM books
+      LEFT JOIN authors ON authors.id = books.author_id
+      LEFT JOIN book_categories ON book_categories.id = books.category_id
+    `;
 
     const searchSql = `
-      SELECT * FROM books
-      WHERE title LIKE ? OR author LIKE ? OR description LIKE ?
-      ORDER BY created_at DESC
+      SELECT books.*,
+             COALESCE(authors.name, books.author) AS author_name,
+             COALESCE(book_categories.name, books.category) AS category_name
+      ${baseFromClause}
+      ${whereClause}
+      ORDER BY books.created_at DESC
       LIMIT ? OFFSET ?
     `;
-    const searchParams = [`%${query}%`, `%${query}%`, `%${query}%`, limit, offset];
-    const books = await this.all(searchSql, searchParams);
+    const books = await this.all(searchSql, [...params, safeLimit, offset]);
 
     const countSql = `
-      SELECT COUNT(*) as total FROM books
-      WHERE title LIKE ? OR author LIKE ? OR description LIKE ?
+      SELECT COUNT(*) as total
+      ${baseFromClause}
+      ${whereClause}
     `;
-    const countResult = await this.get(countSql, [`%${query}%`, `%${query}%`, `%${query}%`]);
+    const countResult = await this.get(countSql, params);
     const total = countResult.total;
 
     const formattedBooks = books.map(book => ({
       ...book,
+      author: book.author_name || book.author,
+      category: book.category_name || book.category,
       duration_formatted: this.formatDuration(book.duration),
       created_at: new Date(book.created_at).toISOString(),
       updated_at: new Date(book.updated_at).toISOString(),
@@ -244,15 +303,65 @@ class Database {
 
     return {
       books: formattedBooks,
+      total,
+      page: safePage,
+      limit: safeLimit,
       pagination: {
-        page,
-        limit,
+        page: safePage,
+        limit: safeLimit,
         total,
-        pages: Math.ceil(total / limit),
-        has_next: page < Math.ceil(total / limit),
-        has_prev: page > 1
+        pages: Math.ceil(total / safeLimit),
+        has_next: safePage < Math.ceil(total / safeLimit),
+        has_prev: safePage > 1
       }
     };
+  }
+
+  buildDurationRangeCondition(durationRange) {
+    const normalized = typeof durationRange === 'string'
+      ? durationRange.trim().replace(/\s+/g, '')
+      : '';
+    switch (normalized) {
+      case '<30':
+        return 'books.duration < 30';
+      case '30-60':
+        return 'books.duration >= 30 AND books.duration < 60';
+      case '60-120':
+        return 'books.duration >= 60 AND books.duration < 120';
+      case '120-300':
+        return 'books.duration >= 120 AND books.duration < 300';
+      case '300':
+      case '300+':
+        return 'books.duration >= 300';
+      default:
+        return '';
+    }
+  }
+
+  async listAuthorsWithBookCount() {
+    return this.all(`
+      SELECT
+        a.id,
+        a.name,
+        COUNT(b.id) AS book_count
+      FROM authors a
+      LEFT JOIN books b ON b.author_id = a.id
+      GROUP BY a.id, a.name
+      ORDER BY a.name ASC
+    `);
+  }
+
+  async listCategoriesWithBookCount() {
+    return this.all(`
+      SELECT
+        c.id,
+        c.name,
+        COUNT(b.id) AS book_count
+      FROM book_categories c
+      LEFT JOIN books b ON b.category_id = c.id
+      GROUP BY c.id, c.name
+      ORDER BY c.name ASC
+    `);
   }
 
   async getCrawlStats() {
