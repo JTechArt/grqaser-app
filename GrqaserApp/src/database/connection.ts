@@ -15,8 +15,10 @@
  */
 import SQLite from 'react-native-sqlite-storage';
 import RNFS from 'react-native-fs';
+import {withTimeout} from '../utils/timeout';
 
 SQLite.enablePromise(true);
+const SQLITE_OPEN_TIMEOUT_MS = 5000;
 
 export interface DatabaseConnection {
   db: SQLite.SQLiteDatabase;
@@ -36,10 +38,14 @@ export async function openDatabase(
   const name = isUnderDocuments ? filePath.slice(docs.length + 1) : filePath;
   const location = isUnderDocuments ? 'Documents' : 'default';
 
-  const db = await SQLite.openDatabase({
-    name,
-    location,
-  });
+  const db = await withTimeout(
+    SQLite.openDatabase({
+      name,
+      location,
+    }),
+    SQLITE_OPEN_TIMEOUT_MS,
+    `Timed out opening SQLite database: ${name}`,
+  );
   return {
     db,
     close: () => db.close(),
@@ -55,12 +61,16 @@ export async function openDatabase(
 export async function openBundledDatabase(
   fileName: string,
 ): Promise<DatabaseConnection> {
-  const db = await SQLite.openDatabase({
-    name: fileName,
-    createFromLocation: `~${fileName}`,
-    location: 'default',
-    readOnly: true,
-  });
+  const db = await withTimeout(
+    SQLite.openDatabase({
+      name: fileName,
+      createFromLocation: `~${fileName}`,
+      location: 'default',
+      readOnly: true,
+    }),
+    SQLITE_OPEN_TIMEOUT_MS,
+    `Timed out opening bundled SQLite database: ${fileName}`,
+  );
   return {
     db,
     close: () => db.close(),

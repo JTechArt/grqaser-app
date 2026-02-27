@@ -8,8 +8,12 @@ import RNFS from 'react-native-fs';
 import {ManagedDatabase} from '../types/book';
 import {appMetaRepository} from '../database/appMetaRepository';
 import {storageService} from './storageService';
+import {withTimeout} from '../utils/timeout';
 
 const DB_DIR = `${RNFS.DocumentDirectoryPath}/databases`;
+const FS_OP_TIMEOUT_MS = 5000;
+const EXISTS_CACHE_TTL_MS = 30000;
+const existsCache = new Map<string, {value: boolean; expiresAt: number}>();
 
 export type DbDownloadProgressCallback = (progress: {
   bytesWritten: number;
@@ -18,9 +22,78 @@ export type DbDownloadProgressCallback = (progress: {
 }) => void;
 
 async function ensureDir(dir: string): Promise<void> {
-  const exists = await RNFS.exists(dir);
+  const exists = await safeExists(dir);
   if (!exists) {
-    await RNFS.mkdir(dir);
+    await withTimeout(
+      RNFS.mkdir(dir),
+      FS_OP_TIMEOUT_MS,
+      `Timed out creating directory: ${dir}`,
+    );
+    cacheExists(dir, true);
+  }
+}
+
+function cacheExists(path: string, value: boolean): void {
+  existsCache.set(path, {
+    value,
+    expiresAt: Date.now() + EXISTS_CACHE_TTL_MS,
+  });
+}
+
+function readExistsCache(path: string): boolean | null {
+  const cached = existsCache.get(path);
+  if (!cached) {
+    return null;
+  }
+  if (cached.expiresAt <= Date.now()) {
+    existsCache.delete(path);
+    return null;
+  }
+  return cached.value;
+}
+
+async function safeExists(path: string, useCache = true): Promise<boolean> {
+  if (useCache) {
+    const cached = readExistsCache(path);
+    if (cached !== null) {
+      return cached;
+    }
+  }
+
+  try {
+    const exists = await withTimeout(
+      RNFS.exists(path),
+      FS_OP_TIMEOUT_MS,
+      `Timed out checking file existence: ${path}`,
+    );
+    cacheExists(path, exists);
+    return exists;
+  } catch {
+    return false;
+  }
+}
+
+async function safeReadDir(path: string): Promise<RNFS.ReadDirItem[]> {
+  try {
+    return await withTimeout(
+      RNFS.readDir(path),
+      FS_OP_TIMEOUT_MS,
+      `Timed out listing directory: ${path}`,
+    );
+  } catch {
+    return [];
+  }
+}
+
+async function safeStat(path: string): Promise<RNFS.StatResult | null> {
+  try {
+    return await withTimeout(
+      RNFS.stat(path),
+      FS_OP_TIMEOUT_MS,
+      `Timed out reading file metadata: ${path}`,
+    );
+  } catch {
+    return null;
   }
 }
 
@@ -57,11 +130,11 @@ function validateUrl(url: string): void {
 async function getDatabaseFileSizesFromDisk(): Promise<Map<string, number>> {
   const map = new Map<string, number>();
   try {
-    const exists = await RNFS.exists(DB_DIR);
+    const exists = await safeExists(DB_DIR);
     if (!exists) {
       return map;
     }
-    const items = await RNFS.readDir(DB_DIR);
+    const items = await safeReadDir(DB_DIR);
     for (const item of items) {
       if (item.isFile() && item.name.endsWith('.db')) {
         const id = item.name.replace(/\.db$/i, '');
@@ -78,6 +151,10 @@ async function getDatabaseFileSizesFromDisk(): Promise<Map<string, number>> {
 }
 
 export const databaseManager = {
+  __resetCachesForTests(): void {
+    existsCache.clear();
+  },
+
   async loadDatabaseFromUrl(
     url: string,
     onProgress?: DbDownloadProgressCallback,
@@ -113,7 +190,11 @@ export const databaseManager = {
       throw new Error(`Download failed with HTTP ${result.statusCode}`);
     }
 
-    const stat = await RNFS.stat(filePath);
+    const stat = await safeStat(filePath);
+    if (!stat) {
+      await RNFS.unlink(filePath).catch(() => {});
+      throw new Error('Failed to verify downloaded database file');
+    }
     const size = Number(stat.size);
     const expected = expectedBytes > 0 ? expectedBytes : result.bytesWritten;
     if (expected > 0 && size < expected * 0.95) {
@@ -210,9 +291,10 @@ export const databaseManager = {
       );
     }
 
-    const fileExists = await RNFS.exists(db.filePath);
+    const fileExists = await safeExists(db.filePath, false);
     if (fileExists) {
       await RNFS.unlink(db.filePath);
+      cacheExists(db.filePath, false);
     }
 
     await appMetaRepository.removeDatabase(dbId);

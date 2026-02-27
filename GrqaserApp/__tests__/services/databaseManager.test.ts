@@ -26,6 +26,7 @@ const mockRepo = appMetaRepository as jest.Mocked<typeof appMetaRepository>;
 
 beforeEach(() => {
   jest.clearAllMocks();
+  databaseManager.__resetCachesForTests();
 });
 
 describe('databaseManager', () => {

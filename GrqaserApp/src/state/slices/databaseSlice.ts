@@ -8,6 +8,7 @@ import {initAppMetaDb} from '../../database/appMetaRepository';
 import {APP_META_DB} from '../../database/connection';
 import {databaseManager} from '../../services/databaseManager';
 import {fetchBooks} from './booksSlice';
+import {withTimeout} from '../../utils/timeout';
 
 interface DatabaseState {
   managedDatabases: ManagedDatabase[];
@@ -35,16 +36,37 @@ export const initializeDatabases = createAsyncThunk(
   'database/initialize',
   async (_, {dispatch, rejectWithValue}) => {
     try {
-      await initAppMetaDb(APP_META_DB);
+      // Startup audit:
+      // - initAppMetaDb/openDatabase can block on file system
+      // - fetchManagedDatabases can trigger RNFS directory scans
+      // - initCatalogDb/openDatabase can block when DB files are slow to access
+      // Each step has a strict timeout to avoid long startup stalls.
+      await withTimeout(
+        initAppMetaDb(APP_META_DB),
+        5000,
+        'Database initialization timed out: app meta DB',
+      );
 
       // Check if a user-managed DB is already active; prefer it over the bundled one
-      const managed = await dispatch(fetchManagedDatabases()).unwrap();
+      const managed = await withTimeout(
+        dispatch(fetchManagedDatabases()).unwrap(),
+        5000,
+        'Database initialization timed out: managed DB lookup',
+      );
       if (managed.active) {
-        await initCatalogDb(managed.active.filePath);
+        await withTimeout(
+          initCatalogDb(managed.active.filePath),
+          5000,
+          'Database initialization timed out: active catalog DB',
+        );
       } else {
         // Fall back to bundled catalog DB; non-fatal if missing
         try {
-          await initBundledCatalogDb();
+          await withTimeout(
+            initBundledCatalogDb(),
+            3000,
+            'Database initialization timed out: bundled catalog DB',
+          );
         } catch {
           // No bundled DB available -- user can load one from Settings
         }
