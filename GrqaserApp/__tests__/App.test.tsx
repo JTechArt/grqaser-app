@@ -4,6 +4,25 @@
 
 import 'react-native';
 import React from 'react';
+import renderer, {act} from 'react-test-renderer';
+
+const mockDispatch = jest.fn();
+const mockInitializeDatabases = jest.fn(() => ({type: 'database/initialize'}));
+const baseState = {
+  user: {preferences: {theme: 'light'}},
+  books: {favorites: []},
+  networkStatus: {isConnected: true, showRestored: false},
+};
+
+jest.mock('react-redux', () => {
+  const ReactMod = require('react');
+  return {
+    Provider: ({children}: {children: React.ReactNode}) =>
+      ReactMod.createElement(ReactMod.Fragment, null, children),
+    useDispatch: () => mockDispatch,
+    useSelector: (selector: (state: unknown) => unknown) => selector(baseState),
+  };
+});
 
 // Mock native/ESM deps so App loads in Jest without native binary or ESM transform
 jest.mock('react-native-vector-icons/MaterialCommunityIcons', () => {
@@ -43,14 +62,29 @@ jest.mock('@react-native-community/netinfo', () => ({
   addEventListener: jest.fn(() => jest.fn()),
 }));
 
-import App from '../App';
+jest.mock('../src/services/preferencesStorage', () => ({
+  getFavorites: jest.fn(() => new Promise(() => {})),
+  setFavoritesStorage: jest.fn().mockResolvedValue(undefined),
+  getThemePreference: jest.fn(() => new Promise(() => {})),
+  setThemePreference: jest.fn().mockResolvedValue(undefined),
+}));
 
-// Note: import explicitly to use the types shiped with jest.
-import {it} from '@jest/globals';
+jest.mock('../src/state/slices/databaseSlice', () => ({
+  initializeDatabases: () => mockInitializeDatabases(),
+}));
 
-// Note: test renderer must be required after react-native.
-import renderer from 'react-test-renderer';
+import {AppContent} from '../App';
 
-it('renders correctly', () => {
-  renderer.create(<App />);
+beforeEach(() => {
+  mockDispatch.mockClear();
+  mockInitializeDatabases.mockClear();
+});
+
+it('dispatches initializeDatabases on mount', async () => {
+  await act(async () => {
+    renderer.create(<AppContent />);
+  });
+
+  expect(mockInitializeDatabases).toHaveBeenCalledTimes(1);
+  expect(mockDispatch).toHaveBeenCalledWith({type: 'database/initialize'});
 });
