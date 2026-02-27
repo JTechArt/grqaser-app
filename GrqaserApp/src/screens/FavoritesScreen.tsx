@@ -32,14 +32,14 @@ const FavoritesScreen: React.FC = () => {
 
   const favoriteBooks = useMemo(
     () =>
-      favorites
-        .map(id => booksById[id])
-        .filter((b): b is Book => b != null),
+      favorites.map(id => booksById[id]).filter((b): b is Book => b != null),
     [favorites, booksById],
   );
 
   const filteredBooks = useMemo(() => {
-    if (!searchQuery.trim()) return favoriteBooks;
+    if (!searchQuery.trim()) {
+      return favoriteBooks;
+    }
     const q = searchQuery.trim().toLowerCase();
     return favoriteBooks.filter(
       b =>
