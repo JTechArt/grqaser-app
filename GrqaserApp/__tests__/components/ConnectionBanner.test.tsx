@@ -52,6 +52,7 @@ describe('ConnectionBanner', () => {
     const json = tree.toJSON();
     expect(findText(json, 'Network connection failed')).toBe(false);
     expect(findText(json, 'Connection restored')).toBe(false);
+    tree.unmount();
   });
 
   it('renders nothing when online and not showRestored', () => {
@@ -64,6 +65,7 @@ describe('ConnectionBanner', () => {
     const json = tree.toJSON();
     expect(findText(json, 'Network connection failed')).toBe(false);
     expect(findText(json, 'Connection restored')).toBe(false);
+    tree.unmount();
   });
 
   it('shows offline banner when isConnected is false', () => {
@@ -75,6 +77,7 @@ describe('ConnectionBanner', () => {
     );
     const json = tree.toJSON();
     expect(findText(json, 'Network connection failed')).toBe(true);
+    tree.unmount();
   });
 
   it('shows restored banner when showRestored is true', () => {
