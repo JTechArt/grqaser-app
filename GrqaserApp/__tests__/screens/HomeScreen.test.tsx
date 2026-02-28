@@ -134,9 +134,13 @@ beforeEach(() => {
 });
 
 describe('HomeScreen startup initialization flow', () => {
-  it('shows loading UI and does not fetch books before db initialization', async () => {
+  afterEach(() => {
+    jest.clearAllMocks();
+  });
+
+  it('shows loading UI and does not fetch books before db initialization', () => {
     let tree: renderer.ReactTestRenderer;
-    await act(async () => {
+    act(() => {
       tree = renderer.create(<HomeScreen />);
     });
 
@@ -145,24 +149,26 @@ describe('HomeScreen startup initialization flow', () => {
     ).toBeTruthy();
     expect(mockFetchBooksPage).not.toHaveBeenCalled();
     expect(mockFetchCatalogStats).not.toHaveBeenCalled();
+    tree.unmount();
   });
 
-  it('fetches books and stats when db is initialized', async () => {
+  it('fetches books and stats when db is initialized', () => {
     mockState.database.initialized = true;
-
-    await act(async () => {
-      renderer.create(<HomeScreen />);
+    let tree: renderer.ReactTestRenderer;
+    act(() => {
+      tree = renderer.create(<HomeScreen />);
     });
 
     expect(mockFetchBooksPage).toHaveBeenCalledWith({limit: 20, offset: 0});
     expect(mockFetchCatalogStats).toHaveBeenCalledTimes(1);
+    tree.unmount();
   });
 
-  it('renders db error state with retry action', async () => {
+  it('renders db error state with retry action', () => {
     mockState.database.error = 'init failed';
 
     let tree: renderer.ReactTestRenderer;
-    await act(async () => {
+    act(() => {
       tree = renderer.create(<HomeScreen />);
     });
 
@@ -173,11 +179,12 @@ describe('HomeScreen startup initialization flow', () => {
     const retryButton = tree!.root.findByProps({
       testID: 'catalog-retry-button',
     });
-    await act(async () => {
+    act(() => {
       retryButton.props.onPress();
     });
 
     expect(mockSetDatabaseError).toHaveBeenCalledWith(null);
     expect(mockInitializeDatabases).toHaveBeenCalledTimes(1);
+    tree.unmount();
   });
 });

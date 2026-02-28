@@ -200,22 +200,25 @@ describe('databaseSlice', () => {
 
     it('sets timeout error when app meta DB init hangs', async () => {
       jest.useFakeTimers();
-      const appMetaRepo = require('../../../src/database/appMetaRepository');
-      appMetaRepo.initAppMetaDb.mockImplementationOnce(
-        () => new Promise(() => {}),
-      );
+      try {
+        const appMetaRepo = require('../../../src/database/appMetaRepository');
+        appMetaRepo.initAppMetaDb.mockImplementationOnce(
+          () => new Promise(() => {}),
+        );
 
-      const store = createTestStore();
-      const pending = store.dispatch(initializeDatabases());
+        const store = createTestStore();
+        const pending = store.dispatch(initializeDatabases());
 
-      jest.advanceTimersByTime(5000);
-      await pending;
+        jest.advanceTimersByTime(5000);
+        await pending;
 
-      const state = store.getState().database;
-      expect(state.loading).toBe(false);
-      expect(state.initialized).toBe(false);
-      expect(state.error).toContain('timed out');
-      jest.useRealTimers();
+        const state = store.getState().database;
+        expect(state.loading).toBe(false);
+        expect(state.initialized).toBe(false);
+        expect(state.error).toContain('timed out');
+      } finally {
+        jest.useRealTimers();
+      }
     });
   });
 

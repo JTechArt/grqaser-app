@@ -51,6 +51,10 @@ const mockBook: Book = {
 };
 
 describe('BookCard', () => {
+  afterEach(() => {
+    jest.clearAllMocks();
+  });
+
   it('renders with minimal book (placeholder cover)', () => {
     const onPress = jest.fn();
     const tree = renderer.create(
@@ -58,6 +62,7 @@ describe('BookCard', () => {
     );
     expect(tree).toBeDefined();
     expect(tree.toJSON()).toBeDefined();
+    tree.unmount();
   });
 
   it('renders in compact mode', () => {
@@ -66,6 +71,7 @@ describe('BookCard', () => {
       <BookCard book={mockBook} onPress={onPress} compact />,
     );
     expect(tree.toJSON()).toBeDefined();
+    tree.unmount();
   });
 
   it('calls onPress with book when pressed', () => {
@@ -76,6 +82,7 @@ describe('BookCard', () => {
     const touchable = tree.root.findByProps({activeOpacity: 0.7});
     touchable.props.onPress();
     expect(onPress).toHaveBeenCalledWith(mockBook);
+    tree.unmount();
   });
 
   it('renders with cover image when book.coverImage set', () => {
@@ -87,5 +94,6 @@ describe('BookCard', () => {
       <BookCard book={bookWithCover} onPress={jest.fn()} />,
     );
     expect(tree.toJSON()).toBeDefined();
+    tree.unmount();
   });
 });
