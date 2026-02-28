@@ -9,6 +9,8 @@ import renderer, {act} from 'react-test-renderer';
 const mockDispatch = jest.fn();
 const mockInitializeDatabases = jest.fn(() => ({type: 'database/initialize'}));
 const mockStartNetworkMonitor = jest.fn(() => jest.fn());
+const mockPerfMark = jest.fn();
+const mockPerfMeasure = jest.fn();
 const baseState = {
   user: {preferences: {theme: 'light'}},
   books: {favorites: []},
@@ -54,6 +56,14 @@ jest.mock('../src/components/TrackPlayerProvider', () => {
   };
 });
 
+jest.mock('../src/components/PerformanceDashboard', () => {
+  const ReactMod = require('react');
+  const {View} = require('react-native');
+  return function MockPerformanceDashboard() {
+    return ReactMod.createElement(View, {testID: 'perf-dashboard'});
+  };
+});
+
 jest.mock('@react-native-community/netinfo', () => ({
   fetch: jest.fn().mockResolvedValue({
     isConnected: true,
@@ -64,9 +74,9 @@ jest.mock('@react-native-community/netinfo', () => ({
 }));
 
 jest.mock('../src/services/preferencesStorage', () => ({
-  getFavorites: jest.fn(() => new Promise(() => {})),
+  getFavorites: jest.fn().mockResolvedValue([]),
   setFavoritesStorage: jest.fn().mockResolvedValue(undefined),
-  getThemePreference: jest.fn(() => new Promise(() => {})),
+  getThemePreference: jest.fn().mockResolvedValue('light'),
   setThemePreference: jest.fn().mockResolvedValue(undefined),
 }));
 
@@ -78,29 +88,71 @@ jest.mock('../src/services/networkMonitor', () => ({
   startNetworkMonitor: () => mockStartNetworkMonitor(),
 }));
 
+jest.mock('../src/utils/performanceMonitor', () => ({
+  perfMonitor: {
+    mark: (...args: unknown[]) => mockPerfMark(...args),
+    measure: (...args: unknown[]) => mockPerfMeasure(...args),
+    getMeasures: () => ({}),
+    reset: jest.fn(),
+  },
+}));
+
+jest.mock('@react-navigation/native', () => {
+  const ReactMod = require('react');
+  const {View} = require('react-native');
+
+  return {
+    NavigationContainer: ({
+      children,
+      onReady,
+    }: {
+      children?: React.ReactNode;
+      onReady?: () => void;
+    }) => {
+      ReactMod.useEffect(() => {
+        onReady?.();
+      }, [onReady]);
+      return ReactMod.createElement(View, null, children);
+    },
+  };
+});
+
 import {AppContent} from '../App';
 
 beforeEach(() => {
   mockDispatch.mockClear();
   mockInitializeDatabases.mockClear();
   mockStartNetworkMonitor.mockClear();
+  mockPerfMark.mockClear();
+  mockPerfMeasure.mockClear();
+  mockDispatch.mockImplementation((action: {type?: string}) => {
+    if (action?.type === 'database/initialize') {
+      return {
+        unwrap: () => Promise.resolve(true),
+      };
+    }
+    return action;
+  });
   jest.useRealTimers();
 });
 
 it('dispatches initializeDatabases on mount', async () => {
+  let tree: renderer.ReactTestRenderer;
   await act(async () => {
-    renderer.create(<AppContent />);
+    tree = renderer.create(<AppContent />);
   });
 
   expect(mockInitializeDatabases).toHaveBeenCalledTimes(1);
   expect(mockDispatch).toHaveBeenCalledWith({type: 'database/initialize'});
+  tree!.unmount();
 });
 
 it('defers network monitor startup by 2 seconds', async () => {
   jest.useFakeTimers();
+  let tree: renderer.ReactTestRenderer;
 
   await act(async () => {
-    renderer.create(<AppContent />);
+    tree = renderer.create(<AppContent />);
   });
 
   expect(mockStartNetworkMonitor).not.toHaveBeenCalled();
@@ -110,4 +162,27 @@ it('defers network monitor startup by 2 seconds', async () => {
   });
 
   expect(mockStartNetworkMonitor).toHaveBeenCalledTimes(1);
+  tree!.unmount();
+});
+
+it('records startup performance marks and measures', async () => {
+  let tree: renderer.ReactTestRenderer;
+  await act(async () => {
+    tree = renderer.create(<AppContent />);
+  });
+
+  expect(mockPerfMark).toHaveBeenCalledWith('app-mount');
+  expect(mockPerfMark).toHaveBeenCalledWith('navigation-ready');
+  expect(mockPerfMark).toHaveBeenCalledWith('database-init-complete');
+  expect(mockPerfMeasure).toHaveBeenCalledWith(
+    'Time to Navigation Ready',
+    'app-mount',
+    'navigation-ready',
+  );
+  expect(mockPerfMeasure).toHaveBeenCalledWith(
+    'Database Initialization',
+    'app-mount',
+    'database-init-complete',
+  );
+  tree!.unmount();
 });
