@@ -35,4 +35,4 @@ jobs:
       - name: Test (GrqaserApp)
         run: |
           cd GrqaserApp
-          npm test -- --ci --passWithNoTests
+          npm test -- --ci --passWithNoTests --runInBand --forceExit

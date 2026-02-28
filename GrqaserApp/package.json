@@ -9,7 +9,7 @@
     "ios:clean": "rm -rf node_modules/.cache ios/build && react-native run-ios",
     "start": "react-native start",
     "start:reset": "react-native start --reset-cache",
-    "test": "jest",
+    "test": "jest --forceExit --runInBand",
     "lint": "eslint . --ext .js,.jsx,.ts,.tsx",
     "format": "prettier --write \"**/*.{js,jsx,ts,tsx,json,md}\"",
     "type-check": "tsc --noEmit"
@@ -77,6 +77,12 @@
   },
   "jest": {
     "preset": "react-native",
+    "forceExit": true,
+    "testTimeout": 10000,
+    "moduleNameMapper": {
+      "@react-native-vector-icons/material-design-icons": "<rootDir>/__mocks__/MockIcon.js",
+      "@expo/vector-icons/MaterialCommunityIcons": "<rootDir>/__mocks__/MockIcon.js"
+    },
     "moduleFileExtensions": [
       "ts",
       "tsx",
