@@ -71,7 +71,8 @@ function computeProgress(progress: {
     const pct = Math.min(Math.max(Math.round(fraction * 100), 0), 100);
     return {
       pct,
-      statusText: formatBytes(bytesWritten) + ' / ' + formatBytes(contentLength),
+      statusText:
+        formatBytes(bytesWritten) + ' / ' + formatBytes(contentLength),
     };
   }
 
