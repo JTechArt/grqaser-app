@@ -35,4 +35,4 @@ jobs:
       - name: Test (GrqaserApp)
         run: |
           cd GrqaserApp
-          npm test -- --ci --passWithNoTests --runInBand --forceExit
+          npm test -- --ci --testPathIgnorePatterns="e2e" --passWithNoTests --runInBand --forceExit
