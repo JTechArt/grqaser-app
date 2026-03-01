@@ -35,7 +35,7 @@ async function resolvePartUrl(
   bookId: string,
   url: string,
   chapterIndex?: number,
-  totalParts?: number,
+  _totalParts?: number,
 ): Promise<string> {
   const isDownloaded = await downloadManager.isBookDownloaded(bookId);
   if (isDownloaded) {
@@ -163,7 +163,9 @@ export async function playBook(book: Book): Promise<boolean> {
         id: `${TRACK_ID_PREFIX}${book.id}_ch${i}`,
         url: resolvedUrl,
         title:
-          totalParts > 1 ? `${book.title} (Part ${i + 1}/${totalParts})` : book.title,
+          totalParts > 1
+            ? `${book.title} (Part ${i + 1}/${totalParts})`
+            : book.title,
         artist: book.author,
         duration: partDuration,
         artwork: book.coverImage,
@@ -310,10 +312,14 @@ export async function skipToPreviousPart(): Promise<void> {
 export function parseTrackId(
   trackId: string,
 ): {bookId: string; chapterIndex: number} | null {
-  if (!trackId.startsWith(TRACK_ID_PREFIX)) return null;
+  if (!trackId.startsWith(TRACK_ID_PREFIX)) {
+    return null;
+  }
   const rest = trackId.slice(TRACK_ID_PREFIX.length);
   const idx = rest.lastIndexOf('_ch');
-  if (idx < 0) return null;
+  if (idx < 0) {
+    return null;
+  }
   const bookId = rest.slice(0, idx);
   const chNum = parseInt(rest.slice(idx + 3), 10);
   return {

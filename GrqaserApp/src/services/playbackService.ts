@@ -30,13 +30,14 @@ async function savePositionFromActiveTrack(
 ): Promise<void> {
   const track = await TrackPlayer.getActiveTrack();
   const trackId = track?.id as string | undefined;
-  if (!trackId) return;
+  if (!trackId) {
+    return;
+  }
   const parsed = parseTrackId(trackId);
   const bookId = parsed?.bookId ?? trackId;
   const chapterIndex = parsed?.chapterIndex ?? 0;
   const total =
-    totalChapters ??
-    (parsed ? (await TrackPlayer.getQueue()).length : 1);
+    totalChapters ?? (parsed ? (await TrackPlayer.getQueue()).length : 1);
   await savePlaybackPosition(bookId, position, chapterIndex, total);
   store.dispatch(syncPlayProgress());
 }
