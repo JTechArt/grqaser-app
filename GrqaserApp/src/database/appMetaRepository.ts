@@ -39,6 +39,16 @@ const CREATE_LIBRARY_ENTRIES_TABLE = `
   )
 `;
 
+const CREATE_PART_HISTORY_TABLE = `
+  CREATE TABLE IF NOT EXISTS part_listening_history (
+    book_id TEXT NOT NULL,
+    part_index INTEGER NOT NULL,
+    status TEXT NOT NULL DEFAULT 'not_started',
+    listened_at TEXT,
+    PRIMARY KEY (book_id, part_index)
+  )
+`;
+
 export async function initAppMetaDb(dbPath: string): Promise<void> {
   if (connection) {
     await connection.close();
@@ -47,6 +57,7 @@ export async function initAppMetaDb(dbPath: string): Promise<void> {
   await connection.db.executeSql(CREATE_MANAGED_DATABASES_TABLE);
   await connection.db.executeSql(CREATE_DOWNLOADED_MP3S_TABLE);
   await connection.db.executeSql(CREATE_LIBRARY_ENTRIES_TABLE);
+  await connection.db.executeSql(CREATE_PART_HISTORY_TABLE);
 }
 
 export async function closeAppMetaDb(): Promise<void> {
@@ -302,5 +313,59 @@ export const appMetaRepository = {
       [bookId],
     );
     return results.rows.length > 0;
+  },
+
+  // --- part_listening_history CRUD ---
+
+  async markPartStatus(
+    bookId: string,
+    partIndex: number,
+    status: 'not_started' | 'in_progress' | 'completed',
+  ): Promise<void> {
+    const {db} = assertConnected();
+    const now = new Date().toISOString();
+    await db.executeSql(
+      `INSERT INTO part_listening_history (book_id, part_index, status, listened_at)
+       VALUES (?, ?, ?, ?)
+       ON CONFLICT(book_id, part_index) DO UPDATE SET status = excluded.status, listened_at = excluded.listened_at`,
+      [bookId, partIndex, status, now],
+    );
+  },
+
+  async getPartHistory(
+    bookId: string,
+  ): Promise<Array<{partIndex: number; status: string; listenedAt: string | null}>> {
+    const {db} = assertConnected();
+    const [results] = await db.executeSql(
+      'SELECT part_index, status, listened_at FROM part_listening_history WHERE book_id = ? ORDER BY part_index ASC',
+      [bookId],
+    );
+    const items: Array<{partIndex: number; status: string; listenedAt: string | null}> = [];
+    for (let i = 0; i < results.rows.length; i++) {
+      const row = results.rows.item(i);
+      items.push({
+        partIndex: row.part_index as number,
+        status: row.status as string,
+        listenedAt: (row.listened_at as string) ?? null,
+      });
+    }
+    return items;
+  },
+
+  async getCompletedPartsCount(bookId: string): Promise<number> {
+    const {db} = assertConnected();
+    const [results] = await db.executeSql(
+      "SELECT COUNT(*) as cnt FROM part_listening_history WHERE book_id = ? AND status = 'completed'",
+      [bookId],
+    );
+    return results.rows.item(0).cnt as number;
+  },
+
+  async resetPartHistory(bookId: string): Promise<void> {
+    const {db} = assertConnected();
+    await db.executeSql(
+      'DELETE FROM part_listening_history WHERE book_id = ?',
+      [bookId],
+    );
   },
 };

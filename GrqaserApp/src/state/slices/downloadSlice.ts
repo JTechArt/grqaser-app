@@ -10,6 +10,7 @@ interface DownloadProgress {
   overallFraction?: number;
   currentFileIndex?: number;
   totalFiles?: number;
+  completedFiles?: number;
 }
 
 interface DownloadState {
@@ -18,6 +19,7 @@ interface DownloadState {
   totalStorageUsed: number;
   loading: boolean;
   error: string | null;
+  bannerDismissed: boolean;
 }
 
 const initialState: DownloadState = {
@@ -26,6 +28,7 @@ const initialState: DownloadState = {
   totalStorageUsed: 0,
   loading: false,
   error: null,
+  bannerDismissed: false,
 };
 
 export const loadDownloadState = createAsyncThunk(
@@ -93,6 +96,21 @@ export const downloadBook = createAsyncThunk(
   },
 );
 
+export const cancelDownload = createAsyncThunk(
+  'download/cancelDownload',
+  async (bookId: string, {rejectWithValue}) => {
+    try {
+      downloadManager.cancelBookDownload(bookId);
+      await downloadManager.deleteBookDownloads(bookId);
+      return bookId;
+    } catch (error) {
+      const msg =
+        error instanceof Error ? error.message : 'Cancel failed';
+      return rejectWithValue(msg);
+    }
+  },
+);
+
 export const cleanupBook = createAsyncThunk(
   'download/cleanupBook',
   async (bookId: string, {rejectWithValue}) => {
@@ -130,10 +148,20 @@ const downloadSlice = createSlice({
       state,
       action: PayloadAction<{bookId: string; progress: DownloadProgress}>,
     ) => {
+      const isNew = !(action.payload.bookId in state.downloadingBooks);
       state.downloadingBooks[action.payload.bookId] = action.payload.progress;
+      if (isNew) {
+        state.bannerDismissed = false;
+      }
     },
     clearDownloadError: state => {
       state.error = null;
+    },
+    dismissBanner: state => {
+      state.bannerDismissed = true;
+    },
+    showBanner: state => {
+      state.bannerDismissed = false;
     },
   },
   extraReducers: builder => {
@@ -156,6 +184,9 @@ const downloadSlice = createSlice({
         delete state.downloadingBooks[bookId];
         state.error = (action.payload as string) ?? 'Download failed';
       })
+      .addCase(cancelDownload.fulfilled, (state, action) => {
+        delete state.downloadingBooks[action.payload];
+      })
       .addCase(cleanupBook.fulfilled, (state, action) => {
         const {bookId, totalSize} = action.payload;
         state.downloadedBookIds = state.downloadedBookIds.filter(
@@ -177,6 +208,7 @@ const downloadSlice = createSlice({
   },
 });
 
-export const {setDownloadProgress, clearDownloadError} = downloadSlice.actions;
+export const {setDownloadProgress, clearDownloadError, dismissBanner, showBanner} =
+  downloadSlice.actions;
 
 export default downloadSlice.reducer;
