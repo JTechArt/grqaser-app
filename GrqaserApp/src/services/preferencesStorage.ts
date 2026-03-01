@@ -50,8 +50,12 @@ export function positionToSeconds(
   pos: PlaybackPosition | undefined,
   _totalDuration?: number,
 ): number {
-  if (pos == null) return 0;
-  if (typeof pos === 'number') return Math.max(0, pos);
+  if (pos == null) {
+    return 0;
+  }
+  if (typeof pos === 'number') {
+    return Math.max(0, pos);
+  }
   return Math.max(0, pos.position);
 }
 
@@ -80,8 +84,12 @@ export async function getSavedPosition(
 ): Promise<{chapterIndex: number; position: number}> {
   const positions = await getPlaybackPositions();
   const raw = positions[bookId];
-  if (raw == null) return {chapterIndex: 0, position: 0};
-  if (typeof raw === 'number') return {chapterIndex: 0, position: raw};
+  if (raw == null) {
+    return {chapterIndex: 0, position: 0};
+  }
+  if (typeof raw === 'number') {
+    return {chapterIndex: 0, position: raw};
+  }
   return {
     chapterIndex: Math.max(0, raw.chapterIndex),
     position: Math.max(0, raw.position),
@@ -95,15 +103,16 @@ export function playbackPositionsToSeconds(
 ): Record<string, number> {
   const result: Record<string, number> = {};
   for (const [bookId, raw] of Object.entries(positions)) {
-    if (raw == null) continue;
+    if (raw == null) {
+      continue;
+    }
     if (typeof raw === 'number') {
       result[bookId] = raw;
     } else {
       const duration = getBookDuration(bookId) ?? 0;
       const totalCh = raw.totalChapters ?? 1;
       if (totalCh > 1 && duration > 0) {
-        result[bookId] =
-          raw.chapterIndex * (duration / totalCh) + raw.position;
+        result[bookId] = raw.chapterIndex * (duration / totalCh) + raw.position;
       } else {
         result[bookId] = raw.position;
       }

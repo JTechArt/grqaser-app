@@ -101,8 +101,7 @@ export const downloadManager = {
           filePath,
           totalFiles > 1
             ? progress => {
-                const overallFraction =
-                  (i + progress.fraction) / totalFiles;
+                const overallFraction = (i + progress.fraction) / totalFiles;
                 onProgress?.({
                   ...progress,
                   overallFraction,

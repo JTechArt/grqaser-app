@@ -7,7 +7,7 @@
  * aborts before starting a second run.
  * Skips check when CI=true (GitHub Actions, etc.) where only one run exists.
  */
-const { execSync } = require('child_process');
+const {execSync} = require('child_process');
 
 if (process.env.CI === 'true' || process.env.CI === '1') {
   process.exit(0); // Skip in CI
@@ -15,10 +15,10 @@ if (process.env.CI === 'true' || process.env.CI === '1') {
 
 function checkUnix() {
   try {
-    const out = execSync(
-      'pgrep -fl "jest" 2>/dev/null || true',
-      { encoding: 'utf8', maxBuffer: 256 * 1024 }
-    );
+    const out = execSync('pgrep -fl "jest" 2>/dev/null || true', {
+      encoding: 'utf8',
+      maxBuffer: 256 * 1024,
+    });
     const lines = out.trim().split('\n').filter(Boolean);
     for (const line of lines) {
       // Match Jest running from this GrqaserApp (not other projects)
@@ -37,9 +37,11 @@ function check() {
     try {
       const out = execSync(
         'wmic process where "name=\'node.exe\'" get commandline 2>nul',
-        { encoding: 'utf8', maxBuffer: 256 * 1024 }
+        {encoding: 'utf8', maxBuffer: 256 * 1024},
       );
-      if (out.includes('GrqaserApp') && out.includes('jest')) return true;
+      if (out.includes('GrqaserApp') && out.includes('jest')) {
+        return true;
+      }
     } catch {
       /* ignore */
     }
@@ -52,7 +54,7 @@ if (check()) {
   console.error(
     'Jest is already running for GrqaserApp. Wait for it to finish or kill it:\n' +
       '  pkill -f "node.*jest"\n' +
-      'Then run npm test again.'
+      'Then run npm test again.',
   );
   process.exit(1);
 }

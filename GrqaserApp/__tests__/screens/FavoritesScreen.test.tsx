@@ -4,11 +4,9 @@
 
 import React from 'react';
 import renderer from 'react-test-renderer';
-import {act} from 'react-test-renderer';
 import {Provider} from 'react-redux';
 import {SafeAreaProvider} from 'react-native-safe-area-context';
 import {store} from '../../src/state';
-import {fetchBooksByIds} from '../../src/state/slices/booksSlice';
 import FavoritesScreen from '../../src/screens/FavoritesScreen';
 
 jest.mock('../../src/utils/bookGridLayout', () => ({

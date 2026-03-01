@@ -184,12 +184,8 @@ const BookDetailScreen: React.FC<Props> = ({route}) => {
                         downloadProgress?.totalFiles != null &&
                         downloadProgress.totalFiles > 1 &&
                         downloadProgress.overallFraction != null
-                          ? Math.round(
-                              downloadProgress.overallFraction * 100,
-                            )
-                          : Math.round(
-                              (downloadProgress?.fraction ?? 0) * 100,
-                            );
+                          ? Math.round(downloadProgress.overallFraction * 100)
+                          : Math.round((downloadProgress?.fraction ?? 0) * 100);
                       return `${pct}%`;
                     })()
                   : isDownloaded

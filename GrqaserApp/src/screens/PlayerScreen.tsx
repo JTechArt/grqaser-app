@@ -40,15 +40,11 @@ const PlayerScreen: React.FC = () => {
   const insets = useSafeAreaInsets();
   const dispatch = useDispatch<AppDispatch>();
   const currentBook = useSelector((s: RootState) => s.player.currentBook);
-  const currentChapter = useSelector(
-    (s: RootState) => s.player.currentChapter,
-  );
+  const currentChapter = useSelector((s: RootState) => s.player.currentChapter);
   const isPlaying = useSelector((s: RootState) => s.player.isPlaying);
   const playerError = useSelector((s: RootState) => s.player.error);
   const playbackRate = useSelector((s: RootState) => s.player.playbackRate);
-  const totalParts = useSelector(
-    (s: RootState) => s.player.totalParts ?? 1,
-  );
+  const totalParts = useSelector((s: RootState) => s.player.totalParts ?? 1);
   const {position, duration} = useProgress(1000);
   const hasMultipleParts = totalParts > 1;
   const [seekBarWidth, setSeekBarWidth] = useState(
