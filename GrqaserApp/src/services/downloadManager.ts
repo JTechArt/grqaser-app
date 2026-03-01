@@ -69,11 +69,18 @@ async function downloadFileWithRetry(
       discretionary: false,
     });
 
-    console.log(`[DL] started ${bookId}: jobId=${dl.jobId} url=${fromUrl.substring(0, 80)}`);
+    console.log(
+      `[DL] started ${bookId}: jobId=${dl.jobId} url=${fromUrl.substring(
+        0,
+        80,
+      )}`,
+    );
     activeJobs.set(bookId, dl.jobId);
     const result = await dl.promise;
     activeJobs.delete(bookId);
-    console.log(`[DL] done ${bookId}: status=${result.statusCode} bytes=${result.bytesWritten}`);
+    console.log(
+      `[DL] done ${bookId}: status=${result.statusCode} bytes=${result.bytesWritten}`,
+    );
 
     if (result.statusCode < 200 || result.statusCode >= 300) {
       throw new Error(`HTTP ${result.statusCode} downloading ${fromUrl}`);

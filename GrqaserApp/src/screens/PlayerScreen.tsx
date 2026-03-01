@@ -220,11 +220,7 @@ const PlayerScreen: React.FC = () => {
           <Text style={styles.bookDetailLinkText} numberOfLines={1}>
             View Book Details
           </Text>
-          <Icon
-            name="chevron-right"
-            size={16}
-            color={theme.colors.primary}
-          />
+          <Icon name="chevron-right" size={16} color={theme.colors.primary} />
         </TouchableOpacity>
 
         <View style={styles.coverWrapper}>
@@ -376,20 +372,13 @@ const PlayerScreen: React.FC = () => {
         onRequestClose={() => setPartSelectorVisible(false)}>
         <View style={styles.modalOverlay}>
           <View
-            style={[
-              styles.modalContent,
-              {paddingBottom: insets.bottom + 16},
-            ]}>
+            style={[styles.modalContent, {paddingBottom: insets.bottom + 16}]}>
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>Select Part</Text>
               <TouchableOpacity
                 onPress={() => setPartSelectorVisible(false)}
                 style={styles.modalCloseButton}>
-                <Icon
-                  name="close"
-                  size={24}
-                  color={theme.colors.onSurface}
-                />
+                <Icon name="close" size={24} color={theme.colors.onSurface} />
               </TouchableOpacity>
             </View>
 
