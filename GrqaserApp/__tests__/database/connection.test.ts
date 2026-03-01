@@ -11,7 +11,6 @@ import {openDatabase, openBundledDatabase} from '../../src/database/connection';
 
 describe('database connection', () => {
   afterEach(() => {
-    jest.useRealTimers();
     jest.clearAllMocks();
   });
 
@@ -35,13 +34,19 @@ describe('database connection', () => {
 
   it('times out when SQLite open hangs', async () => {
     jest.useFakeTimers();
-    mockOpenDatabase.mockImplementationOnce(() => new Promise(() => {}));
 
-    const pending = openDatabase('slow.db');
-    jest.advanceTimersByTime(5000);
+    try {
+      mockOpenDatabase.mockImplementationOnce(() => new Promise(() => {}));
 
-    await expect(pending).rejects.toThrow(
-      'Timed out opening SQLite database: slow.db',
-    );
+      const pending = openDatabase('slow.db');
+      jest.advanceTimersByTime(5000);
+
+      await expect(pending).rejects.toThrow(
+        'Timed out opening SQLite database: slow.db',
+      );
+    } finally {
+      jest.runOnlyPendingTimers();
+      jest.useRealTimers();
+    }
   });
 });

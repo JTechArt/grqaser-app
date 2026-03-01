@@ -136,10 +136,6 @@ beforeEach(() => {
   jest.useRealTimers();
 });
 
-afterEach(() => {
-  jest.useRealTimers();
-});
-
 it('dispatches initializeDatabases on mount', async () => {
   let tree: renderer.ReactTestRenderer;
   await act(async () => {
@@ -155,20 +151,23 @@ it('defers network monitor startup by 2 seconds', async () => {
   jest.useFakeTimers();
   let tree: renderer.ReactTestRenderer;
 
-  await act(async () => {
-    tree = renderer.create(<AppContent />);
-  });
+  try {
+    await act(async () => {
+      tree = renderer.create(<AppContent />);
+    });
 
-  expect(mockStartNetworkMonitor).not.toHaveBeenCalled();
+    expect(mockStartNetworkMonitor).not.toHaveBeenCalled();
 
-  await act(async () => {
-    jest.advanceTimersByTime(2000);
-  });
+    await act(async () => {
+      jest.advanceTimersByTime(2000);
+    });
 
-  expect(mockStartNetworkMonitor).toHaveBeenCalledTimes(1);
-  tree!.unmount();
-  jest.runOnlyPendingTimers();
-  jest.useRealTimers();
+    expect(mockStartNetworkMonitor).toHaveBeenCalledTimes(1);
+  } finally {
+    tree?.unmount();
+    jest.runOnlyPendingTimers();
+    jest.useRealTimers();
+  }
 });
 
 it('records startup performance marks and measures', async () => {

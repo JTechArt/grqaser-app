@@ -1,10 +1,6 @@
 import {withTimeout} from '../../src/utils/timeout';
 
 describe('withTimeout', () => {
-  afterEach(() => {
-    jest.useRealTimers();
-  });
-
   it('resolves when promise completes before timeout', async () => {
     await expect(withTimeout(Promise.resolve('ok'), 1000)).resolves.toBe('ok');
   });
@@ -17,5 +13,8 @@ describe('withTimeout', () => {
 
     jest.advanceTimersByTime(500);
     await expect(timeoutPromise).rejects.toThrow('Timed out');
+
+    jest.runOnlyPendingTimers();
+    jest.useRealTimers();
   });
 });
