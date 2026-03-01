@@ -1,6 +1,9 @@
-import {createSlice, PayloadAction} from '@reduxjs/toolkit';
+import {createSlice, createAsyncThunk, PayloadAction} from '@reduxjs/toolkit';
 import {Track} from 'react-native-track-player';
 import {Book} from '../../types/book';
+import {appMetaRepository} from '../../database/appMetaRepository';
+
+export type PartStatus = 'not_started' | 'in_progress' | 'completed';
 
 interface PlayerState {
   isPlaying: boolean;
@@ -8,6 +11,8 @@ interface PlayerState {
   queue: Track[];
   currentBook: Book | null;
   currentChapter: number;
+  /** Total parts/chapters (1 for single-file books). */
+  totalParts: number;
   progress: number;
   duration: number;
   playbackRate: number;
@@ -16,6 +21,8 @@ interface PlayerState {
   sleepTimer: number | null;
   volume: number;
   error: string | null;
+  /** Per-part listening status keyed by partIndex */
+  partHistory: Record<number, PartStatus>;
 }
 
 const initialState: PlayerState = {
@@ -24,6 +31,7 @@ const initialState: PlayerState = {
   queue: [],
   currentBook: null,
   currentChapter: 0,
+  totalParts: 1,
   progress: 0,
   duration: 0,
   playbackRate: 1.0,
@@ -32,7 +40,43 @@ const initialState: PlayerState = {
   sleepTimer: null,
   volume: 1.0,
   error: null,
+  partHistory: {},
 };
+
+export const loadPartHistory = createAsyncThunk(
+  'player/loadPartHistory',
+  async (bookId: string) => {
+    const history = await appMetaRepository.getPartHistory(bookId);
+    const map: Record<number, PartStatus> = {};
+    for (const h of history) {
+      map[h.partIndex] = h.status as PartStatus;
+    }
+    return map;
+  },
+);
+
+export const markPartCompleted = createAsyncThunk(
+  'player/markPartCompleted',
+  async ({bookId, partIndex}: {bookId: string; partIndex: number}) => {
+    await appMetaRepository.markPartStatus(bookId, partIndex, 'completed');
+    return partIndex;
+  },
+);
+
+export const markPartInProgress = createAsyncThunk(
+  'player/markPartInProgress',
+  async ({bookId, partIndex}: {bookId: string; partIndex: number}) => {
+    await appMetaRepository.markPartStatus(bookId, partIndex, 'in_progress');
+    return partIndex;
+  },
+);
+
+export const resetBookPartHistory = createAsyncThunk(
+  'player/resetPartHistory',
+  async (bookId: string) => {
+    await appMetaRepository.resetPartHistory(bookId);
+  },
+);
 
 const playerSlice = createSlice({
   name: 'player',
@@ -52,6 +96,9 @@ const playerSlice = createSlice({
     },
     setCurrentChapter: (state, action: PayloadAction<number>) => {
       state.currentChapter = action.payload;
+    },
+    setTotalParts: (state, action: PayloadAction<number>) => {
+      state.totalParts = Math.max(1, action.payload);
     },
     setProgress: (state, action: PayloadAction<number>) => {
       state.progress = action.payload;
@@ -89,10 +136,33 @@ const playerSlice = createSlice({
       state.queue = [];
       state.currentBook = null;
       state.currentChapter = 0;
+      state.totalParts = 1;
       state.progress = 0;
       state.duration = 0;
       state.error = null;
+      state.partHistory = {};
     },
+    setPartStatus: (
+      state,
+      action: PayloadAction<{partIndex: number; status: PartStatus}>,
+    ) => {
+      state.partHistory[action.payload.partIndex] = action.payload.status;
+    },
+  },
+  extraReducers: builder => {
+    builder
+      .addCase(loadPartHistory.fulfilled, (state, action) => {
+        state.partHistory = action.payload;
+      })
+      .addCase(markPartCompleted.fulfilled, (state, action) => {
+        state.partHistory[action.payload] = 'completed';
+      })
+      .addCase(markPartInProgress.fulfilled, (state, action) => {
+        state.partHistory[action.payload] = 'in_progress';
+      })
+      .addCase(resetBookPartHistory.fulfilled, state => {
+        state.partHistory = {};
+      });
   },
 });
 
@@ -102,6 +172,7 @@ export const {
   setQueue,
   setCurrentBook,
   setCurrentChapter,
+  setTotalParts,
   setProgress,
   setDuration,
   setPlaybackRate,
@@ -112,6 +183,7 @@ export const {
   setError,
   clearError,
   resetPlayer,
+  setPartStatus,
 } = playerSlice.actions;
 
 export default playerSlice.reducer;

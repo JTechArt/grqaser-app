@@ -93,6 +93,10 @@ function createTestStore() {
   });
 }
 
+beforeEach(() => {
+  jest.useRealTimers();
+});
+
 function renderScreen() {
   const store = createTestStore();
   return renderer.create(
@@ -129,12 +133,17 @@ function findTextContent(
 }
 
 describe('SettingsScreen', () => {
+  afterEach(() => {
+    jest.clearAllMocks();
+  });
+
   it('renders without crashing', async () => {
     let tree: renderer.ReactTestRenderer | null = null;
     await act(async () => {
       tree = renderScreen();
     });
     expect(tree).toBeTruthy();
+    tree?.unmount();
   });
 
   it('contains Storage Usage section header', async () => {
@@ -144,6 +153,7 @@ describe('SettingsScreen', () => {
     });
     const json = tree!.toJSON();
     expect(findTextContent(json, 'STORAGE USAGE')).toBe(true);
+    tree?.unmount();
   });
 
   it('contains Mobile Data Usage section header', async () => {
@@ -153,6 +163,7 @@ describe('SettingsScreen', () => {
     });
     const json = tree!.toJSON();
     expect(findTextContent(json, 'MOBILE DATA USAGE')).toBe(true);
+    tree?.unmount();
   });
 
   it('contains General Settings section header', async () => {
@@ -162,6 +173,7 @@ describe('SettingsScreen', () => {
     });
     const json = tree!.toJSON();
     expect(findTextContent(json, 'GENERAL SETTINGS')).toBe(true);
+    tree?.unmount();
   });
 
   it('renders storage breakdown items', async () => {
@@ -179,6 +191,7 @@ describe('SettingsScreen', () => {
     expect(findTextContent(json, 'Downloaded MP3s')).toBe(true);
     expect(findTextContent(json, 'Databases')).toBe(true);
     expect(findTextContent(json, 'App Storage')).toBe(true);
+    tree?.unmount();
   });
 
   it('renders mobile data breakdown items', async () => {
@@ -195,6 +208,7 @@ describe('SettingsScreen', () => {
     expect(findTextContent(json, 'Streaming')).toBe(true);
     expect(findTextContent(json, 'Downloads')).toBe(true);
     expect(findTextContent(json, 'DB Updates')).toBe(true);
+    tree?.unmount();
   });
 
   it('sections appear in correct order', async () => {
@@ -215,5 +229,6 @@ describe('SettingsScreen', () => {
     expect(dataIdx).toBeLessThan(downloadsIdx);
     expect(downloadsIdx).toBeLessThan(catalogIdx);
     expect(catalogIdx).toBeLessThan(generalIdx);
+    tree?.unmount();
   });
 });

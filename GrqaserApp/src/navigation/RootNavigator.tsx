@@ -17,6 +17,7 @@ import BookDetailScreen from '../screens/BookDetailScreen';
 import SearchScreen from '../screens/SearchScreen';
 import SettingsScreen from '../screens/SettingsScreen';
 import MiniPlayer from '../components/MiniPlayer';
+import DownloadProgressBanner from '../components/DownloadProgressBanner';
 
 // Types
 import {RootStackParamList, TabParamList} from './types';
@@ -70,6 +71,7 @@ const TabNavigator: React.FC = () => {
 
   return (
     <View style={styles.container}>
+      <DownloadProgressBanner />
       <Tab.Navigator
         screenOptions={({route}) => ({
           // Arrow here is RN's tabBarIcon API; TabBarIcon is stable (no new component type)
