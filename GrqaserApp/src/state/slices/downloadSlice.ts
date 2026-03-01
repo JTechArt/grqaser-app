@@ -208,7 +208,11 @@ const downloadSlice = createSlice({
   },
 });
 
-export const {setDownloadProgress, clearDownloadError, dismissBanner, showBanner} =
-  downloadSlice.actions;
+export const {
+  setDownloadProgress,
+  clearDownloadError,
+  dismissBanner,
+  showBanner,
+} = downloadSlice.actions;
 
 export default downloadSlice.reducer;

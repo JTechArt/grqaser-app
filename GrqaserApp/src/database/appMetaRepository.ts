@@ -334,13 +334,19 @@ export const appMetaRepository = {
 
   async getPartHistory(
     bookId: string,
-  ): Promise<Array<{partIndex: number; status: string; listenedAt: string | null}>> {
+  ): Promise<
+    Array<{partIndex: number; status: string; listenedAt: string | null}>
+  > {
     const {db} = assertConnected();
     const [results] = await db.executeSql(
       'SELECT part_index, status, listened_at FROM part_listening_history WHERE book_id = ? ORDER BY part_index ASC',
       [bookId],
     );
-    const items: Array<{partIndex: number; status: string; listenedAt: string | null}> = [];
+    const items: Array<{
+      partIndex: number;
+      status: string;
+      listenedAt: string | null;
+    }> = [];
     for (let i = 0; i < results.rows.length; i++) {
       const row = results.rows.item(i);
       items.push({
