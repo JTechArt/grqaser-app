@@ -9,6 +9,8 @@ import {
   setError,
   setPlaying,
   setCurrentChapter,
+  markPartCompleted,
+  markPartInProgress,
 } from '../state/slices/playerSlice';
 import {syncPlayProgress} from '../state/slices/booksSlice';
 import {savePlaybackPosition} from './preferencesStorage';
@@ -84,13 +86,32 @@ export async function PlaybackService(): Promise<void> {
     }
   });
 
-  // When active track changes (e.g. next part), update currentChapter in state
+  // When active track changes (e.g. next part), update chapter and mark completion
   TrackPlayer.addEventListener(Event.PlaybackActiveTrackChanged, async ev => {
+    const lastTrack = ev.lastTrack;
+    if (lastTrack?.id) {
+      const lastParsed = parseTrackId(lastTrack.id as string);
+      if (lastParsed) {
+        store.dispatch(
+          markPartCompleted({
+            bookId: lastParsed.bookId,
+            partIndex: lastParsed.chapterIndex,
+          }),
+        );
+      }
+    }
+
     const track = ev.track;
     if (track?.id) {
       const parsed = parseTrackId(track.id as string);
       if (parsed) {
         store.dispatch(setCurrentChapter(parsed.chapterIndex));
+        store.dispatch(
+          markPartInProgress({
+            bookId: parsed.bookId,
+            partIndex: parsed.chapterIndex,
+          }),
+        );
       }
     }
   });

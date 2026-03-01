@@ -20,6 +20,8 @@ import {
   clearError,
   setPlaying,
   setPlaybackRate,
+  loadPartHistory,
+  markPartInProgress,
 } from '../state/slices/playerSlice';
 import {addBookToLibrary} from '../state/slices/librarySlice';
 import {getSavedPosition, getPlaybackSpeed} from './preferencesStorage';
@@ -186,6 +188,10 @@ export async function playBook(book: Book): Promise<boolean> {
     store.dispatch(setCurrentChapter(safeChapterIndex));
     store.dispatch(setTotalParts(totalParts));
     store.dispatch(setDuration(book.duration ?? 0));
+    store.dispatch(loadPartHistory(book.id));
+    store.dispatch(
+      markPartInProgress({bookId: book.id, partIndex: safeChapterIndex}),
+    );
 
     if (safeChapterIndex > 0) {
       await TrackPlayer.skip(safeChapterIndex);
@@ -287,6 +293,33 @@ export async function skipToNextPart(): Promise<void> {
   } catch (e) {
     const message = e instanceof Error ? e.message : 'Skip failed';
     store.dispatch(setError(message));
+  }
+}
+
+/** Skip to a specific part (chapter) by index. Waits briefly for buffering. */
+export async function skipToPart(partIndex: number): Promise<void> {
+  try {
+    await ensurePlayerReady();
+    const queue = await TrackPlayer.getQueue();
+    if (partIndex < 0 || partIndex >= queue.length) {
+      return;
+    }
+    store.dispatch(clearError());
+    const wasPlaying =
+      (await TrackPlayer.getPlaybackState())?.state === State.Playing;
+    if (wasPlaying) {
+      await TrackPlayer.pause();
+    }
+    await TrackPlayer.skip(partIndex);
+    store.dispatch(setCurrentChapter(partIndex));
+    store.dispatch(setProgress(0));
+    await TrackPlayer.seekTo(0);
+    await TrackPlayer.play();
+    store.dispatch(setPlaying(true));
+  } catch (e) {
+    const message = e instanceof Error ? e.message : 'Skip failed';
+    store.dispatch(setError(message));
+    store.dispatch(setPlaying(false));
   }
 }
 
