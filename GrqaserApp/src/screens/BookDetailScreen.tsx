@@ -179,7 +179,19 @@ const BookDetailScreen: React.FC<Props> = ({route}) => {
               )}
               <Text style={styles.downloadBtnLabel}>
                 {isDownloading
-                  ? `${Math.round((downloadProgress?.fraction ?? 0) * 100)}%`
+                  ? (() => {
+                      const pct =
+                        downloadProgress?.totalFiles != null &&
+                        downloadProgress.totalFiles > 1 &&
+                        downloadProgress.overallFraction != null
+                          ? Math.round(
+                              downloadProgress.overallFraction * 100,
+                            )
+                          : Math.round(
+                              (downloadProgress?.fraction ?? 0) * 100,
+                            );
+                      return `${pct}%`;
+                    })()
                   : isDownloaded
                   ? 'Downloaded'
                   : 'Download'}

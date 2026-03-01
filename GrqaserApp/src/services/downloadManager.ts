@@ -12,6 +12,12 @@ export type DownloadProgressCallback = (progress: {
   bytesWritten: number;
   contentLength: number;
   fraction: number;
+  /** Overall progress across all files (0-1). Set when totalFiles > 1. */
+  overallFraction?: number;
+  /** Current file index (0-based). Set when totalFiles > 1. */
+  currentFileIndex?: number;
+  /** Total number of files. Set when totalFiles > 1. */
+  totalFiles?: number;
 }) => void;
 
 async function ensureDir(dir: string): Promise<void> {
@@ -82,6 +88,7 @@ export const downloadManager = {
     const results: DownloadedMp3[] = [];
     const now = new Date().toISOString();
 
+    const totalFiles = audioUrls.length;
     try {
       for (let i = 0; i < audioUrls.length; i++) {
         const url = audioUrls[i];
@@ -89,7 +96,22 @@ export const downloadManager = {
           audioUrls.length === 1 ? `${bookId}.mp3` : `${bookId}_ch${i}.mp3`;
         const filePath = `${dir}/${fileName}`;
 
-        const fileSize = await downloadFileWithRetry(url, filePath, onProgress);
+        const fileSize = await downloadFileWithRetry(
+          url,
+          filePath,
+          totalFiles > 1
+            ? progress => {
+                const overallFraction =
+                  (i + progress.fraction) / totalFiles;
+                onProgress?.({
+                  ...progress,
+                  overallFraction,
+                  currentFileIndex: i,
+                  totalFiles,
+                });
+              }
+            : onProgress,
+        );
 
         results.push({
           id: audioUrls.length === 1 ? bookId : `${bookId}_${i}`,
