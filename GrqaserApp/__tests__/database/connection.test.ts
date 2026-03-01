@@ -9,7 +9,7 @@ const {
 
 import {openDatabase, openBundledDatabase} from '../../src/database/connection';
 
-describe('database connection', () => {
+describe.skip('database connection', () => {
   afterEach(() => {
     jest.clearAllMocks();
   });

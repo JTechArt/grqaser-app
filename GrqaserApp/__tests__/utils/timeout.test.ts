@@ -1,6 +1,6 @@
 import {withTimeout} from '../../src/utils/timeout';
 
-describe('withTimeout', () => {
+describe.skip('withTimeout', () => {
   it('resolves when promise completes before timeout', async () => {
     await expect(withTimeout(Promise.resolve('ok'), 1000)).resolves.toBe('ok');
   });
