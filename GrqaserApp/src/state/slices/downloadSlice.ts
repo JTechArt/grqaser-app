@@ -7,6 +7,9 @@ interface DownloadProgress {
   bytesWritten: number;
   contentLength: number;
   fraction: number;
+  overallFraction?: number;
+  currentFileIndex?: number;
+  totalFiles?: number;
 }
 
 interface DownloadState {

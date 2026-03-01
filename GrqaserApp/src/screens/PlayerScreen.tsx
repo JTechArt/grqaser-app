@@ -20,6 +20,8 @@ import {
   togglePlayPause,
   seekTo,
   setPlaybackSpeed as setPlaybackSpeedService,
+  skipToNextPart,
+  skipToPreviousPart,
 } from '../services/playerService';
 import {
   getPlaybackSpeed,
@@ -38,10 +40,17 @@ const PlayerScreen: React.FC = () => {
   const insets = useSafeAreaInsets();
   const dispatch = useDispatch<AppDispatch>();
   const currentBook = useSelector((s: RootState) => s.player.currentBook);
+  const currentChapter = useSelector(
+    (s: RootState) => s.player.currentChapter,
+  );
   const isPlaying = useSelector((s: RootState) => s.player.isPlaying);
   const playerError = useSelector((s: RootState) => s.player.error);
   const playbackRate = useSelector((s: RootState) => s.player.playbackRate);
+  const totalParts = useSelector(
+    (s: RootState) => s.player.totalParts ?? 1,
+  );
   const {position, duration} = useProgress(1000);
+  const hasMultipleParts = totalParts > 1;
   const [seekBarWidth, setSeekBarWidth] = useState(
     width - theme.spacing.lg * 2,
   );
@@ -152,6 +161,41 @@ const PlayerScreen: React.FC = () => {
         </View>
       ) : null}
 
+      {hasMultipleParts && (
+        <View style={styles.partRow}>
+          <TouchableOpacity
+            onPress={skipToPreviousPart}
+            style={styles.partNavButton}
+            disabled={currentChapter <= 0}>
+            <Icon
+              name="skip-previous"
+              size={24}
+              color={
+                currentChapter <= 0
+                  ? theme.colors.outline
+                  : theme.colors.onSurface
+              }
+            />
+          </TouchableOpacity>
+          <Text style={styles.partText}>
+            Part {currentChapter + 1} of {totalParts}
+          </Text>
+          <TouchableOpacity
+            onPress={skipToNextPart}
+            style={styles.partNavButton}
+            disabled={currentChapter >= totalParts - 1}>
+            <Icon
+              name="skip-next"
+              size={24}
+              color={
+                currentChapter >= totalParts - 1
+                  ? theme.colors.outline
+                  : theme.colors.onSurface
+              }
+            />
+          </TouchableOpacity>
+        </View>
+      )}
       <View style={styles.progressSection}>
         <TouchableOpacity
           style={styles.seekBarContainer}
@@ -267,6 +311,22 @@ const styles = StyleSheet.create({
     ...theme.typography.body2,
     color: theme.colors.error,
     flex: 1,
+  } as TextStyle,
+  partRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 16,
+    marginBottom: 12,
+  },
+  partNavButton: {
+    padding: 8,
+  },
+  partText: {
+    ...theme.typography.body2,
+    color: theme.colors.onSurface,
+    minWidth: 80,
+    textAlign: 'center',
   } as TextStyle,
   progressSection: {width: '100%', marginBottom: 24},
   seekBarContainer: {

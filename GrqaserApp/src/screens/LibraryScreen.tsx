@@ -125,10 +125,13 @@ const LibraryScreen: React.FC = () => {
           .filter(id => booksById[id] == null)
           .map(id => {
             const prog = downloadingBooks[id];
-            const pct =
-              prog && prog.contentLength > 0
+            const pct = prog
+              ? prog.totalFiles != null && prog.totalFiles > 1
+                ? Math.round((prog.overallFraction ?? 0) * 100)
+                : prog.contentLength > 0
                 ? Math.round(prog.fraction * 100)
-                : 0;
+                : 0
+              : 0;
             return {id, placeholder: true as const, downloadPct: pct};
           });
         return [
@@ -201,12 +204,13 @@ const LibraryScreen: React.FC = () => {
     const isDownloaded = downloadedBookIds.includes(book.id);
     const downloadProgress = downloadingBooks[book.id];
     const isDownloading = downloadProgress != null;
-    const downloadPct =
-      isDownloading && downloadProgress.contentLength > 0
+    const downloadPct = isDownloading
+      ? downloadProgress.totalFiles != null && downloadProgress.totalFiles > 1
+        ? Math.round((downloadProgress.overallFraction ?? 0) * 100)
+        : downloadProgress.contentLength > 0
         ? Math.round(downloadProgress.fraction * 100)
-        : isDownloading
-        ? 0
-        : null;
+        : 0
+      : null;
     const progressPct =
       book.playProgress != null && book.duration != null && book.duration > 0
         ? Math.round((book.playProgress / book.duration) * 100)

@@ -8,6 +8,8 @@ interface PlayerState {
   queue: Track[];
   currentBook: Book | null;
   currentChapter: number;
+  /** Total parts/chapters (1 for single-file books). */
+  totalParts: number;
   progress: number;
   duration: number;
   playbackRate: number;
@@ -24,6 +26,7 @@ const initialState: PlayerState = {
   queue: [],
   currentBook: null,
   currentChapter: 0,
+  totalParts: 1,
   progress: 0,
   duration: 0,
   playbackRate: 1.0,
@@ -52,6 +55,9 @@ const playerSlice = createSlice({
     },
     setCurrentChapter: (state, action: PayloadAction<number>) => {
       state.currentChapter = action.payload;
+    },
+    setTotalParts: (state, action: PayloadAction<number>) => {
+      state.totalParts = Math.max(1, action.payload);
     },
     setProgress: (state, action: PayloadAction<number>) => {
       state.progress = action.payload;
@@ -89,6 +95,7 @@ const playerSlice = createSlice({
       state.queue = [];
       state.currentBook = null;
       state.currentChapter = 0;
+      state.totalParts = 1;
       state.progress = 0;
       state.duration = 0;
       state.error = null;
@@ -102,6 +109,7 @@ export const {
   setQueue,
   setCurrentBook,
   setCurrentChapter,
+  setTotalParts,
   setProgress,
   setDuration,
   setPlaybackRate,
