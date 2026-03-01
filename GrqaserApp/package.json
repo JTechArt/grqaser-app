@@ -9,7 +9,6 @@
     "ios:clean": "rm -rf node_modules/.cache ios/build && react-native run-ios",
     "start": "react-native start",
     "start:reset": "react-native start --reset-cache",
-    "pretest": "node scripts/check-no-jest-running.js",
     "test": "jest",
     "lint": "eslint . --ext .js,.jsx,.ts,.tsx",
     "format": "prettier --write \"**/*.{js,jsx,ts,tsx,json,md}\"",

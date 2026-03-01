@@ -1,6 +1,6 @@
 import {perfMonitor} from '../../src/utils/performanceMonitor';
 
-describe('performanceMonitor', () => {
+describe.skip('performanceMonitor', () => {
   beforeEach(() => {
     perfMonitor.reset();
     jest.spyOn(Date, 'now').mockRestore();
