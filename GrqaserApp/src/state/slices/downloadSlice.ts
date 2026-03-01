@@ -104,8 +104,7 @@ export const cancelDownload = createAsyncThunk(
       await downloadManager.deleteBookDownloads(bookId);
       return bookId;
     } catch (error) {
-      const msg =
-        error instanceof Error ? error.message : 'Cancel failed';
+      const msg = error instanceof Error ? error.message : 'Cancel failed';
       return rejectWithValue(msg);
     }
   },
