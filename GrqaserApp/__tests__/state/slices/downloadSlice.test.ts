@@ -13,6 +13,7 @@ describe('downloadSlice reducer', () => {
     totalStorageUsed: 0,
     loading: false,
     error: null,
+    bannerDismissed: false,
   };
 
   it('returns initial state', () => {

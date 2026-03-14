@@ -8,6 +8,8 @@ import {initAppMetaDb} from '../../database/appMetaRepository';
 import {APP_META_DB} from '../../database/connection';
 import {databaseManager} from '../../services/databaseManager';
 import {fetchBooks} from './booksSlice';
+import {withTimeout} from '../../utils/timeout';
+import {perfMonitor} from '../../utils/performanceMonitor';
 
 interface DatabaseState {
   managedDatabases: ManagedDatabase[];
@@ -35,16 +37,63 @@ export const initializeDatabases = createAsyncThunk(
   'database/initialize',
   async (_, {dispatch, rejectWithValue}) => {
     try {
-      await initAppMetaDb(APP_META_DB);
+      const measurePhase = async <T>(
+        phaseName: string,
+        startMark: string,
+        work: () => Promise<T>,
+      ): Promise<T> => {
+        perfMonitor.mark(startMark);
+        const endMark = `${startMark}-end`;
+        try {
+          return await work();
+        } finally {
+          perfMonitor.mark(endMark);
+          perfMonitor.measure(phaseName, startMark, endMark);
+        }
+      };
+
+      // Startup audit:
+      // - initAppMetaDb/openDatabase can block on file system
+      // - fetchManagedDatabases can trigger RNFS directory scans
+      // - initCatalogDb/openDatabase can block when DB files are slow to access
+      // Each step has a strict timeout to avoid long startup stalls.
+      await measurePhase('App Meta DB Init', 'db-init-app-meta-start', () =>
+        withTimeout(
+          initAppMetaDb(APP_META_DB),
+          5000,
+          'Database initialization timed out: app meta DB',
+        ),
+      );
 
       // Check if a user-managed DB is already active; prefer it over the bundled one
-      const managed = await dispatch(fetchManagedDatabases()).unwrap();
+      const managed = await measurePhase(
+        'Fetch Managed DBs',
+        'db-init-fetch-managed-start',
+        () =>
+          withTimeout(
+            dispatch(fetchManagedDatabases()).unwrap(),
+            5000,
+            'Database initialization timed out: managed DB lookup',
+          ),
+      );
       if (managed.active) {
-        await initCatalogDb(managed.active.filePath);
+        await measurePhase('Catalog DB Init', 'db-init-catalog-start', () =>
+          withTimeout(
+            initCatalogDb(managed.active.filePath),
+            5000,
+            'Database initialization timed out: active catalog DB',
+          ),
+        );
       } else {
         // Fall back to bundled catalog DB; non-fatal if missing
         try {
-          await initBundledCatalogDb();
+          await measurePhase('Catalog DB Init', 'db-init-catalog-start', () =>
+            withTimeout(
+              initBundledCatalogDb(),
+              3000,
+              'Database initialization timed out: bundled catalog DB',
+            ),
+          );
         } catch {
           // No bundled DB available -- user can load one from Settings
         }

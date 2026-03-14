@@ -10,8 +10,13 @@ const KEY_PLAYBACK_SPEED = '@grqaser/playback_speed';
 
 export type ThemeMode = 'light' | 'dark' | 'auto';
 
+/** Single-file books: position in seconds. Multi-part: chapter index + position in that chapter + totalChapters for display %. */
+export type PlaybackPosition =
+  | number
+  | {chapterIndex: number; position: number; totalChapters?: number};
+
 export interface PlaybackPositions {
-  [bookId: string]: number;
+  [bookId: string]: PlaybackPosition;
 }
 
 export async function getPlaybackPositions(): Promise<PlaybackPositions> {
@@ -40,13 +45,80 @@ export async function setPlaybackPositions(
   }
 }
 
+/** Get position as seconds for backward compatibility (single-file or legacy). */
+export function positionToSeconds(
+  pos: PlaybackPosition | undefined,
+  _totalDuration?: number,
+): number {
+  if (pos == null) {
+    return 0;
+  }
+  if (typeof pos === 'number') {
+    return Math.max(0, pos);
+  }
+  return Math.max(0, pos.position);
+}
+
 export async function savePlaybackPosition(
   bookId: string,
   positionSeconds: number,
+  chapterIndex?: number,
+  totalChapters?: number,
 ): Promise<void> {
   const positions = await getPlaybackPositions();
-  positions[bookId] = positionSeconds;
+  if (chapterIndex != null && chapterIndex >= 0) {
+    positions[bookId] = {
+      chapterIndex,
+      position: positionSeconds,
+      totalChapters: totalChapters ?? 1,
+    };
+  } else {
+    positions[bookId] = positionSeconds;
+  }
   await setPlaybackPositions(positions);
+}
+
+/** Get saved position for resume. Returns { chapterIndex, position } for multi-part, or position for single. */
+export async function getSavedPosition(
+  bookId: string,
+): Promise<{chapterIndex: number; position: number}> {
+  const positions = await getPlaybackPositions();
+  const raw = positions[bookId];
+  if (raw == null) {
+    return {chapterIndex: 0, position: 0};
+  }
+  if (typeof raw === 'number') {
+    return {chapterIndex: 0, position: raw};
+  }
+  return {
+    chapterIndex: Math.max(0, raw.chapterIndex),
+    position: Math.max(0, raw.position),
+  };
+}
+
+/** Convert PlaybackPositions to Record<bookId, positionSeconds> for display. Uses duration and totalChapters for multi-part. */
+export function playbackPositionsToSeconds(
+  positions: PlaybackPositions,
+  getBookDuration: (bookId: string) => number | undefined,
+): Record<string, number> {
+  const result: Record<string, number> = {};
+  for (const [bookId, raw] of Object.entries(positions)) {
+    if (raw == null) {
+      continue;
+    }
+    if (typeof raw === 'number') {
+      result[bookId] = raw;
+    } else {
+      const duration = getBookDuration(bookId) ?? 0;
+      const totalCh = raw.totalChapters ?? 1;
+      if (totalCh > 1 && duration > 0) {
+        result[bookId] = raw.chapterIndex * (duration / totalCh) + raw.position;
+      } else {
+        result[bookId] = raw.position;
+      }
+    }
+  }
+  return result;
 }
 
 export async function getFavorites(): Promise<string[]> {

@@ -8,10 +8,20 @@ import {storageService} from './storageService';
 
 const MP3_DIR = `${RNFS.DocumentDirectoryPath}/mp3downloads`;
 
+const activeJobs = new Map<string, number>();
+
 export type DownloadProgressCallback = (progress: {
   bytesWritten: number;
   contentLength: number;
   fraction: number;
+  /** Overall progress across all files (0-1). Set when totalFiles > 1. */
+  overallFraction?: number;
+  /** Current file index (0-based). Set when totalFiles > 1. */
+  currentFileIndex?: number;
+  /** Total number of files. Set when totalFiles > 1. */
+  totalFiles?: number;
+  /** Number of files fully downloaded so far. */
+  completedFiles?: number;
 }) => void;
 
 async function ensureDir(dir: string): Promise<void> {
@@ -30,14 +40,23 @@ const MAX_RETRIES = 2;
 async function downloadFileWithRetry(
   fromUrl: string,
   toFile: string,
+  bookId: string,
   onProgress?: DownloadProgressCallback,
   attempt = 0,
 ): Promise<number> {
   try {
-    const result = await RNFS.downloadFile({
+    const dl = RNFS.downloadFile({
       fromUrl,
       toFile,
+      begin: res => {
+        console.log(
+          `[DL] begin ${bookId}: status=${res.statusCode} length=${res.contentLength}`,
+        );
+      },
       progress: res => {
+        console.log(
+          `[DL] progress ${bookId}: ${res.bytesWritten}/${res.contentLength}`,
+        );
         onProgress?.({
           bytesWritten: res.bytesWritten,
           contentLength: res.contentLength,
@@ -45,10 +64,23 @@ async function downloadFileWithRetry(
             res.contentLength > 0 ? res.bytesWritten / res.contentLength : 0,
         });
       },
-      progressInterval: 500,
-      background: true,
+      progressInterval: 300,
+      background: false,
       discretionary: false,
-    }).promise;
+    });
+
+    console.log(
+      `[DL] started ${bookId}: jobId=${dl.jobId} url=${fromUrl.substring(
+        0,
+        80,
+      )}`,
+    );
+    activeJobs.set(bookId, dl.jobId);
+    const result = await dl.promise;
+    activeJobs.delete(bookId);
+    console.log(
+      `[DL] done ${bookId}: status=${result.statusCode} bytes=${result.bytesWritten}`,
+    );
 
     if (result.statusCode < 200 || result.statusCode >= 300) {
       throw new Error(`HTTP ${result.statusCode} downloading ${fromUrl}`);
@@ -57,8 +89,15 @@ async function downloadFileWithRetry(
     const stat = await RNFS.stat(toFile);
     return Number(stat.size);
   } catch (err) {
+    activeJobs.delete(bookId);
     if (attempt < MAX_RETRIES) {
-      return downloadFileWithRetry(fromUrl, toFile, onProgress, attempt + 1);
+      return downloadFileWithRetry(
+        fromUrl,
+        toFile,
+        bookId,
+        onProgress,
+        attempt + 1,
+      );
     }
     throw err;
   }
@@ -82,6 +121,7 @@ export const downloadManager = {
     const results: DownloadedMp3[] = [];
     const now = new Date().toISOString();
 
+    const totalFiles = audioUrls.length;
     try {
       for (let i = 0; i < audioUrls.length; i++) {
         const url = audioUrls[i];
@@ -89,7 +129,27 @@ export const downloadManager = {
           audioUrls.length === 1 ? `${bookId}.mp3` : `${bookId}_ch${i}.mp3`;
         const filePath = `${dir}/${fileName}`;
 
-        const fileSize = await downloadFileWithRetry(url, filePath, onProgress);
+        const completedFiles = i;
+        const fileSize = await downloadFileWithRetry(
+          url,
+          filePath,
+          bookId,
+          totalFiles > 1
+            ? progress => {
+                const fileFraction =
+                  progress.contentLength > 0 ? progress.fraction : 0;
+                const overallFraction =
+                  (completedFiles + fileFraction) / totalFiles;
+                onProgress?.({
+                  ...progress,
+                  overallFraction,
+                  currentFileIndex: i,
+                  totalFiles,
+                  completedFiles,
+                });
+              }
+            : onProgress,
+        );
 
         results.push({
           id: audioUrls.length === 1 ? bookId : `${bookId}_${i}`,
@@ -112,6 +172,14 @@ export const downloadManager = {
     }
 
     return results;
+  },
+
+  cancelBookDownload(bookId: string): void {
+    const jobId = activeJobs.get(bookId);
+    if (jobId != null) {
+      RNFS.stopDownload(jobId);
+      activeJobs.delete(bookId);
+    }
   },
 
   async deleteBookDownloads(bookId: string): Promise<void> {

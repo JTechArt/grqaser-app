@@ -32,6 +32,15 @@ jest.mock('../../../src/database/appMetaRepository', () => ({
   closeAppMetaDb: jest.fn().mockResolvedValue(undefined),
 }));
 
+jest.mock('../../../src/utils/performanceMonitor', () => ({
+  perfMonitor: {
+    mark: jest.fn(),
+    measure: jest.fn(),
+    getMeasures: jest.fn(() => ({})),
+    reset: jest.fn(),
+  },
+}));
+
 import {configureStore} from '@reduxjs/toolkit';
 import reducer, {
   setActiveDatabase,
@@ -49,8 +58,10 @@ import reducer, {
 } from '../../../src/state/slices/databaseSlice';
 import {ManagedDatabase} from '../../../src/types/book';
 import {appMetaRepository} from '../../../src/database/appMetaRepository';
+import {perfMonitor} from '../../../src/utils/performanceMonitor';
 
 const mockRepo = appMetaRepository as jest.Mocked<typeof appMetaRepository>;
+const mockPerf = perfMonitor as jest.Mocked<typeof perfMonitor>;
 
 const sampleDb: ManagedDatabase = {
   id: 'db-1',
@@ -164,6 +175,12 @@ describe('databaseSlice', () => {
       expect(state.loading).toBe(false);
       expect(state.initialized).toBe(true);
       expect(state.error).toBeNull();
+      expect(mockPerf.mark).toHaveBeenCalledWith('db-init-app-meta-start');
+      expect(mockPerf.measure).toHaveBeenCalledWith(
+        'App Meta DB Init',
+        'db-init-app-meta-start',
+        'db-init-app-meta-start-end',
+      );
     });
 
     it('sets error on failure', async () => {
@@ -179,6 +196,29 @@ describe('databaseSlice', () => {
       expect(state.loading).toBe(false);
       expect(state.initialized).toBe(false);
       expect(state.error).toBe('DB open failed');
+    });
+
+    it('sets timeout error when app meta DB init hangs', async () => {
+      jest.useFakeTimers();
+      try {
+        const appMetaRepo = require('../../../src/database/appMetaRepository');
+        appMetaRepo.initAppMetaDb.mockImplementationOnce(
+          () => new Promise(() => {}),
+        );
+
+        const store = createTestStore();
+        const pending = store.dispatch(initializeDatabases());
+
+        jest.advanceTimersByTime(5000);
+        await pending;
+
+        const state = store.getState().database;
+        expect(state.loading).toBe(false);
+        expect(state.initialized).toBe(false);
+        expect(state.error).toContain('timed out');
+      } finally {
+        jest.useRealTimers();
+      }
     });
   });
 

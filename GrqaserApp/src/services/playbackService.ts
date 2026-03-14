@@ -1,13 +1,21 @@
 /**
  * Playback service for react-native-track-player.
  * Handles remote events (lock screen, notification, BT) and runs in background.
+ * Saves playback position with chapter/part for multi-part books (resume from exact spot).
  */
 import TrackPlayer, {Event, State} from 'react-native-track-player';
 import {store} from '../state';
-import {setError, setPlaying} from '../state/slices/playerSlice';
+import {
+  setError,
+  setPlaying,
+  setCurrentChapter,
+  markPartCompleted,
+  markPartInProgress,
+} from '../state/slices/playerSlice';
 import {syncPlayProgress} from '../state/slices/booksSlice';
 import {savePlaybackPosition} from './preferencesStorage';
 import {storageService} from './storageService';
+import {parseTrackId} from './playerService';
 
 const POSITION_SAVE_INTERVAL_MS = 10000;
 const ESTIMATED_BITRATE_BYTES_PER_SEC = 16000; // ~128kbps MP3
@@ -16,6 +24,24 @@ let lastStreamingPosition = 0;
 
 export function resetStreamingPosition(): void {
   lastStreamingPosition = 0;
+}
+
+async function savePositionFromActiveTrack(
+  position: number,
+  totalChapters?: number,
+): Promise<void> {
+  const track = await TrackPlayer.getActiveTrack();
+  const trackId = track?.id as string | undefined;
+  if (!trackId) {
+    return;
+  }
+  const parsed = parseTrackId(trackId);
+  const bookId = parsed?.bookId ?? trackId;
+  const chapterIndex = parsed?.chapterIndex ?? 0;
+  const total =
+    totalChapters ?? (parsed ? (await TrackPlayer.getQueue()).length : 1);
+  await savePlaybackPosition(bookId, position, chapterIndex, total);
+  store.dispatch(syncPlayProgress());
 }
 
 export async function PlaybackService(): Promise<void> {
@@ -33,7 +59,14 @@ export async function PlaybackService(): Promise<void> {
     ev => ev.position != null && TrackPlayer.seekTo(ev.position),
   );
   TrackPlayer.addEventListener(Event.PlaybackError, ev => {
-    store.dispatch(setError(ev?.message ?? 'Playback error'));
+    const msg = ev?.message ?? 'Playback error';
+    store.dispatch(
+      setError(
+        msg.includes('large') || msg.includes('buffer')
+          ? `${msg} Try downloading for offline play.`
+          : msg,
+      ),
+    );
     store.dispatch(setPlaying(false));
   });
 
@@ -53,6 +86,36 @@ export async function PlaybackService(): Promise<void> {
     }
   });
 
+  // When active track changes (e.g. next part), update chapter and mark completion
+  TrackPlayer.addEventListener(Event.PlaybackActiveTrackChanged, async ev => {
+    const lastTrack = ev.lastTrack;
+    if (lastTrack?.id) {
+      const lastParsed = parseTrackId(lastTrack.id as string);
+      if (lastParsed) {
+        store.dispatch(
+          markPartCompleted({
+            bookId: lastParsed.bookId,
+            partIndex: lastParsed.chapterIndex,
+          }),
+        );
+      }
+    }
+
+    const track = ev.track;
+    if (track?.id) {
+      const parsed = parseTrackId(track.id as string);
+      if (parsed) {
+        store.dispatch(setCurrentChapter(parsed.chapterIndex));
+        store.dispatch(
+          markPartInProgress({
+            bookId: parsed.bookId,
+            partIndex: parsed.chapterIndex,
+          }),
+        );
+      }
+    }
+  });
+
   // Persist playback position per book (throttled) and track streaming data
   TrackPlayer.addEventListener(Event.PlaybackProgressUpdated, async ev => {
     const now = Date.now();
@@ -60,12 +123,11 @@ export async function PlaybackService(): Promise<void> {
       return;
     }
     const track = await TrackPlayer.getActiveTrack();
-    const bookId = track?.id as string | undefined;
-    if (bookId && typeof ev.position === 'number') {
+    const trackId = track?.id as string | undefined;
+    if (trackId && typeof ev.position === 'number') {
       lastPositionSaveAt = now;
-      savePlaybackPosition(bookId, ev.position)
-        .then(() => store.dispatch(syncPlayProgress()))
-        .catch(() => {});
+      const queue = await TrackPlayer.getQueue();
+      savePositionFromActiveTrack(ev.position, queue.length).catch(() => {});
 
       const url = track?.url as string | undefined;
       const isStreaming = url != null && !url.startsWith('file://');
@@ -90,15 +152,9 @@ export async function PlaybackService(): Promise<void> {
       state === State.Stopped ||
       state === State.Ready
     ) {
-      const track = await TrackPlayer.getActiveTrack();
-      const bookId = track?.id as string | undefined;
-      if (bookId) {
-        const position = await TrackPlayer.getPosition();
-        if (typeof position === 'number' && position >= 0) {
-          savePlaybackPosition(bookId, position)
-            .then(() => store.dispatch(syncPlayProgress()))
-            .catch(() => {});
-        }
+      const position = await TrackPlayer.getPosition();
+      if (typeof position === 'number' && position >= 0) {
+        savePositionFromActiveTrack(position).catch(() => {});
       }
     }
   });

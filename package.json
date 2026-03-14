@@ -8,7 +8,7 @@
     "ios": "cd GrqaserApp && react-native run-ios",
     "start": "cd GrqaserApp && react-native start",
     "dev": "cd GrqaserApp && react-native start",
-    "test": "jest --selectProjects grqaser-app",
+    "test": "jest --selectProjects grqaser-app --forceExit --runInBand",
     "admin:start": "cd books-admin-app && npm start",
     "admin:test": "cd books-admin-app && npm test",
     "admin:dev": "cd books-admin-app && npm run dev",

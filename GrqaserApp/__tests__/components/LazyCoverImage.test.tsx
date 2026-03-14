@@ -22,11 +22,16 @@ jest.mock('../../src/theme', () => ({
 import LazyCoverImage from '../../src/components/LazyCoverImage';
 
 describe('LazyCoverImage', () => {
+  afterEach(() => {
+    jest.clearAllMocks();
+  });
+
   it('renders placeholder when uri is empty', () => {
     const tree = renderer.create(
       <LazyCoverImage uri="" placeholderText="AB" />,
     );
     expect(tree.toJSON()).toBeDefined();
+    tree.unmount();
   });
 
   it('renders placeholder when uri is undefined', () => {
@@ -34,6 +39,7 @@ describe('LazyCoverImage', () => {
       <LazyCoverImage uri={undefined} placeholderText="XY" />,
     );
     expect(tree.toJSON()).toBeDefined();
+    tree.unmount();
   });
 
   it('renders with uri (loads image)', () => {
@@ -44,6 +50,7 @@ describe('LazyCoverImage', () => {
       />,
     );
     expect(tree.toJSON()).toBeDefined();
+    tree.unmount();
   });
 
   it('renders in compact mode', () => {
@@ -55,5 +62,6 @@ describe('LazyCoverImage', () => {
       />,
     );
     expect(tree.toJSON()).toBeDefined();
+    tree.unmount();
   });
 });

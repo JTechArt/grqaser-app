@@ -3,7 +3,7 @@ import {AppState, StatusBar, LogBox, View, StyleSheet} from 'react-native';
 import {NavigationContainer} from '@react-navigation/native';
 import {Provider, useDispatch, useSelector} from 'react-redux';
 import {store} from './src/state';
-import type {RootState} from './src/state';
+import type {AppDispatch, RootState} from './src/state';
 import {GestureHandlerRootView} from 'react-native-gesture-handler';
 import {SafeAreaProvider} from 'react-native-safe-area-context';
 import {PaperProvider} from 'react-native-paper';
@@ -12,9 +12,11 @@ import {getAppTheme} from './src/theme';
 import RootNavigator from './src/navigation/RootNavigator';
 import TrackPlayerProvider from './src/components/TrackPlayerProvider';
 import ConnectionBanner from './src/components/ConnectionBanner';
+import PerformanceDashboard from './src/components/PerformanceDashboard';
 import {startNetworkMonitor} from './src/services/networkMonitor';
 import {setFavorites} from './src/state/slices/booksSlice';
 import {updatePreferences} from './src/state/slices/userSlice';
+import {initializeDatabases} from './src/state/slices/databaseSlice';
 import {
   getFavorites,
   setFavoritesStorage,
@@ -22,6 +24,7 @@ import {
   setThemePreference,
 } from './src/services/preferencesStorage';
 import {clearCoverImageMemoryCache} from './src/services/imageCacheService';
+import {perfMonitor} from './src/utils/performanceMonitor';
 
 LogBox.ignoreLogs(['Required dispatch_sync to load constants']);
 
@@ -64,17 +67,42 @@ const styles = StyleSheet.create({
   content: {flex: 1},
 });
 
-const AppContent: React.FC = () => {
-  const dispatch = useDispatch();
+export const AppContent: React.FC = () => {
+  const dispatch = useDispatch<AppDispatch>();
   const themeMode = useSelector((s: RootState) => s.user.preferences.theme);
   const favorites = useSelector((s: RootState) => s.books.favorites);
   const prevFavoritesRef = useRef<string[]>([]);
   const prevThemeRef = useRef(themeMode);
 
   useEffect(() => {
-    const stop = startNetworkMonitor();
-    return stop;
+    perfMonitor.mark('app-mount');
+    let stopMonitor: (() => void) | null = null;
+    const timerId = setTimeout(() => {
+      stopMonitor = startNetworkMonitor();
+    }, 2000);
+
+    return () => {
+      clearTimeout(timerId);
+      if (stopMonitor) {
+        stopMonitor();
+      }
+    };
   }, []);
+
+  useEffect(() => {
+    // Fire-and-forget DB initialization so first UI render is never blocked.
+    dispatch(initializeDatabases())
+      .unwrap()
+      .then(() => {
+        perfMonitor.mark('database-init-complete');
+        perfMonitor.measure(
+          'Database Initialization',
+          'app-mount',
+          'database-init-complete',
+        );
+      })
+      .catch(() => {});
+  }, [dispatch]);
 
   useEffect(() => {
     const sub = AppState.addEventListener('change', nextState => {
@@ -118,13 +146,22 @@ const AppContent: React.FC = () => {
       settings={{
         icon: renderPaperIcon,
       }}>
-      <NavigationContainer>
+      <NavigationContainer
+        onReady={() => {
+          perfMonitor.mark('navigation-ready');
+          perfMonitor.measure(
+            'Time to Navigation Ready',
+            'app-mount',
+            'navigation-ready',
+          );
+        }}>
         <StatusBar
           barStyle={isDark ? 'light-content' : 'dark-content'}
           backgroundColor={appTheme.colors.primary}
         />
         <View style={styles.appWrap}>
           <ConnectionBanner />
+          <PerformanceDashboard />
           <View style={styles.content}>
             <TrackPlayerProvider>
               <RootNavigator />

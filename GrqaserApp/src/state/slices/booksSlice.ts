@@ -10,7 +10,10 @@ import {
   getErrorMessage,
   type CatalogStats,
 } from '../../services/booksApi';
-import {getPlaybackPositions} from '../../services/preferencesStorage';
+import {
+  getPlaybackPositions,
+  playbackPositionsToSeconds,
+} from '../../services/preferencesStorage';
 
 interface BooksState {
   books: Book[];
@@ -80,9 +83,12 @@ export const fetchBooks = createAsyncThunk(
     try {
       const books = await booksApi.getBooks();
       const positions = await getPlaybackPositions();
+      const getDuration = (id: string) =>
+        books.find(b => b.id === id)?.duration;
+      const posSeconds = playbackPositionsToSeconds(positions, getDuration);
       return books.map(b => ({
         ...b,
-        playProgress: positions[b.id] as number | undefined,
+        playProgress: posSeconds[b.id],
       }));
     } catch (error) {
       return rejectWithValue(getErrorMessage(error));
@@ -100,9 +106,12 @@ export const fetchBooksPage = createAsyncThunk(
     try {
       const books = await booksApi.getBooksPage(limit, offset);
       const positions = await getPlaybackPositions();
+      const getDuration = (id: string) =>
+        books.find(b => b.id === id)?.duration;
+      const posSeconds = playbackPositionsToSeconds(positions, getDuration);
       return books.map(b => ({
         ...b,
-        playProgress: positions[b.id] as number | undefined,
+        playProgress: posSeconds[b.id],
       }));
     } catch (error) {
       return rejectWithValue(getErrorMessage(error));
@@ -120,9 +129,12 @@ export const fetchBooksByIds = createAsyncThunk(
       }
       const books = await booksApi.getBooksByIds(ids);
       const positions = await getPlaybackPositions();
+      const getDuration = (id: string) =>
+        books.find(b => b.id === id)?.duration;
+      const posSeconds = playbackPositionsToSeconds(positions, getDuration);
       return books.map(b => ({
         ...b,
-        playProgress: positions[b.id] as number | undefined,
+        playProgress: posSeconds[b.id],
       }));
     } catch (error) {
       return rejectWithValue(getErrorMessage(error));
@@ -437,10 +449,18 @@ export const {
 
 export const syncPlayProgress = createAsyncThunk(
   'books/syncPlayProgress',
-  async (_, {dispatch, rejectWithValue}) => {
+  async (_, {dispatch, getState, rejectWithValue}) => {
     try {
       const positions = await getPlaybackPositions();
-      dispatch(mergePlayProgress(positions));
+      const state = getState() as {books: BooksState};
+      const getDuration = (id: string) =>
+        state.books.booksById[id]?.duration ??
+        state.books.books.find(b => b.id === id)?.duration;
+      const positionsForDisplay = playbackPositionsToSeconds(
+        positions,
+        getDuration,
+      );
+      dispatch(mergePlayProgress(positionsForDisplay));
     } catch (error) {
       return rejectWithValue(getErrorMessage(error));
     }

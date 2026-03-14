@@ -77,6 +77,12 @@
   },
   "jest": {
     "preset": "react-native",
+    "forceExit": true,
+    "testTimeout": 10000,
+    "moduleNameMapper": {
+      "@react-native-vector-icons/material-design-icons": "<rootDir>/__mocks__/MockIcon.js",
+      "@expo/vector-icons/MaterialCommunityIcons": "<rootDir>/__mocks__/MockIcon.js"
+    },
     "moduleFileExtensions": [
       "ts",
       "tsx",

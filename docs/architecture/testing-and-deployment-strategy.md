@@ -47,6 +47,15 @@ Testing and deployment follow the same phase order as development. **After Epic 
 - **Commands:** From repo root run `cd GrqaserApp && npm ci && npm run lint && npm test`, or from `GrqaserApp/` run `npm run lint` and `npm test`. Use Node LTS matching `GrqaserApp/package.json` engines (e.g. Node 22).
 - **CI job:** A pipeline (e.g. GitHub Actions) can run GrqaserApp lint and test on changes under `GrqaserApp/**`. Native iOS/Android builds in CI are optional (require macOS runner for iOS, Android SDK for Android); see [GrqaserApp build and signing](./grqaserapp-build-and-signing.md).
 
+### GrqaserApp: Troubleshooting test hangs and duplicate processes
+
+**Root cause:** Tests can hang due to open handles (e.g. Jest fake timers not restored, async work left running). If you run `npm test` again while a run is stuck, a second Jest process starts, and repeated runs accumulate (observed 10+ processes).
+
+**Mitigations:**
+1. **Pretest guard:** `npm test` runs `pretest` first, which checks for an existing Jest process. If found, it exits with a message instead of starting another run.
+2. **Kill stuck processes:** `pkill -f "node.*jest"` then run tests again.
+3. **Timer cleanup:** Tests using `jest.useFakeTimers()` must call `jest.useRealTimers()` in `afterEach` or a `finally` block so the next test file gets real timers.
+
 ### Books-admin-app: single command and pipeline
 
 - **Single command:** From repo root run `npm run admin:test`, or from `books-admin-app/` run `npm test`. This runs the full Jest suite (crawler unit tests, API route tests, DB versioning tests, crawler smoke/integration).
