@@ -42,6 +42,8 @@ interface BooksState {
   searchQuery: string;
 }
 
+export const ADVANCED_SEARCH_LIMIT = 50;
+
 const initialState: BooksState = {
   books: [],
   booksById: {},
@@ -195,7 +197,7 @@ export const advancedSearchBooks = createAsyncThunk(
       const result = await booksApi.advancedSearch({
         ...mergedFilters,
         page: params.page ?? 1,
-        limit: params.limit ?? 100,
+        limit: params.limit ?? ADVANCED_SEARCH_LIMIT,
       });
       return {result, filters: mergedFilters};
     } catch (error) {

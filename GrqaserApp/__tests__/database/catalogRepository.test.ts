@@ -23,6 +23,14 @@ function makeRows(items: Record<string, unknown>[]) {
   ];
 }
 
+function makeSchemaRows(hasRelationTables = true) {
+  return makeRows(
+    hasRelationTables
+      ? [{name: 'authors'}, {name: 'book_categories'}]
+      : [],
+  );
+}
+
 const sampleRow = {
   id: 1,
   title: 'Test Book',
@@ -41,8 +49,11 @@ const sampleRow = {
   published_at: null,
 };
 
-beforeEach(() => {
-  jest.clearAllMocks();
+beforeEach(async () => {
+  mockExecuteSql.mockReset();
+  mockClose.mockClear();
+  mockOpenDatabase.mockClear();
+  await closeCatalogDb();
 });
 
 describe('catalogRepository', () => {
@@ -138,18 +149,22 @@ describe('catalogRepository', () => {
   describe('advanced search helpers', () => {
     it('returns author filter options with book counts', async () => {
       await initCatalogDb('test.db');
-      mockExecuteSql.mockResolvedValueOnce(
+      mockExecuteSql
+        .mockResolvedValueOnce(makeSchemaRows())
+        .mockResolvedValueOnce(
         makeRows([{id: 1, name: 'Author A', book_count: 4}]),
-      );
+        );
       const authors = await catalogRepository.getAuthors();
       expect(authors).toEqual([{id: 1, name: 'Author A', bookCount: 4}]);
     });
 
     it('returns category filter options with book counts', async () => {
       await initCatalogDb('test.db');
-      mockExecuteSql.mockResolvedValueOnce(
+      mockExecuteSql
+        .mockResolvedValueOnce(makeSchemaRows())
+        .mockResolvedValueOnce(
         makeRows([{id: 2, name: 'Fiction', book_count: 9}]),
-      );
+        );
       const categories = await catalogRepository.getCategories();
       expect(categories).toEqual([{id: 2, name: 'Fiction', bookCount: 9}]);
     });
@@ -157,6 +172,7 @@ describe('catalogRepository', () => {
     it('applies combined filters and returns paged result', async () => {
       await initCatalogDb('test.db');
       mockExecuteSql
+        .mockResolvedValueOnce(makeSchemaRows())
         .mockResolvedValueOnce(makeRows([{total: 1}]))
         .mockResolvedValueOnce(
           makeRows([
@@ -180,12 +196,12 @@ describe('catalogRepository', () => {
       });
 
       expect(mockExecuteSql).toHaveBeenNthCalledWith(
-        1,
+        2,
         expect.stringContaining('COUNT(*) as total'),
         [1, 2, '%test%', '%test%', '%test%'],
       );
       expect(mockExecuteSql).toHaveBeenNthCalledWith(
-        2,
+        3,
         expect.stringContaining('LIMIT ? OFFSET ?'),
         [1, 2, '%test%', '%test%', '%test%', 10, 10],
       );
@@ -199,6 +215,7 @@ describe('catalogRepository', () => {
     it('ignores empty filters and returns all rows page', async () => {
       await initCatalogDb('test.db');
       mockExecuteSql
+        .mockResolvedValueOnce(makeSchemaRows())
         .mockResolvedValueOnce(makeRows([{total: 2}]))
         .mockResolvedValueOnce(makeRows([sampleRow]));
 
@@ -210,10 +227,139 @@ describe('catalogRepository', () => {
       });
 
       expect(mockExecuteSql).toHaveBeenNthCalledWith(
-        1,
+        2,
         expect.not.stringContaining('WHERE'),
         [],
       );
+    });
+
+    it('falls back to grouped books table authors when relation tables are missing', async () => {
+      await initCatalogDb('test.db');
+      mockExecuteSql
+        .mockResolvedValueOnce(makeSchemaRows(false))
+        .mockResolvedValueOnce(
+          makeRows([
+            {...sampleRow, author: 'Legacy Author'},
+            {...sampleRow, id: 2, author: 'Legacy Author'},
+            {...sampleRow, id: 3, author: 'Other Author'},
+          ]),
+        );
+
+      const authors = await catalogRepository.getAuthors();
+
+      expect(mockExecuteSql).toHaveBeenNthCalledWith(
+        2,
+        'SELECT * FROM books ORDER BY title ASC',
+      );
+      expect(authors).toEqual([
+        {id: 1, name: 'Legacy Author', bookCount: 2},
+        {id: 2, name: 'Other Author', bookCount: 1},
+      ]);
+    });
+
+    it('falls back to grouped books table categories when relation tables are missing', async () => {
+      await initCatalogDb('test.db');
+      mockExecuteSql
+        .mockResolvedValueOnce(makeSchemaRows(false))
+        .mockResolvedValueOnce(
+          makeRows([
+            {...sampleRow, category: 'Legacy Category'},
+            {...sampleRow, id: 2, category: 'Legacy Category'},
+            {...sampleRow, id: 3, category: 'Other Category'},
+          ]),
+        );
+
+      const categories = await catalogRepository.getCategories();
+
+      expect(mockExecuteSql).toHaveBeenNthCalledWith(
+        2,
+        'SELECT * FROM books ORDER BY title ASC',
+      );
+      expect(categories).toEqual([
+        {id: 1, name: 'Legacy Category', bookCount: 2},
+        {id: 2, name: 'Other Category', bookCount: 1},
+      ]);
+    });
+
+    it('falls back to books.author and books.category filters when relation tables are missing', async () => {
+      await initCatalogDb('test.db');
+      mockExecuteSql
+        .mockResolvedValueOnce(makeSchemaRows(false))
+        .mockResolvedValueOnce(
+          makeRows([
+            {
+              ...sampleRow,
+              author: 'Legacy Author',
+              category: 'Legacy Category',
+              resolved_author: 'Legacy Author',
+              resolved_category: 'Legacy Category',
+            },
+            {
+              ...sampleRow,
+              id: 2,
+              title: 'Ignored Book',
+              author: 'Other Author',
+              category: 'Other Category',
+            },
+          ]),
+        );
+
+      await catalogRepository.getAuthors();
+      await catalogRepository.getCategories();
+
+      const result = await catalogRepository.advancedSearch({
+        authorIds: [1],
+        categoryIds: [1],
+        durationRange: '60-120',
+        text: 'legacy',
+        page: 1,
+        limit: 5,
+      });
+
+      expect(mockExecuteSql).toHaveBeenCalledTimes(2);
+      expect(mockExecuteSql).toHaveBeenNthCalledWith(
+        2,
+        'SELECT * FROM books ORDER BY title ASC',
+      );
+      expect(result.total).toBe(1);
+      expect(result.books[0].author).toBe('Legacy Author');
+      expect(result.books[0].category).toBe('Legacy Category');
+    });
+
+    it('caches author options after the first load', async () => {
+      await initCatalogDb('test.db');
+      mockExecuteSql
+        .mockResolvedValueOnce(makeSchemaRows(false))
+        .mockResolvedValueOnce(
+          makeRows([
+            {...sampleRow, author: 'Cached Author'},
+            {...sampleRow, id: 2, author: 'Cached Author'},
+          ]),
+        );
+
+      const first = await catalogRepository.getAuthors();
+      const second = await catalogRepository.getAuthors();
+
+      expect(first).toEqual(second);
+      expect(mockExecuteSql).toHaveBeenCalledTimes(2);
+    });
+
+    it('caches category options after the first load', async () => {
+      await initCatalogDb('test.db');
+      mockExecuteSql
+        .mockResolvedValueOnce(makeSchemaRows(false))
+        .mockResolvedValueOnce(
+          makeRows([
+            {...sampleRow, category: 'Cached Category'},
+            {...sampleRow, id: 2, category: 'Cached Category'},
+          ]),
+        );
+
+      const first = await catalogRepository.getCategories();
+      const second = await catalogRepository.getCategories();
+
+      expect(first).toEqual(second);
+      expect(mockExecuteSql).toHaveBeenCalledTimes(2);
     });
   });
 

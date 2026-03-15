@@ -15,7 +15,7 @@ jest.mock('../../src/components/BookCard', () => 'BookCard');
 
 import React from 'react';
 import renderer, {act} from 'react-test-renderer';
-import {Chip, Button, Searchbar} from 'react-native-paper';
+import {Button, Searchbar, List, Checkbox} from 'react-native-paper';
 import {PaperProvider} from 'react-native-paper';
 import AdvancedSearchScreen from '../../src/screens/AdvancedSearchScreen';
 import {theme} from '../../src/theme';
@@ -86,6 +86,26 @@ describe('AdvancedSearchScreen', () => {
   });
 
   it('dispatches filter option loading on mount', async () => {
+    mockUseSelector.mockImplementation(selector =>
+      selector({
+        books: {
+          advancedFilters: {
+            authorIds: [],
+            categoryIds: [],
+            durationRange: null,
+            text: '',
+          },
+          advancedResults: [],
+          advancedTotalCount: 0,
+          advancedLoading: false,
+          advancedError: null,
+          authorOptions: [],
+          categoryOptions: [],
+          filterOptionsLoading: false,
+          filterOptionsError: null,
+        },
+      }),
+    );
     await act(async () => {
       renderer.create(
         <PaperProvider theme={theme}>
@@ -107,13 +127,20 @@ describe('AdvancedSearchScreen', () => {
     });
     mockDispatch.mockClear();
 
-    const authorChip = tree!.root
-      .findAllByType(Chip)
-      .find(node => String(node.props.children).includes('Author A'));
-    expect(authorChip).toBeDefined();
+    const accordions = tree!.root.findAllByType(List.Accordion);
+    expect(accordions).toHaveLength(2);
 
     await act(async () => {
-      authorChip!.props.onPress();
+      accordions[0].props.onPress();
+    });
+
+    const authorOption = tree!.root
+      .findAllByType(Checkbox.Item)
+      .find(node => node.props.label === 'Author A (2)');
+    expect(authorOption).toBeDefined();
+
+    await act(async () => {
+      authorOption!.props.onPress();
     });
     expect(mockDispatch).toHaveBeenCalled();
 

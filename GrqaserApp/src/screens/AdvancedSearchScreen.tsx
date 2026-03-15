@@ -1,9 +1,16 @@
-import React, {useEffect} from 'react';
+import React, {useEffect, useState} from 'react';
 import {View, Text, StyleSheet, FlatList, ScrollView} from 'react-native';
 import {useDispatch, useSelector} from 'react-redux';
 import {StackNavigationProp} from '@react-navigation/stack';
 import {useNavigation} from '@react-navigation/native';
-import {Button, Chip, Searchbar, ActivityIndicator} from 'react-native-paper';
+import {
+  Button,
+  Chip,
+  Searchbar,
+  ActivityIndicator,
+  Checkbox,
+  List,
+} from 'react-native-paper';
 import {RootState, AppDispatch} from '../state';
 import {RootStackParamList} from '../navigation/types';
 import {
@@ -11,6 +18,7 @@ import {
   fetchAdvancedFilterOptions,
   setAdvancedFilters,
   clearAdvancedSearchError,
+  ADVANCED_SEARCH_LIMIT,
 } from '../state/slices/booksSlice';
 import {Book, AdvancedSearchFilters, CatalogFilterOption} from '../types/book';
 import BookCard from '../components/BookCard';
@@ -43,6 +51,9 @@ const AdvancedSearchScreen: React.FC = () => {
   const dispatch = useDispatch<AppDispatch>();
   const navigation = useNavigation<AdvancedSearchNavigationProp>();
   const {cardWidth, numColumns} = useBookGridLayout();
+  const [expandedSection, setExpandedSection] = useState<
+    'authors' | 'categories' | null
+  >(null);
   const {
     advancedFilters,
     advancedResults,
@@ -56,8 +67,19 @@ const AdvancedSearchScreen: React.FC = () => {
   } = useSelector((state: RootState) => state.books);
 
   useEffect(() => {
-    dispatch(fetchAdvancedFilterOptions());
-  }, [dispatch]);
+    if (
+      !filterOptionsLoading &&
+      authorOptions.length === 0 &&
+      categoryOptions.length === 0
+    ) {
+      dispatch(fetchAdvancedFilterOptions());
+    }
+  }, [
+    dispatch,
+    filterOptionsLoading,
+    authorOptions.length,
+    categoryOptions.length,
+  ]);
 
   useEffect(() => {
     if (
@@ -67,7 +89,7 @@ const AdvancedSearchScreen: React.FC = () => {
       advancedFilters.categoryIds.length === 0 &&
       advancedFilters.durationRange == null
     ) {
-      dispatch(advancedSearchBooks({page: 1, limit: 100}));
+      dispatch(advancedSearchBooks({page: 1, limit: ADVANCED_SEARCH_LIMIT}));
     }
   }, [
     dispatch,
@@ -79,7 +101,7 @@ const AdvancedSearchScreen: React.FC = () => {
   ]);
 
   const onApplyFilters = () => {
-    dispatch(advancedSearchBooks({page: 1, limit: 100}));
+    dispatch(advancedSearchBooks({page: 1, limit: ADVANCED_SEARCH_LIMIT}));
   };
 
   const onBookPress = (book: Book) => {
@@ -90,28 +112,62 @@ const AdvancedSearchScreen: React.FC = () => {
     dispatch(setAdvancedFilters(payload));
   };
 
+  const getSelectedSummary = (
+    selected: number[],
+    options: CatalogFilterOption[],
+  ) => {
+    if (selected.length === 0) {
+      return 'All';
+    }
+
+    const selectedNames = options
+      .filter(option => selected.includes(option.id))
+      .map(option => option.name);
+
+    if (selectedNames.length === 0) {
+      return `${selected.length} selected`;
+    }
+
+    if (selectedNames.length <= 2) {
+      return selectedNames.join(', ');
+    }
+
+    return `${selectedNames.slice(0, 2).join(', ')} +${selectedNames.length - 2}`;
+  };
+
   const renderMultiSelect = (
     title: string,
+    section: 'authors' | 'categories',
     selected: number[],
     options: CatalogFilterOption[],
     onToggle: (id: number) => void,
   ) => (
     <View style={styles.filterBlock}>
-      <Text style={styles.filterLabel}>
-        {title} ({selected.length} selected)
-      </Text>
-      <View style={styles.chipsWrap}>
-        {options.map(option => (
-          <Chip
-            key={option.id}
-            mode={selected.includes(option.id) ? 'flat' : 'outlined'}
-            selected={selected.includes(option.id)}
-            onPress={() => onToggle(option.id)}
-            style={styles.chip}>
-            {option.name} ({option.bookCount})
-          </Chip>
-        ))}
-      </View>
+      <Text style={styles.filterLabel}>{title}</Text>
+      <List.Accordion
+        title={`${selected.length} selected`}
+        description={getSelectedSummary(selected, options)}
+        expanded={expandedSection === section}
+        onPress={() =>
+          setExpandedSection(current => (current === section ? null : section))
+        }
+        style={styles.multiSelectBox}
+        titleStyle={styles.multiSelectTitle}
+        descriptionStyle={styles.multiSelectDescription}>
+        {options.map(option => {
+          const isSelected = selected.includes(option.id);
+          return (
+            <Checkbox.Item
+              key={option.id}
+              label={`${option.name} (${option.bookCount})`}
+              status={isSelected ? 'checked' : 'unchecked'}
+              onPress={() => onToggle(option.id)}
+              style={styles.multiSelectOption}
+              labelStyle={styles.multiSelectOptionLabel}
+            />
+          );
+        })}
+      </List.Accordion>
     </View>
   );
 
@@ -142,6 +198,7 @@ const AdvancedSearchScreen: React.FC = () => {
 
             {renderMultiSelect(
               'Authors',
+              'authors',
               advancedFilters.authorIds,
               authorOptions,
               id =>
@@ -152,6 +209,7 @@ const AdvancedSearchScreen: React.FC = () => {
 
             {renderMultiSelect(
               'Categories',
+              'categories',
               advancedFilters.categoryIds,
               categoryOptions,
               id =>
@@ -254,6 +312,28 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: theme.colors.text,
     marginBottom: 6,
+  },
+  multiSelectBox: {
+    backgroundColor: '#f8fafc',
+    borderWidth: 1,
+    borderColor: theme.colors.outline,
+    borderRadius: 12,
+    paddingHorizontal: 4,
+  },
+  multiSelectTitle: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: theme.colors.text,
+  },
+  multiSelectDescription: {
+    color: theme.colors.secondary,
+  },
+  multiSelectOption: {
+    paddingHorizontal: 8,
+  },
+  multiSelectOptionLabel: {
+    fontSize: 14,
+    color: theme.colors.text,
   },
   chipsWrap: {
     flexDirection: 'row',
