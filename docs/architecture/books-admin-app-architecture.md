@@ -73,7 +73,7 @@
 - **Idempotency mode:** Batch config should carry an explicit duplicate policy such as `skip_completed`, `redownload`, or `resume_partial`. Default to `skip_completed` for safety and operator clarity.
 - **Resume behavior:** On resume, rebuild in-memory progress from SQLite and filesystem inspection. Completed books remain immutable; incomplete books resume from the next missing part or restart the current book, depending on implementation simplicity.
 - **Failure isolation:** If one book or part fails, mark that book `failed`, persist the error message, continue to the next book, and keep the batch in `downloading` unless the operator cancels or the storage limit is reached.
-- **Cancellation:** Cancel stops new downloads, preserves existing metadata and completed MP3s, and records the batch as `cancelled` with final counters.
+- **Stop semantics:** Epic 12 uses the term **stop** for operator control. In implementation, `stop` should terminate the active batch run, preserve existing metadata and completed MP3s, and record the batch as `cancelled` unless a future story introduces a separate manual-pause concept.
 
 ### Storage limit enforcement
 
@@ -89,12 +89,12 @@
 - **History drill-down:** Batch detail exposes folder path, config, per-book states, sizes, durations, and error messages so operators can verify what was copied to each external drive or folder.
 - **Suggested endpoints:**
   - `POST /api/v1/admin-downloads/batches` — create and start a batch.
-  - `GET /api/v1/admin-downloads/batches` — list batches.
-  - `GET /api/v1/admin-downloads/batches/:id` — batch summary plus per-book records.
-  - `POST /api/v1/admin-downloads/batches/:id/pause` — manual pause.
-  - `POST /api/v1/admin-downloads/batches/:id/resume` — resume paused batch.
-  - `POST /api/v1/admin-downloads/batches/:id/cancel` — cancel active batch.
+  - `POST /api/v1/admin-downloads/batches/:id/stop` — stop the active batch and retain partial progress.
+  - `GET /api/v1/admin-downloads/status` — current active batch status for the active-download view.
+  - `GET /api/v1/admin-downloads/batches` — batch history list.
+  - `GET /api/v1/admin-downloads/batches/:id` — batch detail including per-book records.
   - `GET /api/v1/admin-downloads/stream` — SSE progress stream for the active batch.
+- **Control model:** To match Epic 12 exactly, `start`, `stop`, `status`, `history`, and `detail` are the required public API surface. Internal implementation may still model automatic storage-limit pauses as `paused` batch state, but manual `pause`/`resume` endpoints are not part of the required contract unless a later story adds them.
 
 ### Security and operational constraints
 
@@ -111,7 +111,7 @@
   - **Crawler control:** Start/stop (e.g. `POST /api/v1/crawler/start`, `POST /api/v1/crawler/stop`), get/update crawler config (e.g. `GET /api/v1/crawler/config`, `PUT /api/v1/crawler/config`).
   - **Data edit:** Update a book (e.g. `PATCH /api/v1/books/:id` or `PUT /api/v1/books/:id`) with body containing editable fields; persist to active DB and return updated resource.
   - **Epic 9:** Authors and categories CRUD (list, add, edit, delete); `GET /api/v1/authors`, `GET /api/v1/categories`; advanced search on book list (author_ids, category_ids, duration_range, text); book edit form uses author/category dropdowns; crawler populates authors and book_categories tables.
-  - **Admin bulk downloads:** Batch create/list/detail/pause/resume/cancel endpoints plus an SSE stream for real-time progress. These routes are local-admin only and operate against the active catalog DB plus admin download tracking tables.
+  - **Admin bulk downloads (Epic 12):** Batch create/start, stop, status, history list, and batch detail endpoints plus an SSE stream for real-time progress. These routes are local-admin only and operate against the active catalog DB plus admin download tracking tables.
 
 ## Project structure (books-admin-app)
 
@@ -120,7 +120,7 @@
   - `books-admin-app/src/server.js` — Express entry; mounts API routes and serves static UI.
   - `books-admin-app/src/config/` — App config (port, logging); includes active DB path and crawler config (or references to same).
   - `books-admin-app/src/routes/` — books, stats, crawler (status/logs/start/stop/config), databases (list/set-active/delete), health.
-  - `books-admin-app/src/routes/admin-downloads.js` — batch create/list/detail/pause/resume/cancel + SSE progress endpoint.
+  - `books-admin-app/src/routes/admin-downloads.js` — batch start/stop/status/history/detail + SSE progress endpoint.
   - `books-admin-app/src/models/` or `books-admin-app/src/db/` — SQLite access (read + write for active DB); DB versioning metadata.
   - `books-admin-app/src/services/admin-downloads/` — batch coordinator, manifest builder, filesystem writer, download worker, storage estimator.
   - `books-admin-app/src/models/admin-download-repository.js` — persistence for `admin_download_batches` and `admin_downloaded_books`.
