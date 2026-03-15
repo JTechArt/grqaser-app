@@ -449,6 +449,20 @@
                 <h2>Active download</h2>
                 <div id="downloadProgressContent"><div class="loading">Loading status…</div></div>
             </div>
+            <div class="controls" style="margin-top: 1.5rem;">
+                <h2>Batch history</h2>
+                <p style="margin-bottom: 1rem; color: var(--text-muted); font-size: 0.9375rem;">All download batches, most recent first.</p>
+                <button type="button" class="btn btn-secondary" id="refreshBatchesBtn">Refresh</button>
+                <div class="books-container" style="margin-top: 1rem;">
+                    <div class="books-header">
+                        <h2>Batches</h2>
+                        <div id="batchesCount">0 batches</div>
+                    </div>
+                    <div class="books-list" id="batchesList">
+                        <div class="loading">Loading batches…</div>
+                    </div>
+                </div>
+            </div>
         </section>
 
         <section id="view-databases" class="view-panel hidden">
@@ -501,6 +515,19 @@
                         <button type="button" class="btn btn-secondary" id="bookEditCancelBtn">Cancel</button>
                     </div>
                 </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Batch Detail Modal (Epic 12) -->
+    <div id="batchDetailModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="batchModalTitle">
+        <div class="modal-content">
+            <div class="modal-header">
+                <div class="modal-title" id="batchModalTitle">Batch Details</div>
+                <button type="button" class="close" id="closeBatchModal" aria-label="Close">&times;</button>
+            </div>
+            <div id="batchDetailContent">
+                <div class="loading">Loading batch details…</div>
             </div>
         </div>
     </div>
@@ -1356,6 +1383,7 @@
             }
             if (viewId === 'download') {
                 loadDownloadStatus();
+                loadDownloadBatches();
                 startDownloadPolling();
             } else {
                 stopDownloadPolling();
@@ -1760,6 +1788,94 @@
             }
         }
 
+        async function loadDownloadBatches() {
+            const el = document.getElementById('batchesList');
+            if (!el) return;
+            el.innerHTML = '<div class="loading">Loading batches…</div>';
+            try {
+                const res = await fetch(`${API_BASE}/downloads/batches?limit=50`);
+                const data = await res.json();
+                if (!data.success || !data.data || !data.data.batches) {
+                    el.innerHTML = '<div class="error">Failed to load batches</div>';
+                    return;
+                }
+                const batches = data.data.batches;
+                const countEl = document.getElementById('batchesCount');
+                if (countEl) countEl.textContent = batches.length + ' batch' + (batches.length === 1 ? '' : 'es');
+                if (batches.length === 0) {
+                    el.innerHTML = '<div class="loading">No batches yet. Start a download to see history.</div>';
+                    return;
+                }
+                el.innerHTML = batches.map(function(b) {
+                    const sizeGB = formatBytesToGB(b.total_size_bytes);
+                    const duration = formatElapsed(b.duration_seconds);
+                    const started = b.started_at ? new Date(b.started_at).toLocaleString() : '—';
+                    const completed = b.completed_at ? new Date(b.completed_at).toLocaleString() : '—';
+                    return '<div class="book-item download-batch-row" data-batch-id="' + escapeHtml(b.id) + '" style="cursor:pointer;">' +
+                        '<div><div class="book-title">' + escapeHtml(b.id) + '</div>' +
+                        '<div class="book-meta"><span>📂 ' + escapeHtml(b.base_folder_path) + '</span></div>' +
+                        '<div class="book-meta"><span>Status: ' + escapeHtml(b.status) + '</span>' +
+                        '<span>📚 ' + (b.books_downloaded || 0) + ' books</span>' +
+                        '<span>💾 ' + sizeGB + ' GB</span>' +
+                        '<span>⏱️ ' + duration + '</span></div>' +
+                        '<div class="book-meta" style="font-size:0.75rem; color:var(--text-subtle);">Started: ' + started + ' • Completed: ' + completed + '</div></div>' +
+                        '<span style="color:var(--accent);">View detail →</span></div>';
+                }).join('');
+            } catch (err) {
+                console.error('Download batches:', err);
+                el.innerHTML = '<div class="error">Failed to load batches</div>';
+            }
+        }
+
+        async function showBatchDetail(batchId) {
+            const modal = document.getElementById('batchDetailModal');
+            const content = document.getElementById('batchDetailContent');
+            if (!modal || !content) return;
+            modal.style.display = 'block';
+            content.innerHTML = '<div class="loading">Loading batch detail…</div>';
+            document.getElementById('closeBatchModal').focus();
+            try {
+                const res = await fetch(`${API_BASE}/downloads/batches/${encodeURIComponent(batchId)}`);
+                const data = await res.json();
+                if (!data.success || !data.data) {
+                    content.innerHTML = '<div class="error">' + (data.error?.message || 'Failed to load batch') + '</div>';
+                    return;
+                }
+                const batch = data.data;
+                const sizeGB = formatBytesToGB(batch.total_size_bytes);
+                const duration = formatElapsed(batch.duration_seconds);
+                const started = batch.started_at ? new Date(batch.started_at).toLocaleString() : '—';
+                const completed = batch.completed_at ? new Date(batch.completed_at).toLocaleString() : '—';
+                document.getElementById('batchModalTitle').textContent = 'Batch: ' + batch.id;
+                const booksHtml = (batch.books || []).map(function(book) {
+                    const bookSizeGB = formatBytesToGB(book.total_size_bytes);
+                    const durationStr = book.duration != null ? escapeHtml(String(book.duration)) : '—';
+                    const errMsg = book.error_message ? '<div style="color:#b91c1c; font-size:0.8125rem; margin-top:0.25rem;">Error: ' + escapeHtml(book.error_message) + '</div>' : '';
+                    return '<div class="book-item" style="cursor:default;">' +
+                        '<div class="book-content"><div class="book-title">' + escapeHtml(book.title || 'Unknown') + '</div>' +
+                        '<div class="book-author">' + escapeHtml(book.author || '') + '</div>' +
+                        '<div class="book-meta"><span>📂 ' + escapeHtml(book.local_folder_path || '') + '</span>' +
+                        '<span>💾 ' + bookSizeGB + ' GB</span>' +
+                        '<span>⏱️ ' + durationStr + '</span>' +
+                        '<span>Status: ' + escapeHtml(book.status || '') + '</span></div>' + errMsg + '</div></div>';
+                }).join('');
+                content.innerHTML = '<div class="book-detail-section"><h3>Summary</h3><div class="book-detail-grid">' +
+                    '<div class="detail-item"><div class="detail-label">Batch ID</div><div class="detail-value">' + escapeHtml(batch.id) + '</div></div>' +
+                    '<div class="detail-item"><div class="detail-label">Base path</div><div class="detail-value">' + escapeHtml(batch.base_folder_path || '') + '</div></div>' +
+                    '<div class="detail-item"><div class="detail-label">Status</div><div class="detail-value">' + escapeHtml(batch.status || '') + '</div></div>' +
+                    '<div class="detail-item"><div class="detail-label">Books</div><div class="detail-value">' + (batch.books_downloaded || 0) + '</div></div>' +
+                    '<div class="detail-item"><div class="detail-label">Total size</div><div class="detail-value">' + sizeGB + ' GB</div></div>' +
+                    '<div class="detail-item"><div class="detail-label">Duration</div><div class="detail-value">' + duration + '</div></div>' +
+                    '<div class="detail-item"><div class="detail-label">Started</div><div class="detail-value">' + started + '</div></div>' +
+                    '<div class="detail-item"><div class="detail-label">Completed</div><div class="detail-value">' + completed + '</div></div>' +
+                    '</div></div>' +
+                    '<div class="book-detail-section"><h3>Books</h3><div class="books-list" style="max-height:400px; overflow-y:auto;">' + booksHtml + '</div></div>';
+            } catch (err) {
+                console.error('Batch detail:', err);
+                content.innerHTML = '<div class="error">Failed to load batch detail</div>';
+            }
+        }
+
         // Initialize
         document.addEventListener('DOMContentLoaded', function() {
             loadStats();
@@ -1821,7 +1937,20 @@
             document.getElementById('categoryCreateBtn').addEventListener('click', createCategory);
 
             document.getElementById('downloadStartBtn').addEventListener('click', startDownload);
+            document.getElementById('refreshDownloadBatchesBtn').addEventListener('click', loadDownloadBatches);
+            document.getElementById('downloadBatchesList').addEventListener('click', function(e) {
+                const row = e.target.closest('[data-batch-id]');
+                if (row) showBatchDetail(row.getAttribute('data-batch-id'));
+            });
+            setupBatchModal();
         });
+
+        function setupBatchModal() {
+            const modal = document.getElementById('batchDetailModal');
+            const closeBtn = document.getElementById('closeBatchModal');
+            if (closeBtn) closeBtn.addEventListener('click', function() { modal.style.display = 'none'; });
+            if (modal) modal.addEventListener('click', function(e) { if (e.target === modal) modal.style.display = 'none'; });
+        }
     </script>
 </body>
 </html>

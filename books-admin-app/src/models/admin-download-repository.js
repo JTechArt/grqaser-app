@@ -133,7 +133,7 @@ function getActiveBatch(db) {
  */
 function getBatchBooks(db, batchId) {
   return db.prepare(`
-    SELECT adb.*, books.title as book_title, books.author as book_author
+    SELECT adb.*, books.title as book_title, books.author as book_author, books.duration_formatted as book_duration
     FROM admin_downloaded_books adb
     LEFT JOIN books ON books.id = adb.book_id
     WHERE adb.download_batch_id = ?

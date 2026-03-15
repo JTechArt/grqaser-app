@@ -335,6 +335,7 @@ function createDownloadsRouter(dbRegistry) {
             author: b.book_author,
             local_folder_path: b.local_folder_path,
             total_size_bytes: b.total_size_bytes || 0,
+            duration: b.book_duration,
             status: b.status,
             error_message: b.error_message,
             parts_downloaded: b.parts_downloaded || 0,
