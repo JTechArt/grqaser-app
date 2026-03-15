@@ -110,7 +110,10 @@ const AppInfoItem: React.FC<AppInfoItemProps> = ({
   <List.Item
     title={title}
     description={description}
-    left={<Icon name={iconName} size={24} color={iconColor} />}
+    // eslint-disable-next-line react/no-unstable-nested-components -- List.Item left requires a render callback
+    left={props => (
+      <Icon {...props} name={iconName} size={24} color={iconColor} />
+    )}
   />
 );
 
