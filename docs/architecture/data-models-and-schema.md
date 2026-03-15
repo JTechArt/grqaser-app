@@ -102,6 +102,8 @@ Current canonical schema (Epic 9 adds `author_id` and `category_id`; original co
 
 ## Books-admin-app admin download tracking tables
 
+**Epic 12 Migration:** These tables are created by `books-admin-app/src/migrations/002-admin-download-tables.js`. Run with `node books-admin-app/scripts/run-migration-002.js [db-path]` or omit the path to use the active DB (Story 6.2). Rollback with `node books-admin-app/scripts/rollback-migration-002.js [db-path]`.
+
 These tables are **admin-only** and live in the books-admin-app active SQLite database alongside the catalog tables. They track local export/download operations for operators and are not consumed by GrqaserApp.
 
 ### admin_download_batches

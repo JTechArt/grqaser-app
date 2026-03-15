@@ -1,0 +1,46 @@
+# Quality Gate: 12.1 database schema and migrations
+schema: 1
+story: "12.1"
+story_title: "Database schema and migrations"
+gate: PASS
+status_reason: "All acceptance criteria met. Migration 002 creates admin_download_batches and admin_downloaded_books with correct schema, indexes, and FKs. Reversible rollback, run/rollback scripts with backup, 9 tests passing, schema documented."
+reviewer: "Quinn (Test Architect)"
+updated: "2026-03-15T00:00:00Z"
+
+waiver: { active: false }
+
+top_issues: []
+
+risk_summary:
+  totals: { critical: 0, high: 0, medium: 0, low: 0 }
+  recommendations:
+    must_fix: []
+    monitor: []
+
+evidence:
+  tests_reviewed: 9
+  risks_identified: 0
+  trace:
+    ac_covered: [1, 2, 3, 4, 5]
+    ac_gaps: []
+
+nfr_validation:
+  security:
+    status: PASS
+    notes: "Additive schema only; no new API or user-input; backup before migration."
+  performance:
+    status: PASS
+    notes: "Indexes on status, started_at, batch_id, book_id; unique constraint for batch+book."
+  reliability:
+    status: PASS
+    notes: "Reversible down migration; run/rollback scripts create backup; idempotent up()."
+  maintainability:
+    status: PASS
+    notes: "9 tests cover table creation, columns, indexes, FK insert, unique constraint, rollback, idempotency; schema doc updated."
+
+quality_score: 100
+recommendations:
+  immediate: []
+  future:
+    - action: "Consider suppressing verbose migration console.log during test runs for CI readability."
+      refs: ["books-admin-app/src/migrations/002-admin-download-tables.js"]
