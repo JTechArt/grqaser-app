@@ -209,6 +209,7 @@
                 <button type="button" class="nav-tab" data-view="categories">Categories</button>
                 <button type="button" class="nav-tab" data-view="crawler">Crawler</button>
                 <button type="button" class="nav-tab" data-view="databases">Databases</button>
+                <button type="button" class="nav-tab" data-view="download">Download</button>
             </nav>
         </aside>
         <main class="main">
@@ -419,6 +420,34 @@
                 <div class="crawler-logs-list" id="crawlerLogsList">
                     <div class="loading">Loading logs...</div>
                 </div>
+            </div>
+        </section>
+
+        <section id="view-download" class="view-panel hidden">
+            <h1 class="page-title">Bulk MP3 Download</h1>
+            <div class="controls" id="downloadSetupCard">
+                <h2>Setup</h2>
+                <p style="margin-bottom: 1rem; color: var(--text-muted); font-size: 0.9375rem;">Download audiobook MP3s to a folder. One batch runs at a time. Storage limit auto-pauses the batch when reached.</p>
+                <div class="filters" style="display: grid; grid-template-columns: 1fr minmax(120px, auto); gap: 1rem; margin-bottom: 1rem;">
+                    <div class="filter-group">
+                        <label for="downloadFolderPath">Base folder path</label>
+                        <input type="text" id="downloadFolderPath" placeholder="/path/to/downloads" style="width: 100%;">
+                    </div>
+                    <div class="filter-group">
+                        <label for="downloadMaxSizeGb">Max size (GB)</label>
+                        <input type="number" id="downloadMaxSizeGb" min="1" value="200" placeholder="200">
+                    </div>
+                </div>
+                <div class="filter-group" style="margin-bottom: 1rem;">
+                    <label for="downloadBookIds">Book scope</label>
+                    <input type="text" id="downloadBookIds" placeholder="all or comma-separated IDs (e.g. 1,2,3)">
+                </div>
+                <button type="button" class="btn" id="downloadStartBtn">▶ Start download</button>
+                <div class="error" id="downloadSetupError" style="display: none; margin-top: 1rem;"></div>
+            </div>
+            <div class="controls" id="downloadProgressCard" style="display: none;">
+                <h2>Active download</h2>
+                <div id="downloadProgressContent"><div class="loading">Loading status…</div></div>
             </div>
         </section>
 
@@ -1325,6 +1354,12 @@
             if (viewId === 'categories') {
                 loadCategories(1);
             }
+            if (viewId === 'download') {
+                loadDownloadStatus();
+                startDownloadPolling();
+            } else {
+                stopDownloadPolling();
+            }
         }
 
         async function loadDatabases() {
@@ -1537,6 +1572,194 @@
             }
         }
 
+        // Download (Epic 12) — setup, status, cancel, polling
+        let downloadPollInterval = null;
+        const DOWNLOAD_POLL_MS = 1500;
+
+        function formatBytesToGB(bytes) {
+            if (bytes == null || bytes === 0) return '0';
+            return (bytes / (1024 * 1024 * 1024)).toFixed(2);
+        }
+
+        function formatElapsed(seconds) {
+            if (seconds == null || seconds < 0) return '0s';
+            const m = Math.floor(seconds / 60);
+            const s = seconds % 60;
+            if (m >= 60) {
+                const h = Math.floor(m / 60);
+                const rem = m % 60;
+                return h + 'h ' + rem + 'm ' + s + 's';
+            }
+            return m + 'm ' + s + 's';
+        }
+
+        async function loadDownloadStatus() {
+            const setupCard = document.getElementById('downloadSetupCard');
+            const progressCard = document.getElementById('downloadProgressCard');
+            const progressContent = document.getElementById('downloadProgressContent');
+            const setupError = document.getElementById('downloadSetupError');
+            if (setupError) setupError.style.display = 'none';
+
+            try {
+                const res = await fetch(`${API_BASE}/downloads/status`);
+                const data = await res.json();
+                if (!data.success) {
+                    if (progressContent) progressContent.innerHTML = '<div class="error">Failed to load status</div>';
+                    return;
+                }
+                const s = data.data;
+                const running = s && s.running === true;
+
+                if (running) {
+                    if (setupCard) setupCard.style.display = 'none';
+                    if (progressCard) progressCard.style.display = 'block';
+                    const phase = s.phase || 0;
+                    const phaseLabels = {
+                        1: 'Creating folder structure…',
+                        2: 'Writing metadata',
+                        3: 'Downloading MP3s'
+                    };
+                    const phaseText = phaseLabels[phase] || s.phaseLabel || 'Working…';
+                    const bookX = (s.bookIndex != null ? s.bookIndex + 1 : 0);
+                    const bookY = s.bookTotal || 0;
+                    const partZ = (s.partIndex != null ? s.partIndex + 1 : 0);
+                    const partW = s.partTotal || 1;
+                    const bookTitle = s.bookTitle ? escapeHtml(s.bookTitle) : '';
+                    let phaseDetail = phaseText;
+                    if (phase === 2 && bookY > 0) phaseDetail = 'Writing metadata for book ' + bookX + ' of ' + bookY + (bookTitle ? ' — ' + bookTitle : '') + '…';
+                    if (phase === 3 && bookY > 0) phaseDetail = 'Downloading book ' + bookX + ' of ' + bookY + ' — part ' + partZ + ' of ' + partW + (bookTitle ? ' — ' + bookTitle : '') + '…';
+
+                    const booksDone = s.books_completed ?? s.booksCompleted ?? 0;
+                    const totalBytes = s.total_size_bytes ?? s.totalSizeBytes ?? 0;
+                    const elapsed = s.elapsed_seconds ?? 0;
+                    const used = s.storage_used ?? totalBytes ?? 0;
+                    const limit = s.storage_limit ?? 200 * 1024 * 1024 * 1024;
+                    const usedGB = formatBytesToGB(used);
+                    const limitGB = formatBytesToGB(limit);
+                    const pct = limit > 0 ? Math.min(100, Math.round((used / limit) * 100)) : 0;
+                    const nearLimit = pct >= 85;
+
+                    let pauseReason = '';
+                    if (s.status === 'paused') {
+                        pauseReason = '<div class="error" style="margin-top:0.5rem;">Paused: storage limit reached (' + limitGB + ' GB)</div>';
+                    }
+
+                    progressContent.innerHTML = `
+                        <div class="crawler-status-grid">
+                            <div class="stat-card"><h3>Phase</h3><div class="number" style="font-size:1rem">${escapeHtml(phaseDetail)}</div></div>
+                            <div class="stat-card"><h3>Books completed</h3><div class="number">${booksDone}</div></div>
+                            <div class="stat-card"><h3>Total size</h3><div class="number" style="font-size:1rem">${formatBytesToGB(totalBytes)} GB</div></div>
+                            <div class="stat-card"><h3>Elapsed</h3><div class="number" style="font-size:1rem">${formatElapsed(elapsed)}</div></div>
+                        </div>
+                        <div style="margin-top:1rem;">
+                            <h3 style="margin-bottom:0.5rem; font-size:0.9375rem;">Storage: ${usedGB} GB / ${limitGB} GB</h3>
+                            <div style="height:12px; background:var(--border-muted); border-radius:var(--radius-sm); overflow:hidden;">
+                                <div style="height:100%; width:${pct}%; background:${nearLimit ? '#f59e0b' : 'var(--accent)'}; transition:width 0.2s;"></div>
+                            </div>
+                            ${nearLimit ? '<p style="font-size:0.8125rem; color:#b45309; margin-top:0.25rem;">Warning: near storage limit</p>' : ''}
+                        </div>
+                        ${pauseReason}
+                        <div style="margin-top:1rem;">
+                            <button type="button" class="btn btn-secondary" id="downloadCancelBtn">Cancel batch</button>
+                        </div>
+                    `;
+                    document.getElementById('downloadCancelBtn').addEventListener('click', cancelDownload);
+                } else {
+                    if (setupCard) setupCard.style.display = 'block';
+                    if (progressCard) progressCard.style.display = 'block';
+                    if (progressContent && s.batch_id) {
+                        const booksDone = s.books_completed ?? s.booksCompleted ?? 0;
+                        const totalBytes = s.total_size_bytes ?? s.totalSizeBytes ?? 0;
+                        const status = s.status || 'completed';
+                        const pauseReason = status === 'paused' ? '<p class="error" style="margin-top:0.5rem;">Paused: storage limit reached</p>' : '';
+                        progressContent.innerHTML = `
+                            <p style="color:var(--text-muted);">Last batch: <strong>${escapeHtml(s.batch_id)}</strong> — ${escapeHtml(status)}</p>
+                            <p>Books: ${booksDone} • Size: ${formatBytesToGB(totalBytes)} GB</p>
+                            ${pauseReason}
+                        `;
+                    } else if (progressContent) {
+                        progressContent.innerHTML = '<p style="color:var(--text-muted);">No active or recent download.</p>';
+                    }
+                }
+            } catch (err) {
+                console.error('Download status:', err);
+                if (progressContent) progressContent.innerHTML = '<div class="error">Failed to load status</div>';
+            }
+        }
+
+        function startDownloadPolling() {
+            if (downloadPollInterval) return;
+            downloadPollInterval = setInterval(loadDownloadStatus, DOWNLOAD_POLL_MS);
+        }
+
+        function stopDownloadPolling() {
+            if (downloadPollInterval) {
+                clearInterval(downloadPollInterval);
+                downloadPollInterval = null;
+            }
+        }
+
+        async function startDownload() {
+            const folderInput = document.getElementById('downloadFolderPath');
+            const maxSizeInput = document.getElementById('downloadMaxSizeGb');
+            const errEl = document.getElementById('downloadSetupError');
+            errEl.style.display = 'none';
+            const path = (folderInput && folderInput.value || '').trim();
+            if (!path) {
+                errEl.textContent = 'Folder path is required.';
+                errEl.style.display = 'block';
+                return;
+            }
+            const maxGb = parseFloat(maxSizeInput && maxSizeInput.value) || 200;
+            const maxBytes = Math.round(maxGb * 1024 * 1024 * 1024);
+            const bookIdsInput = (document.getElementById('downloadBookIds') && document.getElementById('downloadBookIds').value || '').trim().toLowerCase();
+            const bookIds = (!bookIdsInput || bookIdsInput === 'all') ? 'all' : bookIdsInput.split(/[,\s]+/).map(function(x) { return parseInt(x, 10); }).filter(function(n) { return !isNaN(n) && n > 0; });
+
+            try {
+                const res = await fetch(`${API_BASE}/downloads/start`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        base_folder_path: path,
+                        max_size_bytes: maxBytes,
+                        book_ids: bookIds === 'all' ? 'all' : bookIds
+                    })
+                });
+                const data = await res.json();
+                if (data.success) {
+                    loadDownloadStatus();
+                    startDownloadPolling();
+                } else {
+                    errEl.textContent = data.error?.message || data.error?.code || 'Failed to start';
+                    errEl.style.display = 'block';
+                }
+            } catch (err) {
+                errEl.textContent = 'Error: ' + err.message;
+                errEl.style.display = 'block';
+            }
+        }
+
+        async function cancelDownload() {
+            const res = await fetch(`${API_BASE}/downloads/status`);
+            const data = await res.json();
+            if (!data.success || !data.data || !data.data.running || !data.data.batch_id) {
+                alert('No batch running to cancel');
+                return;
+            }
+            const batchId = data.data.batch_id;
+            try {
+                const cancelRes = await fetch(`${API_BASE}/downloads/${encodeURIComponent(batchId)}/cancel`, { method: 'POST' });
+                const cancelData = await cancelRes.json();
+                if (cancelData.success) {
+                    loadDownloadStatus();
+                } else {
+                    alert(cancelData.error?.message || 'Cancel failed');
+                }
+            } catch (err) {
+                alert('Error: ' + err.message);
+            }
+        }
+
         // Initialize
         document.addEventListener('DOMContentLoaded', function() {
             loadStats();
@@ -1596,6 +1819,8 @@
                 if (e.key === 'Enter') loadCategories(1);
             });
             document.getElementById('categoryCreateBtn').addEventListener('click', createCategory);
+
+            document.getElementById('downloadStartBtn').addEventListener('click', startDownload);
         });
     </script>
 </body>
