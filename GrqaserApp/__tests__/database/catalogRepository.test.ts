@@ -25,9 +25,7 @@ function makeRows(items: Record<string, unknown>[]) {
 
 function makeSchemaRows(hasRelationTables = true) {
   return makeRows(
-    hasRelationTables
-      ? [{name: 'authors'}, {name: 'book_categories'}]
-      : [],
+    hasRelationTables ? [{name: 'authors'}, {name: 'book_categories'}] : [],
   );
 }
 
@@ -118,15 +116,7 @@ describe('catalogRepository', () => {
 
       expect(mockExecuteSql).toHaveBeenCalledWith(
         expect.stringMatching(/LIKE.*LIMIT/),
-        [
-          '%test%',
-          '%տեստ%',
-          '%test%',
-          '%տեստ%',
-          '%test%',
-          '%տեստ%',
-          100,
-        ],
+        ['%test%', '%տեստ%', '%test%', '%տեստ%', '%test%', '%տեստ%', 100],
       );
       expect(books).toHaveLength(1);
     });
@@ -183,7 +173,7 @@ describe('catalogRepository', () => {
       mockExecuteSql
         .mockResolvedValueOnce(makeSchemaRows())
         .mockResolvedValueOnce(
-        makeRows([{id: 1, name: 'Author A', book_count: 4}]),
+          makeRows([{id: 1, name: 'Author A', book_count: 4}]),
         );
       const authors = await catalogRepository.getAuthors();
       expect(authors).toEqual([{id: 1, name: 'Author A', bookCount: 4}]);
@@ -194,7 +184,7 @@ describe('catalogRepository', () => {
       mockExecuteSql
         .mockResolvedValueOnce(makeSchemaRows())
         .mockResolvedValueOnce(
-        makeRows([{id: 2, name: 'Fiction', book_count: 9}]),
+          makeRows([{id: 2, name: 'Fiction', book_count: 9}]),
         );
       const categories = await catalogRepository.getCategories();
       expect(categories).toEqual([{id: 2, name: 'Fiction', bookCount: 9}]);
@@ -229,16 +219,7 @@ describe('catalogRepository', () => {
       expect(mockExecuteSql).toHaveBeenNthCalledWith(
         2,
         expect.stringContaining('COUNT(*) as total'),
-        [
-          1,
-          2,
-          '%test%',
-          '%test%',
-          '%test%',
-          '%տեստ%',
-          '%տեստ%',
-          '%տեստ%',
-        ],
+        [1, 2, '%test%', '%test%', '%test%', '%տեստ%', '%տեստ%', '%տեստ%'],
       );
       expect(mockExecuteSql).toHaveBeenNthCalledWith(
         3,

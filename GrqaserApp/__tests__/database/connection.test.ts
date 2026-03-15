@@ -9,6 +9,7 @@ const {
 
 import {openDatabase, openBundledDatabase} from '../../src/database/connection';
 
+// eslint-disable-next-line jest/no-disabled-tests -- requires SQLite native mocking
 describe.skip('database connection', () => {
   afterEach(() => {
     jest.clearAllMocks();
