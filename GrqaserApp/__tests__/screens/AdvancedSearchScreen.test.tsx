@@ -60,10 +60,25 @@ describe('AdvancedSearchScreen', () => {
           advancedTotalCount: 0,
           advancedLoading: false,
           advancedError: null,
-          authorOptions: [{id: 1, name: 'Author A', bookCount: 2}],
+          authorOptions: [
+            {id: 1, name: 'Author A', bookCount: 2},
+            {id: 2, name: 'Author B', bookCount: 5},
+            {id: 3, name: 'Another Author', bookCount: 1},
+          ],
           categoryOptions: [{id: 2, name: 'Fiction', bookCount: 3}],
           filterOptionsLoading: false,
           filterOptionsError: null,
+          favorites: ['fav-1'],
+          booksById: {
+            'fav-1': {
+              id: 'fav-1',
+              title: 'Favorite Book',
+              author: 'Author A',
+              language: 'hy',
+              type: 'audiobook',
+              category: 'Fiction',
+            },
+          },
         },
       }),
     );
@@ -103,6 +118,8 @@ describe('AdvancedSearchScreen', () => {
           categoryOptions: [],
           filterOptionsLoading: false,
           filterOptionsError: null,
+          favorites: [],
+          booksById: {},
         },
       }),
     );
@@ -144,9 +161,9 @@ describe('AdvancedSearchScreen', () => {
     });
     expect(mockDispatch).toHaveBeenCalled();
 
-    const searchbar = tree!.root.findByType(Searchbar);
+    const searchbars = tree!.root.findAllByType(Searchbar);
     await act(async () => {
-      searchbar.props.onChangeText('hello');
+      searchbars[0].props.onChangeText('hello');
     });
     expect(mockDispatch).toHaveBeenCalled();
 
@@ -159,5 +176,38 @@ describe('AdvancedSearchScreen', () => {
       applyButton!.props.onPress();
     });
     expect(mockDispatch).toHaveBeenCalled();
+  });
+
+  it('shows featured authors by default and switches to matched authors after 2 letters', async () => {
+    let tree: renderer.ReactTestRenderer | null = null;
+    await act(async () => {
+      tree = renderer.create(
+        <PaperProvider theme={theme}>
+          <AdvancedSearchScreen />
+        </PaperProvider>,
+      );
+    });
+
+    const accordions = tree!.root.findAllByType(List.Accordion);
+    await act(async () => {
+      accordions[0].props.onPress();
+    });
+
+    let authorOptions = tree!.root
+      .findAllByType(Checkbox.Item)
+      .map(node => node.props.label);
+    expect(authorOptions).toContain('Author A (2)');
+    expect(authorOptions).toContain('Author B (5)');
+
+    const searchbars = tree!.root.findAllByType(Searchbar);
+    await act(async () => {
+      searchbars[1].props.onChangeText('an');
+    });
+
+    authorOptions = tree!.root
+      .findAllByType(Checkbox.Item)
+      .map(node => node.props.label);
+    expect(authorOptions).toContain('Another Author (1)');
+    expect(authorOptions).not.toContain('Author B (5)');
   });
 });
