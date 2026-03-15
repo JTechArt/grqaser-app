@@ -13,9 +13,12 @@ node_modules/
 # Logs (crawler, database-viewer, GrqaserApp)
 logs/
 **/logs/
+
 # BMAD (local only)
 .bmad-core/
 .bmad-*/
 books-admin-app/.env
 books-admin-app/data/**
-.vscode/settings.json
+
+# IDE / editor
+.vscode/
