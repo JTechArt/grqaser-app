@@ -24,6 +24,7 @@ import {
 import {Book, AdvancedSearchFilters, CatalogFilterOption} from '../types/book';
 import BookCard from '../components/BookCard';
 import {useBookGridLayout} from '../utils/bookGridLayout';
+import {buildArmenianSearchVariants} from '../utils/armenianTransliteration';
 import {theme} from '../theme';
 
 type AdvancedSearchNavigationProp = StackNavigationProp<
@@ -194,8 +195,13 @@ const AdvancedSearchScreen: React.FC = () => {
       return featuredAuthorOptions;
     }
 
+    const variants = buildArmenianSearchVariants(query);
+
     return authorOptions
-      .filter(option => option.name.toLowerCase().includes(query))
+      .filter(option => {
+        const normalizedName = option.name.toLowerCase();
+        return variants.some(variant => normalizedName.includes(variant));
+      })
       .sort((a, b) =>
         b.bookCount !== a.bookCount
           ? b.bookCount - a.bookCount
