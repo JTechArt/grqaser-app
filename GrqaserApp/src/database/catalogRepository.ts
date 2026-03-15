@@ -10,6 +10,7 @@ import {
 } from './connection';
 import {Book, AdvancedSearchFilters, CatalogFilterOption} from '../types/book';
 import {ApiBook, mapApiBookToBook} from '../services/bookMapper';
+import {buildArmenianSearchVariants} from '../utils/armenianTransliteration';
 
 let connection: DatabaseConnection | null = null;
 let relationSchemaSupported: boolean | null = null;
@@ -219,10 +220,16 @@ export const catalogRepository = {
    */
   async searchBooks(query: string, limit = 100): Promise<Book[]> {
     const {db} = assertConnected();
-    const like = `%${query}%`;
+    const variants = buildArmenianSearchVariants(query);
+    const likes = variants.map(variant => `%${variant}%`);
+    const titleClauses = variants.map(() => 'title LIKE ?').join(' OR ');
+    const authorClauses = variants.map(() => 'author LIKE ?').join(' OR ');
+    const descriptionClauses = variants
+      .map(() => 'description LIKE ?')
+      .join(' OR ');
     const [results] = await db.executeSql(
-      'SELECT * FROM books WHERE title LIKE ? OR author LIKE ? OR description LIKE ? ORDER BY title ASC LIMIT ?',
-      [like, like, like, limit],
+      `SELECT * FROM books WHERE ${titleClauses} OR ${authorClauses} OR ${descriptionClauses} ORDER BY title ASC LIMIT ?`,
+      [...likes, ...likes, ...likes, limit],
     );
     return rowsToArray(results).map(mapApiBookToBook);
   },
@@ -340,7 +347,7 @@ export const catalogRepository = {
           .map(id => legacyCategoryNamesById.get(id))
           .filter((name): name is string => Boolean(name)),
       );
-      const normalizedQuery = text.trim().toLowerCase();
+      const searchVariants = buildArmenianSearchVariants(text);
 
       const filtered = snapshot.filter(entry => {
         if (selectedAuthors.size > 0 && !selectedAuthors.has(entry.authorName)) {
@@ -388,8 +395,10 @@ export const catalogRepository = {
         }
 
         if (
-          normalizedQuery &&
-          !entry.normalizedText.includes(normalizedQuery)
+          searchVariants.length > 0 &&
+          !searchVariants.some(variant =>
+            entry.normalizedText.includes(variant),
+          )
         ) {
           return false;
         }
@@ -449,13 +458,21 @@ export const catalogRepository = {
       where.push(durationCondition);
     }
     if (text.trim()) {
+      const variants = buildArmenianSearchVariants(text);
+      const textClauses = variants
+        .map(() =>
+          hasRelationSchema
+            ? '(books.title LIKE ? OR books.description LIKE ? OR COALESCE(authors.name, books.author) LIKE ?)'
+            : '(books.title LIKE ? OR books.description LIKE ? OR TRIM(books.author) LIKE ?)',
+        )
+        .join(' OR ');
       where.push(
-        hasRelationSchema
-          ? '(books.title LIKE ? OR books.description LIKE ? OR COALESCE(authors.name, books.author) LIKE ?)'
-          : '(books.title LIKE ? OR books.description LIKE ? OR TRIM(books.author) LIKE ?)',
+        `(${textClauses})`,
       );
-      const pattern = `%${text.trim()}%`;
-      params.push(pattern, pattern, pattern);
+      variants.forEach(variant => {
+        const pattern = `%${variant}%`;
+        params.push(pattern, pattern, pattern);
+      });
     }
 
     const whereClause = where.length > 0 ? ` WHERE ${where.join(' AND ')}` : '';

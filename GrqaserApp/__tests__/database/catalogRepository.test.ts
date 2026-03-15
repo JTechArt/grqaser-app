@@ -118,7 +118,15 @@ describe('catalogRepository', () => {
 
       expect(mockExecuteSql).toHaveBeenCalledWith(
         expect.stringMatching(/LIKE.*LIMIT/),
-        ['%Test%', '%Test%', '%Test%', 100],
+        [
+          '%test%',
+          '%տեստ%',
+          '%test%',
+          '%տեստ%',
+          '%test%',
+          '%տեստ%',
+          100,
+        ],
       );
       expect(books).toHaveLength(1);
     });
@@ -131,8 +139,11 @@ describe('catalogRepository', () => {
 
       expect(mockExecuteSql).toHaveBeenCalledWith(expect.any(String), [
         '%x%',
+        '%քս%',
         '%x%',
+        '%քս%',
         '%x%',
+        '%քս%',
         50,
       ]);
     });
@@ -143,6 +154,26 @@ describe('catalogRepository', () => {
 
       const books = await catalogRepository.searchBooks('nonexistent');
       expect(books).toEqual([]);
+    });
+
+    it('queries with Armenian transliteration variants for latin input', async () => {
+      await initCatalogDb('test.db');
+      mockExecuteSql.mockResolvedValueOnce(makeRows([]));
+
+      await catalogRepository.searchBooks('dyuma');
+
+      expect(mockExecuteSql).toHaveBeenCalledWith(
+        expect.stringContaining('title LIKE ? OR title LIKE ?'),
+        [
+          '%dyuma%',
+          '%դյումա%',
+          '%dyuma%',
+          '%դյումա%',
+          '%dyuma%',
+          '%դյումա%',
+          100,
+        ],
+      );
     });
   });
 
@@ -198,12 +229,32 @@ describe('catalogRepository', () => {
       expect(mockExecuteSql).toHaveBeenNthCalledWith(
         2,
         expect.stringContaining('COUNT(*) as total'),
-        [1, 2, '%test%', '%test%', '%test%'],
+        [
+          1,
+          2,
+          '%test%',
+          '%test%',
+          '%test%',
+          '%տեստ%',
+          '%տեստ%',
+          '%տեստ%',
+        ],
       );
       expect(mockExecuteSql).toHaveBeenNthCalledWith(
         3,
         expect.stringContaining('LIMIT ? OFFSET ?'),
-        [1, 2, '%test%', '%test%', '%test%', 10, 10],
+        [
+          1,
+          2,
+          '%test%',
+          '%test%',
+          '%test%',
+          '%տեստ%',
+          '%տեստ%',
+          '%տեստ%',
+          10,
+          10,
+        ],
       );
       expect(result.total).toBe(1);
       expect(result.page).toBe(2);
