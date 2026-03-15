@@ -100,6 +100,56 @@ Current canonical schema (Epic 9 adds `author_id` and `category_id`; original co
 - All three applications must use the same schema; any change is made in the crawler first, then reflected in viewer and app consumption.
 - Required fields and types must be validated before write in the crawler; invalid rows logged/skipped.
 
+## Books-admin-app admin download tracking tables
+
+These tables are **admin-only** and live in the books-admin-app active SQLite database alongside the catalog tables. They track local export/download operations for operators and are not consumed by GrqaserApp.
+
+### admin_download_batches
+
+Tracks each operator-initiated batch export run.
+
+| Column | Type | Constraints | Notes |
+|--------|------|-------------|-------|
+| id | TEXT | PRIMARY KEY | Batch identifier such as `batch-{uuid}` or operator-defined part label. |
+| base_folder_path | TEXT | NOT NULL | Absolute normalized folder path selected for the batch. |
+| max_size_bytes | INTEGER | NOT NULL | Configured storage cap for the batch. |
+| status | TEXT | NOT NULL | `preparing`, `downloading`, `paused`, `completed`, `cancelled`, `failed`. |
+| books_downloaded | INTEGER | DEFAULT 0 | Count of books completed successfully. |
+| total_size_bytes | INTEGER | DEFAULT 0 | Actual downloaded bytes written so far. |
+| started_at | TIMESTAMP | NOT NULL | Batch start timestamp. |
+| completed_at | TIMESTAMP | NULL | End timestamp when finished, cancelled, or paused for later resume. |
+| duration_seconds | INTEGER | NULL | Optional persisted runtime summary. |
+| config_json | TEXT | NOT NULL | JSON batch config: scope, duplicate policy, selected book IDs, estimation strategy, pause reason, and UI options. |
+
+**Indexes:** `idx_admin_download_batches_status`, `idx_admin_download_batches_started_at`.
+
+### admin_downloaded_books
+
+Tracks per-book progress within a batch.
+
+| Column | Type | Constraints | Notes |
+|--------|------|-------------|-------|
+| id | INTEGER | PRIMARY KEY AUTOINCREMENT | |
+| book_id | INTEGER | NOT NULL REFERENCES books(id) | Catalog book included in the batch. |
+| download_batch_id | TEXT | NOT NULL REFERENCES admin_download_batches(id) | Parent batch. |
+| local_folder_path | TEXT | NOT NULL | Folder where the book metadata and MP3 parts are written. |
+| total_size_bytes | INTEGER | DEFAULT 0 | Actual bytes written for all completed parts of the book. |
+| part_count | INTEGER | NOT NULL | Number of MP3 files expected for the book. |
+| parts_downloaded | INTEGER | DEFAULT 0 | Number of MP3 files successfully written. |
+| status | TEXT | NOT NULL | `pending`, `in_progress`, `completed`, `failed`, `paused`, `cancelled`. |
+| started_at | TIMESTAMP | NULL | Set when the book starts processing. |
+| completed_at | TIMESTAMP | NULL | Set when book finishes or is terminally failed/cancelled. |
+| error_message | TEXT | NULL | Last failure reason, if any. |
+
+**Indexes:** `idx_admin_downloaded_books_batch_id`, `idx_admin_downloaded_books_book_id`, `idx_admin_downloaded_books_status`, unique composite `uidx_admin_downloaded_books_batch_book ON (download_batch_id, book_id)`.
+
+**Operational notes:**
+
+- `metadata.json` creation is part of the tracked workflow, but it does not increment `parts_downloaded`; the counter reflects MP3 parts only.
+- `total_size_bytes` stores actual transferred bytes, not estimates.
+- Duplicate handling is controlled through `config_json` rather than extra columns so the policy can evolve without schema churn.
+- These tables are intended for local operator history and recovery, not cross-device sync.
+
 ## GrqaserApp mobile-specific schemas (Epic 8)
 
 **After Epic 8:** GrqaserApp reads catalog data from a **local SQLite database** (same books table schema as the canonical crawler output). The following additional tables are **mobile-only** — they exist in the app's local storage (separate from the catalog DB or in a dedicated app metadata DB) and are never synced to the server.
@@ -165,4 +215,5 @@ Tracks books auto-added to the Library when the user opens them.
 - [Epic 9 schema changes](./epic-9-schema-changes.md) — Authors and book_categories tables, migration, advanced search queries.
 - [Crawler pipeline and data contract](./crawler-pipeline-and-data-contract.md) — How the crawler fills this schema.
 - [Database-viewer API and deployment](./database-viewer-api-and-deployment.md) — How the viewer exposes books/stats/crawler.
+- [Books-admin-app architecture](./books-admin-app-architecture.md) — Admin download batch orchestration and local export design.
 - [GrqaserApp data integration and audio](./grqaserapp-data-integration-and-audio.md) — How the app consumes this data (local SQLite after Epic 8).
