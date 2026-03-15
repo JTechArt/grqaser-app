@@ -1,0 +1,46 @@
+# Quality Gate: 12.2 backend download pipeline service
+schema: 1
+story: "12.2"
+story_title: "Backend download pipeline service"
+gate: PASS
+status_reason: "All acceptance criteria met. Three-phase pipeline (create structure, metadata, download MP3s) implemented with storage limit, auto-pause, cancellation, progress reporting. One bug fixed during review: Phase 2/3 used manifestList index instead of manifestWithUrls when books lacked valid URLs; fixed and regression test added."
+reviewer: "Quinn (Test Architect)"
+updated: "2026-03-15T00:00:00Z"
+
+waiver: { active: false }
+
+top_issues: []
+
+risk_summary:
+  totals: { critical: 0, high: 0, medium: 0, low: 0 }
+  recommendations:
+    must_fix: []
+    monitor: []
+
+evidence:
+  tests_reviewed: 22
+  risks_identified: 0
+  trace:
+    ac_covered: [1, 2, 3, 4, 5, 6, 7]
+    ac_gaps: []
+
+nfr_validation:
+  security:
+    status: PASS
+    notes: "No user input in URLs; uses crawler url-validator; local file writes to admin-selected folder."
+  performance:
+    status: PASS
+    notes: "Sequential downloads; storage limit prevents unbounded writes; 60s timeout per URL."
+  reliability:
+    status: PASS
+    notes: "Failed books logged and marked; batch continues; cancel signal supported; partial progress retained."
+  maintainability:
+    status: PASS
+    notes: "22 tests; pipeline, repository, slugify, manifestEntry covered; regression test for URL-skip case added."
+
+quality_score: 100
+recommendations:
+  immediate: []
+  future:
+    - action: "Consider mocking network in tests so full Phase 3 download path can be verified without external calls."
+      refs: ["books-admin-app/tests/download-pipeline.test.js"]

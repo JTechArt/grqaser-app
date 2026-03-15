@@ -1,6 +1,6 @@
 # Grqaser Architecture Document
 
-This document is the single source of truth for the Grqaser ecosystem. **After Epic 7:** the admin surface is a single application — **books-admin-app** (crawler + database-viewer behavior merged); the mobile app is **GrqaserApp**. Standalone crawler and database-viewer are removed or archived (Epic 7.2). Design system and UI/UX mockups live in `docs/design/` (Epic 7.3–7.5). **After Epic 8:** GrqaserApp loads catalog from local SQLite (no API), supports offline MP3 playback, manages multiple DB versions from internet, auto-adds opened books to Library, and removes categories. **Epic 9:** Schema normalization (authors, book_categories); advanced search with author/category/duration/text filters. **Epic 10:** Non-blocking app startup for improved launch performance. The document aligns with [docs/prd.md](../prd.md) and defines the technical architecture for AI-driven development.
+This document is the single source of truth for the Grqaser ecosystem. **After Epic 7:** the admin surface is a single application — **books-admin-app** (crawler + database-viewer behavior merged); the mobile app is **GrqaserApp**. Standalone crawler and database-viewer are removed or archived (Epic 7.2). Design system and UI/UX mockups live in `docs/design/` (Epic 7.3–7.5). **After Epic 8:** GrqaserApp loads catalog from local SQLite (no API), supports offline MP3 playback, manages multiple DB versions from internet, auto-adds opened books to Library, and removes categories. **Admin bulk MP3 export:** books-admin-app supports operator-managed batch downloads with metadata-first export, storage caps, and batch history. **Epic 9:** Schema normalization (authors, book_categories); advanced search with author/category/duration/text filters. **Epic 10:** Non-blocking app startup for improved launch performance. The document aligns with [docs/prd.md](../prd.md) and defines the technical architecture for AI-driven development.
 
 ## Critical: Read This First
 
@@ -15,7 +15,7 @@ This document is the single source of truth for the Grqaser ecosystem. **After E
 - [Source tree (unified project structure)](./source-tree.md) — Monorepo layout; books-admin-app, GrqaserApp, docs/design
 - [Crawler pipeline and data contract](./crawler-pipeline-and-data-contract.md) — Crawler behavior (preserved in books-admin-app; standalone removed/archived)
 - [Database-viewer API and deployment](./database-viewer-api-and-deployment.md) — Viewer/API behavior (preserved in books-admin-app; standalone removed/archived)
-- [Books-admin-app architecture](./books-admin-app-architecture.md) — Single admin app: crawler + viewer, DB versioning, crawler control, data edit, design system and UI/UX (Epic 7)
+- [Books-admin-app architecture](./books-admin-app-architecture.md) — Single admin app: crawler + viewer, DB versioning, crawler control, data edit, admin bulk MP3 export, design system and UI/UX
 - **Parity (Epic 1/2 → books-admin-app):** [docs/parity-books-admin-app.md](../parity-books-admin-app.md) — AC-to-feature mapping and sign-off for Epic 5 verification and Story 7.2 removal
 - [GrqaserApp data integration and audio](./grqaserapp-data-integration-and-audio.md) — Mobile app; **local SQLite catalog, offline playback, DB management, library auto-add (Epic 8)**; advanced search (Epic 9); non-blocking startup (Epic 10); UI/UX from docs/design (Epic 7)
 - [Data models and schema](./data-models-and-schema.md) — Shared data contract and SQLite schema
@@ -37,3 +37,4 @@ This document is the single source of truth for the Grqaser ecosystem. **After E
 | 2025-02-17 | 1.3     | Epic 7: books-admin-app single admin app; crawler/database-viewer removed or archived; design system and docs/design/ (mockups, UI/UX) | Architect  |
 | 2026-02-19 | 1.4     | Epic 8: GrqaserApp local SQLite catalog (no API), offline MP3 download/playback, DB management from internet, library auto-add, categories removed, Settings enrichment | Architect (Winston) |
 | 2026-02-27 | 1.5     | Epic 9: Schema normalization (authors, book_categories tables); advanced search API and UI. Epic 10: App startup performance (non-blocking initialization). | Architect |
+| 2026-03-15 | 1.6     | books-admin-app admin bulk MP3 export/download architecture: batch orchestration, tracking tables, storage-cap auto-pause, metadata-first export flow. | Architect (Winston) |

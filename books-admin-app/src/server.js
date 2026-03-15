@@ -21,6 +21,7 @@ const createCategoriesRouter = require('./routes/categories');
 const createStatsRouter = require('./routes/stats');
 const createCrawlerRouter = require('./routes/crawler');
 const createDatabasesRouter = require('./routes/databases');
+const createDownloadsRouter = require('./routes/downloads');
 
 const app = express();
 const activePath = dbRegistry.getActivePath();
@@ -43,7 +44,14 @@ if (config.server.env === 'development') {
   app.use(morgan('combined'));
 }
 
-const limiter = rateLimit(config.api.rateLimit);
+const limiter = rateLimit({
+  ...config.api.rateLimit,
+  // The admin download view polls these local-only endpoints frequently.
+  skip: (req) => {
+    const url = req.originalUrl || req.url || '';
+    return url === `${config.api.basePath}/health` || url.startsWith(`${config.api.basePath}/downloads`);
+  }
+});
 app.use('/api/', limiter);
 
 app.use(express.static(path.join(__dirname, '../public')));
@@ -54,6 +62,7 @@ app.use(`${config.api.basePath}/categories`, createCategoriesRouter(dbHolder));
 app.use(`${config.api.basePath}/stats`, createStatsRouter(dbHolder));
 app.use(`${config.api.basePath}/crawler`, createCrawlerRouter(dbHolder, dbRegistry));
 app.use(`${config.api.basePath}/databases`, createDatabasesRouter(dbHolder, dbRegistry));
+app.use(`${config.api.basePath}/downloads`, createDownloadsRouter(dbRegistry));
 
 app.get(`${config.api.basePath}/health`, async (req, res) => {
   const payload = {
@@ -89,6 +98,7 @@ app.get('/', (req, res) => {
       stats: `${config.api.basePath}/stats`,
       crawler: `${config.api.basePath}/crawler`,
       databases: `${config.api.basePath}/databases`,
+      downloads: `${config.api.basePath}/downloads`,
       health: `${config.api.basePath}/health`
     }
   });

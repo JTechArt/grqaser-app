@@ -1,0 +1,46 @@
+# Quality Gate: 12.5 UI batch history list and detail
+schema: 1
+story: "12.5"
+story_title: "UI — Batch history list and detail"
+gate: PASS
+status_reason: "All acceptance criteria met. Batch history list and detail modal implemented. ID mismatch and initial load bugs fixed during review."
+reviewer: "Quinn (Test Architect)"
+updated: "2026-03-15T00:00:00Z"
+
+waiver: { active: false }
+
+top_issues: []
+
+risk_summary:
+  totals: { critical: 0, high: 0, medium: 0, low: 0 }
+  recommendations:
+    must_fix: []
+    monitor: []
+
+evidence:
+  tests_reviewed: 0
+  risks_identified: 0
+  trace:
+    ac_covered: [1, 2, 3, 4, 5]
+    ac_gaps: []
+
+nfr_validation:
+  security:
+    status: PASS
+    notes: "escapeHtml for batch/book content; no user-input SQL."
+  performance:
+    status: PASS
+    notes: "List limit 50; modal loads on demand."
+  reliability:
+    status: PASS
+    notes: "Error handling for failed fetches; null checks."
+  maintainability:
+    status: PASS
+    notes: "Follows existing modal/list patterns; design system aligned."
+
+quality_score: 100
+recommendations:
+  immediate: []
+  future:
+    - action: "Consider adding book duration to batch detail API and UI (books table has duration)."
+      refs: ["books-admin-app/src/routes/downloads.js", "admin_downloaded_books schema"]

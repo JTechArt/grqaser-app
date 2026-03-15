@@ -1,0 +1,46 @@
+# Quality Gate: 12.4 UI — Download setup and active download progress
+schema: 1
+story: "12.4"
+story_title: "UI — Download setup and active download progress"
+gate: PASS
+status_reason: "All acceptance criteria met. Download tab with setup (folder, max size, book scope), Start button, active progress view (phase, book X of Y, part Z of W, totals, storage bar, cancel). Polling every 1.5s. Pause reason shown when paused. Design system aligned."
+reviewer: "Quinn (Test Architect)"
+updated: "2026-03-15T00:00:00Z"
+
+waiver: { active: false }
+
+top_issues: []
+
+risk_summary:
+  totals: { critical: 0, high: 0, medium: 0, low: 0 }
+  recommendations:
+    must_fix: []
+    monitor: []
+
+evidence:
+  tests_reviewed: 0
+  risks_identified: 0
+  trace:
+    ac_covered: [1, 2, 3, 4, 5, 6, 7, 8, 9]
+    ac_gaps: []
+
+nfr_validation:
+  security:
+    status: PASS
+    notes: "Path input; API validates folder writable. No new auth surface."
+  performance:
+    status: PASS
+    notes: "Polling 1.5s; lightweight status fetch."
+  reliability:
+    status: PASS
+    notes: "Error display on fetch failure; cancel button; polling stops when leaving view."
+  maintainability:
+    status: PASS
+    notes: "Follows existing index.html pattern; design tokens; manual QA per story."
+
+quality_score: 100
+recommendations:
+  immediate: []
+  future:
+    - action: "Consider adding basic Playwright/Puppeteer smoke test for download tab navigation and form elements."
+      refs: ["books-admin-app/public/index.html"]

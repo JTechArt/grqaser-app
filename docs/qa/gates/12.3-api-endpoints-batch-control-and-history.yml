@@ -1,0 +1,46 @@
+# Quality Gate: 12.3 API endpoints for batch control and history
+schema: 1
+story: "12.3"
+story_title: "API endpoints for batch control and history"
+gate: PASS
+status_reason: "All acceptance criteria met. REST API exposes POST /start, POST /:batchId/cancel, GET /status, GET /stream (SSE), GET /batches, GET /batches/:batchId. Download runner owns DB lifecycle; 9 integration tests pass (fixed flaky 409 test)."
+reviewer: "Quinn (Test Architect)"
+updated: "2026-03-15T00:00:00Z"
+
+waiver: { active: false }
+
+top_issues: []
+
+risk_summary:
+  totals: { critical: 0, high: 0, medium: 0, low: 0 }
+  recommendations:
+    must_fix: []
+    monitor: []
+
+evidence:
+  tests_reviewed: 9
+  risks_identified: 0
+  trace:
+    ac_covered: [1, 2, 3, 4, 5, 6]
+    ac_gaps: []
+
+nfr_validation:
+  security:
+    status: PASS
+    notes: "Folder validation rejects path traversal; local-only admin app; no auth changes."
+  performance:
+    status: PASS
+    notes: "SSE polls every 1s; status endpoint lightweight; list/detail use indexed queries."
+  reliability:
+    status: PASS
+    notes: "Runner owns DB, closes when done; 409 enforces one-active-batch; cancel signal supported."
+  maintainability:
+    status: PASS
+    notes: "Routes follow existing pattern; 9 API tests; waitForIdle helper fixes test isolation."
+
+quality_score: 100
+recommendations:
+  immediate: []
+  future:
+    - action: "Consider adding storage_limit to runner progress so status shows limit during run (currently may be 0 from lastProgress)."
+      refs: ["books-admin-app/src/services/download-runner.js"]

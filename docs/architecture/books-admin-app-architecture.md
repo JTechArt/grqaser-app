@@ -36,6 +36,73 @@
 - **Edit:** User can edit any field for a given object (e.g. book title, author, description, audio URL) and persist changes to the active DB. Edits are applied **in place** (SQL UPDATE); the UI reflects the updated data; no duplicate records created by the edit flow.
 - **Audit:** Manual edits are distinguishable from crawler-written data where feasible (e.g. optional `last_edited_at` timestamp or source indicator). Safe for local-only use; no auth required.
 
+## Bulk MP3 export/download architecture (Feature request: MP3 Bulk Download)
+
+- **Responsibility:** books-admin-app owns the admin-only workflow for exporting audiobook MP3 assets from the catalog to operator-selected local storage. This is distinct from GrqaserApp offline playback: the admin flow is batch-oriented, filesystem-first, and designed for archival or distribution.
+- **Scope boundary:** This capability lives only in books-admin-app. It does not change GrqaserApp download behavior, public APIs for end users, or crawler extraction semantics beyond reusing existing audio URL fields from the books table.
+- **Execution rule:** Only **one active download batch** may run at a time across the app. A batch may be `preparing`, `downloading`, `paused`, `completed`, or `cancelled`.
+
+### User flow and pipeline
+
+- **Step 1: Configure batch.** Operator selects a writable base folder, max batch size (default 200 GB), and batch scope/config (for example all remaining books, explicit IDs, or skip previously completed books).
+- **Step 2: Prepare structure.** The app validates the destination path, creates the batch root if needed, registers the batch in SQLite, and emits real-time status that the batch is entering Phase 1.
+- **Step 3: Write metadata first.** For every book included in the batch, the app creates a deterministic book folder and writes `metadata.json` before any audio transfer starts.
+- **Step 4: Download MP3 parts.** The app downloads each book's single-file or chapter-based MP3 set, updates per-book and per-batch progress, and auto-pauses before starting a book that would exceed the size cap.
+- **Step 5: Resume, cancel, or create next batch.** A paused batch can be resumed if limits/config allow, cancelled with partial progress retained, or followed by a new batch that targets a different folder or subfolder.
+
+### Output contract
+
+- **Folder layout:** `{base_folder}/{book_id}_{sanitized-slug}/metadata.json` plus `part_001.mp3`, `part_002.mp3`, and so on.
+- **Slugging:** Folder names must be deterministic and filesystem-safe. Invalid path characters are removed or replaced, length is capped conservatively, and `book_id` stays as the uniqueness anchor.
+- **Metadata-first guarantee:** `metadata.json` is always written before any MP3 file for that book so partial exports remain intelligible and resumable.
+- **Metadata contents:** Derived from the `books` table and normalized author/category tables when available. Include book identity, display fields, duration, category/language, source URLs, cover image, publication date, and a computed `download_links` array.
+- **File naming:** Use zero-padded part names in source order. Single-file books still use `part_001.mp3` so downstream tooling does not need separate naming branches.
+
+### Component design
+
+- **Batch coordinator:** Orchestrates the three phases, enforces the single-active-batch rule, computes running totals, and owns pause/resume/cancel transitions.
+- **Manifest builder:** Reads books from the active catalog DB, expands each book into a normalized download manifest (`metadata + ordered part URLs + estimated size`), and resolves whether a book is single-file or chapter-based.
+- **Filesystem writer:** Validates paths, creates directories, writes `metadata.json` atomically, and ensures partial files do not overwrite completed files unless re-download is explicitly enabled.
+- **Download worker:** Streams MP3s to disk sequentially by default. Keep concurrency at `1` for the initial implementation to simplify storage accounting, UI progress, and failure recovery on local machines.
+- **Progress broadcaster:** Publishes phase changes, current book/part counters, transferred bytes, elapsed time, and pause reasons through SSE or equivalent polling-backed status endpoints.
+- **History/query layer:** Serves batch list and batch detail views from SQLite so the UI can recover state after app restarts.
+
+### Data and recovery rules
+
+- **Batch tracking:** Persist each batch in `admin_download_batches` and each book attempt in `admin_downloaded_books`; see [Data models and schema](./data-models-and-schema.md).
+- **Idempotency mode:** Batch config should carry an explicit duplicate policy such as `skip_completed`, `redownload`, or `resume_partial`. Default to `skip_completed` for safety and operator clarity.
+- **Resume behavior:** On resume, rebuild in-memory progress from SQLite and filesystem inspection. Completed books remain immutable; incomplete books resume from the next missing part or restart the current book, depending on implementation simplicity.
+- **Failure isolation:** If one book or part fails, mark that book `failed`, persist the error message, continue to the next book, and keep the batch in `downloading` unless the operator cancels or the storage limit is reached.
+- **Stop semantics:** Epic 12 uses the term **stop** for operator control. In implementation, `stop` should terminate the active batch run, preserve existing metadata and completed MP3s, and record the batch as `cancelled` unless a future story introduces a separate manual-pause concept.
+
+### Storage limit enforcement
+
+- **Primary rule:** Before Phase 3 starts a book, compute `current_batch_size + estimated_book_size <= max_size_bytes`. If false, the batch transitions to `paused` with a machine-readable and user-visible reason such as `storage_limit_reached`.
+- **Estimation order:** Prefer `books.file_size`; if unavailable, estimate from known chapter metadata or duration heuristics. For mixed-quality data, store both `estimated_size_bytes` in memory/config and `total_size_bytes` as actual transferred bytes once completed.
+- **No mid-book auto-split:** Do not split a single book across batches automatically. If a book does not fit in the remaining allowance, pause before it starts so each exported book folder is self-contained.
+
+### UI and API contract
+
+- **Admin UI:** Add a dedicated bulk-download/export panel in books-admin-app with batch setup form, live status card, storage meter, and reverse-chronological history list.
+- **Live progress:** Support SSE as the preferred transport. Polling every 1-2 seconds is an acceptable fallback if SSE is not feasible in the current Express stack.
+- **Status detail:** UI must display current phase, current book title and ordinal, current part progress, total books completed, cumulative downloaded size, elapsed time, and pause/cancel/error messages.
+- **History drill-down:** Batch detail exposes folder path, config, per-book states, sizes, durations, and error messages so operators can verify what was copied to each external drive or folder.
+- **Suggested endpoints:**
+  - `POST /api/v1/admin-downloads/batches` — create and start a batch.
+  - `POST /api/v1/admin-downloads/batches/:id/stop` — stop the active batch and retain partial progress.
+  - `GET /api/v1/admin-downloads/status` — current active batch status for the active-download view.
+  - `GET /api/v1/admin-downloads/batches` — batch history list.
+  - `GET /api/v1/admin-downloads/batches/:id` — batch detail including per-book records.
+  - `GET /api/v1/admin-downloads/stream` — SSE progress stream for the active batch.
+- **Control model:** To match Epic 12 exactly, `start`, `stop`, `status`, `history`, and `detail` are the required public API surface. Internal implementation may still model automatic storage-limit pauses as `paused` batch state, but manual `pause`/`resume` endpoints are not part of the required contract unless a later story adds them.
+
+### Security and operational constraints
+
+- **Path safety:** Resolve operator input to a normalized absolute path before execution. Reject path traversal escapes, unwritable destinations, and paths that resolve outside the intended filesystem target for the current machine.
+- **Network safety:** Only download from validated `http/https` URLs already present in the catalog DB. Reuse existing crawler URL validation rules where practical.
+- **Observability:** Write structured logs for batch lifecycle events, book failures, and pause/cancel reasons. Batch IDs should be included in every related log line.
+- **Resource profile:** This is a local admin workload, so horizontal scaling is not required. Favor deterministic sequential processing, resumability, and low operator surprise over throughput optimization.
+
 ## API surface (aligned with existing + new)
 
 - **Existing (preserved):** `GET /api/v1/books`, `GET /api/v1/books/:id`, `GET /api/v1/books/search`, stats, crawler status/URLs/logs, `GET /api/v1/health`. All read from active DB.
@@ -44,6 +111,7 @@
   - **Crawler control:** Start/stop (e.g. `POST /api/v1/crawler/start`, `POST /api/v1/crawler/stop`), get/update crawler config (e.g. `GET /api/v1/crawler/config`, `PUT /api/v1/crawler/config`).
   - **Data edit:** Update a book (e.g. `PATCH /api/v1/books/:id` or `PUT /api/v1/books/:id`) with body containing editable fields; persist to active DB and return updated resource.
   - **Epic 9:** Authors and categories CRUD (list, add, edit, delete); `GET /api/v1/authors`, `GET /api/v1/categories`; advanced search on book list (author_ids, category_ids, duration_range, text); book edit form uses author/category dropdowns; crawler populates authors and book_categories tables.
+  - **Admin bulk downloads (Epic 12):** Batch create/start, stop, status, history list, and batch detail endpoints plus an SSE stream for real-time progress. These routes are local-admin only and operate against the active catalog DB plus admin download tracking tables.
 
 ## Project structure (books-admin-app)
 
@@ -52,9 +120,12 @@
   - `books-admin-app/src/server.js` — Express entry; mounts API routes and serves static UI.
   - `books-admin-app/src/config/` — App config (port, logging); includes active DB path and crawler config (or references to same).
   - `books-admin-app/src/routes/` — books, stats, crawler (status/logs/start/stop/config), databases (list/set-active/delete), health.
+  - `books-admin-app/src/routes/admin-downloads.js` — batch start/stop/status/history/detail + SSE progress endpoint.
   - `books-admin-app/src/models/` or `books-admin-app/src/db/` — SQLite access (read + write for active DB); DB versioning metadata.
+  - `books-admin-app/src/services/admin-downloads/` — batch coordinator, manifest builder, filesystem writer, download worker, storage estimator.
+  - `books-admin-app/src/models/admin-download-repository.js` — persistence for `admin_download_batches` and `admin_downloaded_books`.
   - **Crawler:** Either (a) `books-admin-app/src/crawler/` — in-process crawler (logic moved from `crawler/`), or (b) crawler invoked as subprocess pointing at `crawler/src/crawler.js` with config/DB path passed.
-  - `books-admin-app/public/` — Web UI (dashboard, book list/detail, crawler control and logs, DB versioning UI, data edit forms).
+  - `books-admin-app/public/` — Web UI (dashboard, book list/detail, crawler control and logs, DB versioning UI, data edit forms, admin bulk-download screens).
 - **Schema and data contract:** Same as [Data models and schema](./data-models-and-schema.md). Books table may add optional `last_edited_at` (and optionally `edited_by`) for edit audit; see data-models doc.
 
 ## Tech stack (books-admin-app)
@@ -77,6 +148,7 @@
 - [Epic 6](../prd/epic-6.md) — Books Admin App (merge crawler + database-viewer, data management).
 - [Epic 7](../prd/epic-7.md) — Remove crawler and database-viewer; design system and UI/UX for books-admin-app and GrqaserApp.
 - [Epic 9](../prd/epic-9.md) — Authors/categories management, advanced search, schema normalization.
+- [Feature request: MP3 Bulk Download (Books Admin App)](../feature-requests/mp3-bulk-download-admin.md) — Admin batch MP3 export requirements.
 - [Delivery order and application boundaries](./delivery-order-and-application-boundaries.md) — books-admin-app is the single admin app (post–Epic 7).
 - [Crawler pipeline and data contract](./crawler-pipeline-and-data-contract.md) — Crawler behavior preserved in books-admin-app.
 - [Database-viewer API and deployment](./database-viewer-api-and-deployment.md) — Viewer/API behavior preserved in books-admin-app.
