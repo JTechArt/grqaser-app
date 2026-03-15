@@ -16,6 +16,7 @@ const repo = require('../models/admin-download-repository');
 const { filterValidUrls } = require('../crawler/utils/url-validator');
 
 const DEFAULT_MAX_SIZE_BYTES = 200 * 1024 * 1024 * 1024; // 200GB
+const DEFAULT_MAX_CONCURRENT_BOOKS = 10;
 const BYTES_PER_MINUTE_ESTIMATE = 1024 * 1024; // ~1MB per minute
 
 /**
@@ -138,28 +139,53 @@ async function run(options) {
     db,
     baseFolderPath,
     maxSizeBytes = DEFAULT_MAX_SIZE_BYTES,
+    maxConcurrentBooks = DEFAULT_MAX_CONCURRENT_BOOKS,
     bookIds,
     batchId,
     cancelSignal = { cancelled: false },
-    onProgress = () => {}
+    onProgress = () => {},
+    downloadImpl = downloadUrlToFile
   } = options;
-
-  const emitProgress = (overrides = {}) => {
-    onProgress({
-      batchId,
-      ...overrides
-    });
-  };
 
   const basePath = path.resolve(baseFolderPath);
   const configJson = JSON.stringify({
     bookIds,
     maxSizeBytes,
+    maxConcurrentBooks,
     duplicatePolicy: 'skip_completed',
     pauseReason: null
   });
 
   const now = () => new Date().toISOString();
+  const concurrencyLimit = Math.max(1, Math.min(Number(maxConcurrentBooks) || DEFAULT_MAX_CONCURRENT_BOOKS, DEFAULT_MAX_CONCURRENT_BOOKS));
+
+  const progressState = {
+    batchId,
+    status: 'preparing',
+    phase: 1,
+    phaseLabel: 'Creating folder structure',
+    bookIndex: null,
+    bookTotal: 0,
+    partIndex: null,
+    partTotal: null,
+    bookTitle: null,
+    booksCompleted: 0,
+    booksFailed: 0,
+    booksActive: 0,
+    booksQueued: 0,
+    totalSizeBytes: 0,
+    maxSizeBytes,
+    activeWorkers: 0,
+    concurrencyLimit,
+    activeBooks: []
+  };
+
+  const emitProgress = (overrides = {}) => {
+    Object.assign(progressState, overrides);
+    onProgress({
+      ...progressState
+    });
+  };
 
   try {
     repo.createBatch(db, {
@@ -169,7 +195,7 @@ async function run(options) {
       config_json: configJson
     });
 
-    emitProgress({ phase: 1, phaseLabel: 'Creating folder structure' });
+    emitProgress({ phase: 1, phaseLabel: 'Creating folder structure', status: 'preparing' });
 
     // Phase 1: Create base folder, validate write
     if (!fs.existsSync(basePath)) {
@@ -188,6 +214,7 @@ async function run(options) {
 
     emitProgress({
       phase: 2,
+      status: 'downloading',
       phaseLabel: 'Writing metadata',
       bookTotal: manifestList.length
     });
@@ -223,67 +250,95 @@ async function run(options) {
         phaseLabel: `Writing metadata for book ${i + 1} of ${manifestWithUrls.length}`,
         bookIndex: i,
         bookTotal: manifestWithUrls.length,
-        bookTitle: book.title
+        bookTitle: book.title,
+        booksQueued: Math.max(0, manifestWithUrls.length - (i + 1))
       });
     }
 
     emitProgress({
       phase: 3,
       phaseLabel: 'Downloading MP3s',
-      bookTotal: manifestWithUrls.length
+      bookIndex: null,
+      bookTitle: null,
+      partIndex: null,
+      partTotal: null,
+      bookTotal: manifestWithUrls.length,
+      booksQueued: manifestWithUrls.length,
+      booksCompleted: 0,
+      booksFailed: 0,
+      booksActive: 0,
+      activeWorkers: 0,
+      activeBooks: []
     });
 
     // Phase 3: Download MP3s
     let currentBatchSize = 0;
     let booksCompleted = 0;
+    let booksFailed = 0;
+    let reservedBatchSize = 0;
+    let queueIndex = 0;
+    let pauseReason = null;
+    const activeBooksMap = new Map();
 
-    for (let i = 0; i < manifestWithUrls.length; i++) {
-      if (cancelSignal.cancelled) {
-        repo.updateBatch(db, batchId, {
-          status: 'cancelled',
-          completed_at: now(),
-          books_downloaded: booksCompleted,
-          total_size_bytes: currentBatchSize
-        });
-        return { status: 'cancelled', booksCompleted, totalSizeBytes: currentBatchSize };
-      }
+    const buildActiveBooksSnapshot = () => Array.from(activeBooksMap.values()).map((entry) => ({
+      book_id: entry.bookId,
+      queue_index: entry.queueIndex,
+      title: entry.bookTitle,
+      part_index: entry.partIndex,
+      part_total: entry.partTotal,
+      parts_downloaded: entry.partsDownloaded,
+      total_size_bytes: entry.totalSizeBytes,
+      status: entry.status
+    }));
 
-      const { book, partUrls, estimatedSizeBytes, partCount } = manifestWithUrls[i];
+    const emitPhase3Progress = (overrides = {}) => {
+      const activeBooks = buildActiveBooksSnapshot();
+      const nextQueued = Math.max(0, manifestWithUrls.length - queueIndex);
+      const currentBook = activeBooks[0] || null;
+      emitProgress({
+        phase: 3,
+        status: pauseReason ? 'paused' : (cancelSignal.cancelled ? 'cancelled' : 'downloading'),
+        phaseLabel: currentBook
+          ? `Downloading ${activeBooks.length} active book${activeBooks.length === 1 ? '' : 's'}`
+          : (pauseReason ? 'Paused' : 'Waiting for download workers'),
+        bookIndex: currentBook ? currentBook.queueIndex : null,
+        bookTotal: manifestWithUrls.length,
+        partIndex: currentBook ? currentBook.part_index : null,
+        partTotal: currentBook ? currentBook.part_total : null,
+        bookTitle: currentBook ? currentBook.title : null,
+        booksCompleted,
+        booksFailed,
+        booksActive: activeBooks.length,
+        booksQueued: nextQueued,
+        totalSizeBytes: currentBatchSize,
+        activeWorkers: activeBooks.length,
+        activeBooks,
+        ...overrides
+      });
+    };
+
+    const processBook = async (manifest, queuePosition) => {
+      const { book, partUrls, estimatedSizeBytes, partCount } = manifest;
       const slug = slugify(book.title);
       const folderName = `${book.id}_${slug}`;
       const bookFolder = path.join(basePath, folderName);
+      const downloadedBook = repo.getDownloadedBookByBatchAndBook(db, batchId, book.id);
 
-      if (currentBatchSize + estimatedSizeBytes > maxSizeBytes) {
-        repo.updateBatch(db, batchId, {
-          status: 'paused',
-          completed_at: now(),
-          books_downloaded: booksCompleted,
-          total_size_bytes: currentBatchSize,
-          config_json: JSON.stringify({
-            bookIds,
-            maxSizeBytes,
-            duplicatePolicy: 'skip_completed',
-            pauseReason: 'storage_limit_reached'
-          })
-        });
-        return {
-          status: 'paused',
-          booksCompleted,
-          totalSizeBytes: currentBatchSize,
-          error: 'Storage limit reached'
-        };
+      reservedBatchSize -= estimatedSizeBytes;
+
+      if (!downloadedBook) {
+        return;
       }
 
-      const downloadedBook = repo.getDownloadedBookByBatchAndBook(db, batchId, book.id);
-      if (!downloadedBook) continue;
-
       if (partUrls.length === 0) {
+        booksFailed++;
         repo.updateDownloadedBook(db, downloadedBook.id, {
           status: 'failed',
           completed_at: now(),
           error_message: 'No valid download URLs'
         });
-        continue;
+        emitPhase3Progress();
+        return;
       }
 
       repo.updateDownloadedBook(db, downloadedBook.id, {
@@ -291,16 +346,17 @@ async function run(options) {
         started_at: now()
       });
 
-      emitProgress({
-        phase: 3,
-        phaseLabel: `Downloading book ${i + 1} of ${manifestWithUrls.length}`,
-        bookIndex: i,
-        bookTotal: manifestWithUrls.length,
+      activeBooksMap.set(book.id, {
+        bookId: book.id,
+        queueIndex: queuePosition,
         bookTitle: book.title,
+        partIndex: 0,
         partTotal: partCount,
-        booksCompleted,
-        totalSizeBytes: currentBatchSize
+        partsDownloaded: 0,
+        totalSizeBytes: 0,
+        status: 'in_progress'
       });
+      emitPhase3Progress();
 
       let bookTotalBytes = 0;
       let partsDownloaded = 0;
@@ -308,22 +364,28 @@ async function run(options) {
       let bookError = null;
 
       for (let p = 0; p < partUrls.length; p++) {
-        if (cancelSignal.cancelled) break;
+        if (cancelSignal.cancelled) {
+          bookFailed = true;
+          bookError = 'Cancelled';
+          break;
+        }
+
         const url = partUrls[p];
         const partNum = String(p + 1).padStart(3, '0');
         const destPath = path.join(bookFolder, `part_${partNum}.mp3`);
 
-        emitProgress({
-          phase: 3,
-          bookIndex: i,
-          bookTotal: manifestWithUrls.length,
+        activeBooksMap.set(book.id, {
+          ...activeBooksMap.get(book.id),
           partIndex: p,
           partTotal: partCount,
-          bookTitle: book.title
+          partsDownloaded,
+          totalSizeBytes: bookTotalBytes,
+          status: 'in_progress'
         });
+        emitPhase3Progress();
 
         try {
-          const bytes = await downloadUrlToFile(url, destPath);
+          const bytes = await downloadImpl(url, destPath);
           bookTotalBytes += bytes;
           partsDownloaded++;
           currentBatchSize += bytes;
@@ -334,9 +396,19 @@ async function run(options) {
           });
 
           repo.updateBatch(db, batchId, {
-            books_downloaded: booksCompleted + (partsDownloaded === partCount ? 1 : 0),
+            books_downloaded: booksCompleted,
             total_size_bytes: currentBatchSize
           });
+
+          activeBooksMap.set(book.id, {
+            ...activeBooksMap.get(book.id),
+            partIndex: p,
+            partTotal: partCount,
+            partsDownloaded,
+            totalSizeBytes: bookTotalBytes,
+            status: partsDownloaded === partCount ? 'finishing' : 'in_progress'
+          });
+          emitPhase3Progress();
         } catch (err) {
           bookFailed = true;
           bookError = err.message;
@@ -345,9 +417,14 @@ async function run(options) {
         }
       }
 
+      activeBooksMap.delete(book.id);
+
       if (bookFailed) {
+        if (bookError !== 'Cancelled') {
+          booksFailed++;
+        }
         repo.updateDownloadedBook(db, downloadedBook.id, {
-          status: 'failed',
+          status: bookError === 'Cancelled' ? 'cancelled' : 'failed',
           completed_at: now(),
           error_message: bookError
         });
@@ -364,6 +441,81 @@ async function run(options) {
           total_size_bytes: currentBatchSize
         });
       }
+
+      emitPhase3Progress();
+    };
+
+    const worker = async () => {
+      while (queueIndex < manifestWithUrls.length && !pauseReason) {
+        if (cancelSignal.cancelled) {
+          return;
+        }
+
+        const manifest = manifestWithUrls[queueIndex];
+        const queuePosition = queueIndex;
+        queueIndex++;
+
+        if (currentBatchSize + reservedBatchSize + manifest.estimatedSizeBytes > maxSizeBytes) {
+          pauseReason = 'storage_limit_reached';
+          queueIndex--;
+          return;
+        }
+
+        reservedBatchSize += manifest.estimatedSizeBytes;
+        emitPhase3Progress();
+        await processBook(manifest, queuePosition);
+      }
+    };
+
+    const workerCount = Math.min(concurrencyLimit, manifestWithUrls.length || 1);
+    const workerPromises = Array.from({ length: workerCount }, () => worker());
+    await Promise.all(workerPromises);
+
+    if (cancelSignal.cancelled) {
+      repo.updateBatch(db, batchId, {
+        status: 'cancelled',
+        completed_at: now(),
+        books_downloaded: booksCompleted,
+        total_size_bytes: currentBatchSize
+      });
+      emitProgress({
+        status: 'cancelled',
+        activeWorkers: 0,
+        booksActive: 0,
+        booksQueued: Math.max(0, manifestWithUrls.length - queueIndex),
+        activeBooks: []
+      });
+      return { status: 'cancelled', booksCompleted, totalSizeBytes: currentBatchSize };
+    }
+
+    if (pauseReason) {
+      repo.updateBatch(db, batchId, {
+        status: 'paused',
+        completed_at: now(),
+        books_downloaded: booksCompleted,
+        total_size_bytes: currentBatchSize,
+        config_json: JSON.stringify({
+          bookIds,
+          maxSizeBytes,
+          maxConcurrentBooks: concurrencyLimit,
+          duplicatePolicy: 'skip_completed',
+          pauseReason
+        })
+      });
+      emitProgress({
+        status: 'paused',
+        phaseLabel: 'Paused: storage limit reached',
+        activeWorkers: 0,
+        booksActive: 0,
+        booksQueued: Math.max(0, manifestWithUrls.length - queueIndex),
+        activeBooks: []
+      });
+      return {
+        status: 'paused',
+        booksCompleted,
+        totalSizeBytes: currentBatchSize,
+        error: 'Storage limit reached'
+      };
     }
 
     const batchRow = repo.getBatchById(db, batchId);
@@ -374,6 +526,17 @@ async function run(options) {
       books_downloaded: booksCompleted,
       total_size_bytes: currentBatchSize,
       duration_seconds: durationSeconds
+    });
+    emitProgress({
+      status: 'completed',
+      phaseLabel: 'Download complete',
+      booksCompleted,
+      booksFailed,
+      booksQueued: 0,
+      booksActive: 0,
+      activeWorkers: 0,
+      activeBooks: [],
+      totalSizeBytes: currentBatchSize
     });
 
     return {
@@ -391,5 +554,6 @@ module.exports = {
   run,
   slugify,
   buildManifestEntry,
-  DEFAULT_MAX_SIZE_BYTES
+  DEFAULT_MAX_SIZE_BYTES,
+  DEFAULT_MAX_CONCURRENT_BOOKS
 };

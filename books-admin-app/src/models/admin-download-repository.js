@@ -2,8 +2,32 @@
  * Persistence for admin_download_batches and admin_downloaded_books.
  * Epic 12: MP3 bulk download tracking.
  *
- * Expects migration 002 to have been run. Uses raw better-sqlite3 db instance.
+ * Uses raw better-sqlite3 db instance. Ensures tables/indexes exist on demand
+ * so the feature works even if migration 002 has not been run manually yet.
  */
+
+const migration002 = require('../migrations/002-admin-download-tables');
+
+const ensuredDbs = new WeakSet();
+
+function ensureSchema(db) {
+  if (ensuredDbs.has(db)) {
+    return;
+  }
+
+  const batchesTable = db.prepare(
+    "SELECT name FROM sqlite_master WHERE type='table' AND name='admin_download_batches'"
+  ).get();
+  const downloadedBooksTable = db.prepare(
+    "SELECT name FROM sqlite_master WHERE type='table' AND name='admin_downloaded_books'"
+  ).get();
+
+  if (!batchesTable || !downloadedBooksTable) {
+    migration002.up(db);
+  }
+
+  ensuredDbs.add(db);
+}
 
 /**
  * Create a batch record
@@ -12,6 +36,8 @@
  * @returns {object} inserted row
  */
 function createBatch(db, batch) {
+  ensureSchema(db);
+
   const now = new Date().toISOString();
   const configJson = typeof batch.config_json === 'string'
     ? batch.config_json
@@ -40,6 +66,8 @@ function createBatch(db, batch) {
  * @param {object} updates - { status, books_downloaded?, total_size_bytes?, completed_at?, duration_seconds? }
  */
 function updateBatch(db, batchId, updates) {
+  ensureSchema(db);
+
   const allowed = ['status', 'books_downloaded', 'total_size_bytes', 'completed_at', 'duration_seconds', 'config_json'];
   const setParts = [];
   const params = [];
@@ -63,6 +91,8 @@ function updateBatch(db, batchId, updates) {
  * @returns {number} inserted id
  */
 function createDownloadedBook(db, record) {
+  ensureSchema(db);
+
   const result = db.prepare(`
     INSERT INTO admin_downloaded_books (
       book_id, download_batch_id, local_folder_path, part_count, status
@@ -85,6 +115,8 @@ function createDownloadedBook(db, record) {
  * @param {object} updates - { status, parts_downloaded?, total_size_bytes?, started_at?, completed_at?, error_message? }
  */
 function updateDownloadedBook(db, id, updates) {
+  ensureSchema(db);
+
   const allowed = ['status', 'parts_downloaded', 'total_size_bytes', 'started_at', 'completed_at', 'error_message'];
   const setParts = [];
   const params = [];
@@ -108,6 +140,7 @@ function updateDownloadedBook(db, id, updates) {
  * @returns {object|null}
  */
 function getBatchById(db, batchId) {
+  ensureSchema(db);
   return db.prepare('SELECT * FROM admin_download_batches WHERE id = ?').get(batchId);
 }
 
@@ -117,6 +150,7 @@ function getBatchById(db, batchId) {
  * @returns {object|null}
  */
 function getActiveBatch(db) {
+  ensureSchema(db);
   return db.prepare(`
     SELECT * FROM admin_download_batches
     WHERE status IN ('preparing', 'downloading', 'paused')
@@ -132,6 +166,7 @@ function getActiveBatch(db) {
  * @returns {object[]}
  */
 function getBatchBooks(db, batchId) {
+  ensureSchema(db);
   return db.prepare(`
     SELECT adb.*, books.title as book_title, books.author as book_author, books.duration_formatted as book_duration
     FROM admin_downloaded_books adb
@@ -149,6 +184,7 @@ function getBatchBooks(db, batchId) {
  * @returns {object|null}
  */
 function getDownloadedBookByBatchAndBook(db, batchId, bookId) {
+  ensureSchema(db);
   return db.prepare(`
     SELECT * FROM admin_downloaded_books
     WHERE download_batch_id = ? AND book_id = ?
@@ -163,6 +199,8 @@ function getDownloadedBookByBatchAndBook(db, batchId, bookId) {
  * @returns {object[]}
  */
 function listBatches(db, options = {}) {
+  ensureSchema(db);
+
   const limit = Math.min(Number(options.limit) || 50, 100);
   const offset = Math.max(0, Number(options.offset) || 0);
 
@@ -174,6 +212,7 @@ function listBatches(db, options = {}) {
 }
 
 module.exports = {
+  ensureSchema,
   createBatch,
   updateBatch,
   createDownloadedBook,

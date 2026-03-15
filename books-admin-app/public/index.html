@@ -427,7 +427,7 @@
             <h1 class="page-title">Bulk MP3 Download</h1>
             <div class="controls" id="downloadSetupCard">
                 <h2>Setup</h2>
-                <p style="margin-bottom: 1rem; color: var(--text-muted); font-size: 0.9375rem;">Download audiobook MP3s to a folder. One batch runs at a time. Storage limit auto-pauses the batch when reached.</p>
+                <p style="margin-bottom: 1rem; color: var(--text-muted); font-size: 0.9375rem;">Download audiobook MP3s to a folder. One batch runs at a time, with up to 10 books downloading in parallel. Storage limit auto-pauses the batch when reached.</p>
                 <div class="filters" style="display: grid; grid-template-columns: 1fr minmax(120px, auto); gap: 1rem; margin-bottom: 1rem;">
                     <div class="filter-group">
                         <label for="downloadFolderPath">Base folder path</label>
@@ -448,6 +448,12 @@
             <div class="controls" id="downloadProgressCard" style="display: none;">
                 <h2>Active download</h2>
                 <div id="downloadProgressContent"><div class="loading">Loading status…</div></div>
+            </div>
+            <div class="crawler-logs-container" style="margin-top: 1.5rem;">
+                <h3>Download logs</h3>
+                <div class="crawler-logs-list" id="downloadLogsList">
+                    <div class="loading">Loading download logs…</div>
+                </div>
             </div>
             <div class="controls" style="margin-top: 1.5rem;">
                 <h2>Batch history</h2>
@@ -1383,6 +1389,7 @@
             }
             if (viewId === 'download') {
                 loadDownloadStatus();
+                loadDownloadLogs();
                 loadDownloadBatches();
                 startDownloadPolling();
             } else {
@@ -1609,6 +1616,15 @@
             return (bytes / (1024 * 1024 * 1024)).toFixed(2);
         }
 
+        function formatBytesCompact(bytes) {
+            const value = Number(bytes) || 0;
+            if (value <= 0) return '0 B';
+            if (value >= 1024 * 1024 * 1024) return formatBytesToGB(value) + ' GB';
+            if (value >= 1024 * 1024) return (value / (1024 * 1024)).toFixed(1) + ' MB';
+            if (value >= 1024) return (value / 1024).toFixed(1) + ' KB';
+            return value + ' B';
+        }
+
         function formatElapsed(seconds) {
             if (seconds == null || seconds < 0) return '0s';
             const m = Math.floor(seconds / 60);
@@ -1619,6 +1635,34 @@
                 return h + 'h ' + rem + 'm ' + s + 's';
             }
             return m + 'm ' + s + 's';
+        }
+
+        async function loadDownloadLogs() {
+            const el = document.getElementById('downloadLogsList');
+            if (!el) return;
+
+            try {
+                const res = await fetch(`${API_BASE}/downloads/logs?limit=80`);
+                const data = await res.json();
+                if (!data.success || !data.data || !Array.isArray(data.data.logs)) {
+                    el.innerHTML = '<div class="error">Failed to load download logs</div>';
+                    return;
+                }
+
+                if (data.data.logs.length === 0) {
+                    el.innerHTML = '<div class="loading">No download logs yet. Start a batch to see live progress here.</div>';
+                    return;
+                }
+
+                el.innerHTML = data.data.logs.map(function(log) {
+                    const color = log.level === 'error' ? '#b91c1c' : 'var(--text-muted)';
+                    const timestamp = log.timestamp ? new Date(log.timestamp).toLocaleTimeString() : '--:--:--';
+                    return `<div class="log-entry" style="color:${color};"><strong>[${escapeHtml(timestamp)}]</strong> ${escapeHtml(log.message || '')}</div>`;
+                }).join('');
+            } catch (err) {
+                console.error('Download logs:', err);
+                el.innerHTML = '<div class="error">Failed to load download logs</div>';
+            }
         }
 
         async function loadDownloadStatus() {
@@ -1637,6 +1681,20 @@
                 }
                 const s = data.data;
                 const running = s && s.running === true;
+                const booksDone = s.books_completed ?? s.booksCompleted ?? 0;
+                const booksFailed = s.books_failed ?? s.booksFailed ?? 0;
+                const booksActive = s.books_active ?? s.booksActive ?? 0;
+                const booksQueued = s.books_queued ?? s.booksQueued ?? 0;
+                const totalBytes = s.total_size_bytes ?? s.totalSizeBytes ?? 0;
+                const elapsed = s.elapsed_seconds ?? 0;
+                const used = s.storage_used ?? totalBytes ?? 0;
+                const limit = s.storage_limit ?? 200 * 1024 * 1024 * 1024;
+                const activeWorkers = s.active_workers ?? s.activeWorkers ?? booksActive;
+                const concurrencyLimit = s.concurrency_limit ?? s.concurrencyLimit ?? 10;
+                const activeBooks = Array.isArray(s.active_books) ? s.active_books : (Array.isArray(s.activeBooks) ? s.activeBooks : []);
+                const totalBooks = s.bookTotal || (booksDone + booksFailed + booksActive + booksQueued) || 0;
+                const accountedBooks = booksDone + booksFailed;
+                const overallPct = totalBooks > 0 ? Math.min(100, Math.round((accountedBooks / totalBooks) * 100)) : 0;
 
                 if (running) {
                     if (setupCard) setupCard.style.display = 'none';
@@ -1657,15 +1715,33 @@
                     if (phase === 2 && bookY > 0) phaseDetail = 'Writing metadata for book ' + bookX + ' of ' + bookY + (bookTitle ? ' — ' + bookTitle : '') + '…';
                     if (phase === 3 && bookY > 0) phaseDetail = 'Downloading book ' + bookX + ' of ' + bookY + ' — part ' + partZ + ' of ' + partW + (bookTitle ? ' — ' + bookTitle : '') + '…';
 
-                    const booksDone = s.books_completed ?? s.booksCompleted ?? 0;
-                    const totalBytes = s.total_size_bytes ?? s.totalSizeBytes ?? 0;
-                    const elapsed = s.elapsed_seconds ?? 0;
-                    const used = s.storage_used ?? totalBytes ?? 0;
-                    const limit = s.storage_limit ?? 200 * 1024 * 1024 * 1024;
                     const usedGB = formatBytesToGB(used);
                     const limitGB = formatBytesToGB(limit);
                     const pct = limit > 0 ? Math.min(100, Math.round((used / limit) * 100)) : 0;
                     const nearLimit = pct >= 85;
+                    const activeBooksHtml = activeBooks.length > 0
+                        ? activeBooks.map(function(book) {
+                            const activePart = (book.part_index != null ? book.part_index + 1 : 0);
+                            const partTotal = book.part_total || 0;
+                            const partLabel = partTotal > 0 ? ('Part ' + activePart + ' / ' + partTotal) : 'Waiting';
+                            const partProgress = partTotal > 0 ? Math.min(100, Math.round(((book.parts_downloaded || 0) / partTotal) * 100)) : 0;
+                            return `
+                                <div class="book-item" style="cursor:default;">
+                                    <div class="book-content">
+                                        <div class="book-title">${escapeHtml(book.title || 'Untitled')}</div>
+                                        <div class="book-meta">
+                                            <span>${escapeHtml(partLabel)}</span>
+                                            <span>Status: ${escapeHtml(book.status || 'in_progress')}</span>
+                                            <span>Downloaded: ${formatBytesCompact(book.total_size_bytes || 0)}</span>
+                                        </div>
+                                        <div style="height:8px; background:var(--border-muted); border-radius:999px; overflow:hidden; margin-top:0.625rem;">
+                                            <div style="height:100%; width:${partProgress}%; background:var(--accent); transition:width 0.2s;"></div>
+                                        </div>
+                                    </div>
+                                </div>
+                            `;
+                        }).join('')
+                        : '<p style="color:var(--text-muted);">Workers are starting…</p>';
 
                     let pauseReason = '';
                     if (s.status === 'paused') {
@@ -1676,8 +1752,17 @@
                         <div class="crawler-status-grid">
                             <div class="stat-card"><h3>Phase</h3><div class="number" style="font-size:1rem">${escapeHtml(phaseDetail)}</div></div>
                             <div class="stat-card"><h3>Books completed</h3><div class="number">${booksDone}</div></div>
+                            <div class="stat-card"><h3>Queue</h3><div class="number">${booksQueued}</div></div>
+                            <div class="stat-card"><h3>Workers</h3><div class="number">${activeWorkers}/${concurrencyLimit}</div></div>
+                            <div class="stat-card"><h3>Failed</h3><div class="number">${booksFailed}</div></div>
                             <div class="stat-card"><h3>Total size</h3><div class="number" style="font-size:1rem">${formatBytesToGB(totalBytes)} GB</div></div>
                             <div class="stat-card"><h3>Elapsed</h3><div class="number" style="font-size:1rem">${formatElapsed(elapsed)}</div></div>
+                        </div>
+                        <div style="margin-top:1rem;">
+                            <h3 style="margin-bottom:0.5rem; font-size:0.9375rem;">Overall progress: ${accountedBooks} / ${totalBooks || 0} books</h3>
+                            <div style="height:12px; background:var(--border-muted); border-radius:var(--radius-sm); overflow:hidden;">
+                                <div style="height:100%; width:${overallPct}%; background:var(--accent); transition:width 0.2s;"></div>
+                            </div>
                         </div>
                         <div style="margin-top:1rem;">
                             <h3 style="margin-bottom:0.5rem; font-size:0.9375rem;">Storage: ${usedGB} GB / ${limitGB} GB</h3>
@@ -1685,6 +1770,13 @@
                                 <div style="height:100%; width:${pct}%; background:${nearLimit ? '#f59e0b' : 'var(--accent)'}; transition:width 0.2s;"></div>
                             </div>
                             ${nearLimit ? '<p style="font-size:0.8125rem; color:#b45309; margin-top:0.25rem;">Warning: near storage limit</p>' : ''}
+                        </div>
+                        <div class="books-container" style="margin-top:1rem;">
+                            <div class="books-header">
+                                <h2>Active downloads</h2>
+                                <div>${activeBooks.length} active</div>
+                            </div>
+                            <div class="books-list" style="max-height:280px;">${activeBooksHtml}</div>
                         </div>
                         ${pauseReason}
                         <div style="margin-top:1rem;">
@@ -1696,13 +1788,11 @@
                     if (setupCard) setupCard.style.display = 'block';
                     if (progressCard) progressCard.style.display = 'block';
                     if (progressContent && s.batch_id) {
-                        const booksDone = s.books_completed ?? s.booksCompleted ?? 0;
-                        const totalBytes = s.total_size_bytes ?? s.totalSizeBytes ?? 0;
                         const status = s.status || 'completed';
                         const pauseReason = status === 'paused' ? '<p class="error" style="margin-top:0.5rem;">Paused: storage limit reached</p>' : '';
                         progressContent.innerHTML = `
                             <p style="color:var(--text-muted);">Last batch: <strong>${escapeHtml(s.batch_id)}</strong> — ${escapeHtml(status)}</p>
-                            <p>Books: ${booksDone} • Size: ${formatBytesToGB(totalBytes)} GB</p>
+                            <p>Books: ${booksDone} completed • ${booksFailed} failed • Size: ${formatBytesToGB(totalBytes)} GB</p>
                             ${pauseReason}
                         `;
                     } else if (progressContent) {
@@ -1712,6 +1802,8 @@
             } catch (err) {
                 console.error('Download status:', err);
                 if (progressContent) progressContent.innerHTML = '<div class="error">Failed to load status</div>';
+            } finally {
+                loadDownloadLogs();
             }
         }
 
@@ -1936,12 +2028,19 @@
             });
             document.getElementById('categoryCreateBtn').addEventListener('click', createCategory);
 
-            document.getElementById('downloadStartBtn').addEventListener('click', startDownload);
-            document.getElementById('refreshDownloadBatchesBtn').addEventListener('click', loadDownloadBatches);
-            document.getElementById('downloadBatchesList').addEventListener('click', function(e) {
-                const row = e.target.closest('[data-batch-id]');
-                if (row) showBatchDetail(row.getAttribute('data-batch-id'));
-            });
+            const downloadStartBtn = document.getElementById('downloadStartBtn');
+            if (downloadStartBtn) downloadStartBtn.addEventListener('click', startDownload);
+
+            const refreshBatchesBtn = document.getElementById('refreshBatchesBtn');
+            if (refreshBatchesBtn) refreshBatchesBtn.addEventListener('click', loadDownloadBatches);
+
+            const batchesList = document.getElementById('batchesList');
+            if (batchesList) {
+                batchesList.addEventListener('click', function(e) {
+                    const row = e.target.closest('[data-batch-id]');
+                    if (row) showBatchDetail(row.getAttribute('data-batch-id'));
+                });
+            }
             setupBatchModal();
         });
 

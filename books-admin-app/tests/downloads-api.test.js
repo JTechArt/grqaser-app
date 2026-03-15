@@ -137,6 +137,9 @@ describe('GET /api/v1/downloads/status', () => {
     expect(res.body.success).toBe(true);
     expect(res.body.data).toBeDefined();
     expect(typeof res.body.data.running).toBe('boolean');
+    expect(typeof res.body.data.active_workers).toBe('number');
+    expect(typeof res.body.data.concurrency_limit).toBe('number');
+    expect(Array.isArray(res.body.data.active_books)).toBe(true);
   });
 });
 
@@ -183,6 +186,16 @@ describe('POST /api/v1/downloads/:batchId/cancel', () => {
   it('returns 404 when batch is not running', async () => {
     const res = await request(app)
       .post('/api/v1/downloads/batch-nonexistent/cancel')
+      .expect(404);
+    expect(res.body.success).toBe(false);
+    expect(res.body.error.code).toBe('BATCH_NOT_RUNNING');
+  });
+});
+
+describe('POST /api/v1/downloads/:batchId/stop', () => {
+  it('returns 404 when batch is not running', async () => {
+    const res = await request(app)
+      .post('/api/v1/downloads/batch-nonexistent/stop')
       .expect(404);
     expect(res.body.success).toBe(false);
     expect(res.body.error.code).toBe('BATCH_NOT_RUNNING');

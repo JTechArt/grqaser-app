@@ -13,7 +13,7 @@ const path = require('path');
 const Database = require('better-sqlite3');
 const downloadRunner = require('../services/download-runner');
 const adminDownloadRepo = require('../models/admin-download-repository');
-const { DEFAULT_MAX_SIZE_BYTES } = require('../services/download-pipeline');
+const { DEFAULT_MAX_SIZE_BYTES, DEFAULT_MAX_CONCURRENT_BOOKS } = require('../services/download-pipeline');
 
 function createDownloadsRouter(dbRegistry) {
   const router = express.Router();
@@ -135,8 +135,7 @@ function createDownloadsRouter(dbRegistry) {
     }
   });
 
-  // POST /:batchId/cancel — Cancel a running batch
-  router.post('/:batchId/cancel', (req, res) => {
+  function stopBatch(req, res) {
     const { batchId } = req.params;
     if (!batchId) {
       return res.status(400).json({
@@ -155,13 +154,19 @@ function createDownloadsRouter(dbRegistry) {
       }
       res.json({ success: true, data: { message: 'Cancel requested', batch_id: batchId } });
     } catch (err) {
-      console.error('[route:downloads] POST /cancel error:', err.message);
+      console.error('[route:downloads] POST /stop error:', err.message);
       res.status(500).json({
         success: false,
-        error: { code: 'CANCEL_ERROR', message: err.message }
+        error: { code: 'STOP_ERROR', message: err.message }
       });
     }
-  });
+  }
+
+  // POST /:batchId/stop — Stop a running batch
+  router.post('/:batchId/stop', stopBatch);
+
+  // Backward-compatible alias for older UI wiring.
+  router.post('/:batchId/cancel', stopBatch);
 
   // GET /status — Current batch status (polling)
   router.get('/status', (req, res) => {
@@ -189,10 +194,16 @@ function createDownloadsRouter(dbRegistry) {
             part_total: null,
             book_title: null,
             books_completed: activeBatch.books_downloaded || 0,
+            books_failed: 0,
+            books_active: 0,
+            books_queued: 0,
             total_size_bytes: activeBatch.total_size_bytes || 0,
             elapsed_seconds: elapsed,
             storage_used: activeBatch.total_size_bytes || 0,
-            storage_limit: activeBatch.max_size_bytes || 0
+            storage_limit: activeBatch.max_size_bytes || 0,
+            active_workers: 0,
+            concurrency_limit: DEFAULT_MAX_CONCURRENT_BOOKS,
+            active_books: []
           }
         });
       }
@@ -207,15 +218,35 @@ function createDownloadsRouter(dbRegistry) {
             status: lastBatch.status,
             phase: null,
             books_completed: lastBatch.books_downloaded || 0,
+            books_failed: 0,
+            books_active: 0,
+            books_queued: 0,
             total_size_bytes: lastBatch.total_size_bytes || 0,
             elapsed_seconds: lastBatch.duration_seconds || 0,
             storage_used: lastBatch.total_size_bytes || 0,
-            storage_limit: lastBatch.max_size_bytes || 0
+            storage_limit: lastBatch.max_size_bytes || 0,
+            active_workers: 0,
+            concurrency_limit: DEFAULT_MAX_CONCURRENT_BOOKS,
+            active_books: []
           }
         });
       }
 
-      res.json({ success: true, data: { running: false, batch_id: null, status: null } });
+      res.json({
+        success: true,
+        data: {
+          running: false,
+          batch_id: null,
+          status: null,
+          books_completed: 0,
+          books_failed: 0,
+          books_active: 0,
+          books_queued: 0,
+          active_workers: 0,
+          concurrency_limit: DEFAULT_MAX_CONCURRENT_BOOKS,
+          active_books: []
+        }
+      });
     } catch (err) {
       console.error('[route:downloads] GET /status error:', err.message);
       res.status(500).json({
@@ -269,6 +300,26 @@ function createDownloadsRouter(dbRegistry) {
       clearInterval(interval);
       res.end();
     });
+  });
+
+  // GET /logs — recent download logs for UI/debugging
+  router.get('/logs', (req, res) => {
+    try {
+      const limit = Math.min(parseInt(req.query.limit, 10) || 100, 200);
+      res.json({
+        success: true,
+        data: {
+          log_file: downloadRunner.getLogFilePath(),
+          logs: downloadRunner.getLogs(limit)
+        }
+      });
+    } catch (err) {
+      console.error('[route:downloads] GET /logs error:', err.message);
+      res.status(500).json({
+        success: false,
+        error: { code: 'LOGS_ERROR', message: err.message }
+      });
+    }
   });
 
   // GET /batches — List all batches (reverse chronological)

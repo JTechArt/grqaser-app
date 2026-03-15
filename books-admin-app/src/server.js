@@ -44,7 +44,14 @@ if (config.server.env === 'development') {
   app.use(morgan('combined'));
 }
 
-const limiter = rateLimit(config.api.rateLimit);
+const limiter = rateLimit({
+  ...config.api.rateLimit,
+  // The admin download view polls these local-only endpoints frequently.
+  skip: (req) => {
+    const url = req.originalUrl || req.url || '';
+    return url === `${config.api.basePath}/health` || url.startsWith(`${config.api.basePath}/downloads`);
+  }
+});
 app.use('/api/', limiter);
 
 app.use(express.static(path.join(__dirname, '../public')));

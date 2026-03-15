@@ -7,7 +7,13 @@ const fs = require('fs');
 const path = require('path');
 const os = require('os');
 
-const { slugify, buildManifestEntry, run, DEFAULT_MAX_SIZE_BYTES } = require('../src/services/download-pipeline');
+const {
+  slugify,
+  buildManifestEntry,
+  run,
+  DEFAULT_MAX_SIZE_BYTES,
+  DEFAULT_MAX_CONCURRENT_BOOKS
+} = require('../src/services/download-pipeline');
 const migration = require('../src/migrations/002-admin-download-tables');
 const { CREATE_BOOKS_TABLE_SQL } = require('../src/crawler/schema/books-table');
 const { CREATE_AUTHORS_TABLE_SQL } = require('../src/crawler/schema/authors-table');
@@ -120,6 +126,12 @@ describe('Download pipeline', () => {
   describe('DEFAULT_MAX_SIZE_BYTES', () => {
     test('equals 200GB', () => {
       expect(DEFAULT_MAX_SIZE_BYTES).toBe(200 * 1024 * 1024 * 1024);
+    });
+  });
+
+  describe('DEFAULT_MAX_CONCURRENT_BOOKS', () => {
+    test('caps concurrency at 10 books', () => {
+      expect(DEFAULT_MAX_CONCURRENT_BOOKS).toBe(10);
     });
   });
 
@@ -242,6 +254,48 @@ describe('Download pipeline', () => {
 
       expect(result.status).toBe('paused');
       expect(result.error).toContain('Storage limit');
+    });
+
+    test('downloads at most 10 books concurrently and starts next queued book when one finishes', async () => {
+      db.prepare('DELETE FROM books').run();
+
+      const values = [];
+      const placeholders = [];
+      for (let i = 1; i <= 12; i++) {
+        placeholders.push('(?, ?, ?, ?, ?, ?)');
+        values.push(i, `Book ${i}`, `Author ${i}`, `https://example.com/${i}.mp3`, 10, '10m');
+      }
+      db.prepare(`
+        INSERT INTO books (id, title, author, main_audio_url, duration, duration_formatted)
+        VALUES ${placeholders.join(', ')}
+      `).run(...values);
+
+      let inFlight = 0;
+      let peakInFlight = 0;
+      const progressEvents = [];
+
+      const result = await run({
+        db,
+        baseFolderPath: basePath,
+        maxSizeBytes: 1024 * 1024 * 1024 * 100,
+        bookIds: Array.from({ length: 12 }, (_, index) => index + 1),
+        batchId: 'batch-concurrency-' + Date.now(),
+        downloadImpl: async (_url, destPath) => {
+          inFlight++;
+          peakInFlight = Math.max(peakInFlight, inFlight);
+          await new Promise((resolve) => setTimeout(resolve, 25));
+          fs.writeFileSync(destPath, 'ok');
+          inFlight--;
+          return 2;
+        },
+        onProgress: (progress) => progressEvents.push(progress)
+      });
+
+      expect(result.status).toBe('completed');
+      expect(result.booksCompleted).toBe(12);
+      expect(peakInFlight).toBeLessThanOrEqual(10);
+      expect(progressEvents.some((event) => event.activeWorkers === 10)).toBe(true);
+      expect(progressEvents.some((event) => event.booksQueued > 0)).toBe(true);
     });
   });
 });
