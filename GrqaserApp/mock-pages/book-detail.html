@@ -1,0 +1,422 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Կտակ - Grqaser</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: #333;
+        }
+        
+        .container {
+            max-width: 414px;
+            margin: 0 auto;
+            background: white;
+            min-height: 100vh;
+            position: relative;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            position: relative;
+        }
+        
+        .back-button {
+            position: absolute;
+            left: 20px;
+            top: 20px;
+            font-size: 24px;
+            cursor: pointer;
+        }
+        
+        .book-cover-large {
+            width: 120px;
+            height: 160px;
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            border-radius: 15px;
+            margin: 20px auto;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 16px;
+            text-align: center;
+            padding: 15px;
+            box-shadow: 0 8px 25px rgba(0,0,0,0.2);
+        }
+        
+        .book-info {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        
+        .book-title {
+            font-size: 24px;
+            font-weight: bold;
+            margin-bottom: 8px;
+        }
+        
+        .book-author {
+            font-size: 16px;
+            opacity: 0.9;
+            margin-bottom: 15px;
+        }
+        
+        .book-meta {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            font-size: 14px;
+            opacity: 0.8;
+        }
+        
+        .progress-section {
+            padding: 0 20px;
+            margin-bottom: 30px;
+        }
+        
+        .progress-bar {
+            background: #f0f0f0;
+            height: 8px;
+            border-radius: 4px;
+            overflow: hidden;
+            margin-bottom: 10px;
+        }
+        
+        .progress-fill {
+            background: linear-gradient(90deg, #667eea, #764ba2);
+            height: 100%;
+            width: 35%;
+            border-radius: 4px;
+        }
+        
+        .progress-text {
+            display: flex;
+            justify-content: space-between;
+            font-size: 12px;
+            color: #666;
+        }
+        
+        .controls {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 20px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+        
+        .control-btn {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            border: none;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            font-size: 20px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+        }
+        
+        .play-btn {
+            width: 70px;
+            height: 70px;
+            font-size: 30px;
+        }
+        
+        .chapters-section {
+            padding: 0 20px;
+            margin-bottom: 100px;
+        }
+        
+        .section-title {
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 15px;
+            color: #333;
+        }
+        
+        .chapter-list {
+            background: #f8f9fa;
+            border-radius: 15px;
+            overflow: hidden;
+        }
+        
+        .chapter-item {
+            display: flex;
+            align-items: center;
+            padding: 15px 20px;
+            border-bottom: 1px solid #eee;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+        
+        .chapter-item:hover {
+            background: #f0f0f0;
+        }
+        
+        .chapter-item.active {
+            background: #667eea;
+            color: white;
+        }
+        
+        .chapter-number {
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            background: #667eea;
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            font-weight: bold;
+            margin-right: 15px;
+        }
+        
+        .chapter-item.active .chapter-number {
+            background: white;
+            color: #667eea;
+        }
+        
+        .chapter-info {
+            flex: 1;
+        }
+        
+        .chapter-title {
+            font-size: 14px;
+            font-weight: 500;
+            margin-bottom: 4px;
+        }
+        
+        .chapter-duration {
+            font-size: 12px;
+            opacity: 0.7;
+        }
+        
+        .chapter-status {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: #ddd;
+            margin-left: 10px;
+        }
+        
+        .chapter-status.completed {
+            background: #28a745;
+        }
+        
+        .chapter-status.current {
+            background: #667eea;
+        }
+        
+        .bottom-player {
+            position: fixed;
+            bottom: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 100%;
+            max-width: 414px;
+            background: white;
+            border-top: 1px solid #eee;
+            padding: 15px 20px;
+            box-shadow: 0 -4px 15px rgba(0,0,0,0.1);
+        }
+        
+        .mini-player {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+        
+        .mini-cover {
+            width: 40px;
+            height: 40px;
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 10px;
+        }
+        
+        .mini-info {
+            flex: 1;
+        }
+        
+        .mini-title {
+            font-size: 12px;
+            font-weight: 500;
+            margin-bottom: 2px;
+        }
+        
+        .mini-progress {
+            font-size: 10px;
+            color: #666;
+        }
+        
+        .mini-controls {
+            display: flex;
+            gap: 10px;
+        }
+        
+        .mini-btn {
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            border: none;
+            background: #667eea;
+            color: white;
+            font-size: 14px;
+            cursor: pointer;
+        }
+        
+        .action-buttons {
+            display: flex;
+            gap: 10px;
+            padding: 0 20px;
+            margin-bottom: 20px;
+        }
+        
+        .action-btn {
+            flex: 1;
+            padding: 12px;
+            border: none;
+            border-radius: 10px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+        }
+        
+        .btn-secondary {
+            background: #f8f9fa;
+            color: #333;
+            border: 1px solid #ddd;
+        }
+        
+        .btn-secondary:hover {
+            background: #e9ecef;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="back-button">←</div>
+            <div class="book-cover-large">Կտակ</div>
+            <div class="book-info">
+                <div class="book-title">Կտակ</div>
+                <div class="book-author">Վրթանես Փափազյան</div>
+                <div class="book-meta">
+                    <span>0ժ 51ր</span>
+                    <span>•</span>
+                    <span>⭐ 4.8</span>
+                    <span>•</span>
+                    <span>❤️ 1.2k</span>
+                </div>
+            </div>
+        </div>
+        
+        <div class="action-buttons">
+            <button class="action-btn btn-primary">🎧 Listen Now</button>
+            <button class="action-btn btn-secondary">❤️ Favorite</button>
+        </div>
+        
+        <div class="progress-section">
+            <div class="section-title">Progress</div>
+            <div class="progress-bar">
+                <div class="progress-fill"></div>
+            </div>
+            <div class="progress-text">
+                <span>18ր 15վ</span>
+                <span>35%</span>
+                <span>51ր 0վ</span>
+            </div>
+        </div>
+        
+        <div class="controls">
+            <button class="control-btn">⏮️</button>
+            <button class="control-btn play-btn">⏸️</button>
+            <button class="control-btn">⏭️</button>
+        </div>
+        
+        <div class="chapters-section">
+            <div class="section-title">Chapters</div>
+            <div class="chapter-list">
+                <div class="chapter-item active">
+                    <div class="chapter-number">1</div>
+                    <div class="chapter-info">
+                        <div class="chapter-title">Chapter 1: The Beginning</div>
+                        <div class="chapter-duration">12ր 30վ</div>
+                    </div>
+                    <div class="chapter-status current"></div>
+                </div>
+                
+                <div class="chapter-item">
+                    <div class="chapter-number">2</div>
+                    <div class="chapter-info">
+                        <div class="chapter-title">Chapter 2: The Journey</div>
+                        <div class="chapter-duration">15ր 45վ</div>
+                    </div>
+                    <div class="chapter-status"></div>
+                </div>
+                
+                <div class="chapter-item">
+                    <div class="chapter-number">3</div>
+                    <div class="chapter-info">
+                        <div class="chapter-title">Chapter 3: The Discovery</div>
+                        <div class="chapter-duration">18ր 20վ</div>
+                    </div>
+                    <div class="chapter-status completed"></div>
+                </div>
+                
+                <div class="chapter-item">
+                    <div class="chapter-number">4</div>
+                    <div class="chapter-info">
+                        <div class="chapter-title">Chapter 4: The Resolution</div>
+                        <div class="chapter-duration">14ր 25վ</div>
+                    </div>
+                    <div class="chapter-status"></div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="bottom-player">
+            <div class="mini-player">
+                <div class="mini-cover">Կ</div>
+                <div class="mini-info">
+                    <div class="mini-title">Կտակ - Chapter 1</div>
+                    <div class="mini-progress">12ր 30վ / 51ր 0վ</div>
+                </div>
+                <div class="mini-controls">
+                    <button class="mini-btn">⏮️</button>
+                    <button class="mini-btn">⏸️</button>
+                    <button class="mini-btn">⏭️</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

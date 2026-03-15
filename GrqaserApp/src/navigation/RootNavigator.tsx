@@ -1,0 +1,157 @@
+import React from 'react';
+import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
+import { createStackNavigator } from '@react-navigation/stack';
+import { useTheme } from 'react-native-paper';
+import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
+
+// Screens
+import HomeScreen from '../screens/HomeScreen';
+import LibraryScreen from '../screens/LibraryScreen';
+import PlayerScreen from '../screens/PlayerScreen';
+import FavoritesScreen from '../screens/FavoritesScreen';
+import ProfileScreen from '../screens/ProfileScreen';
+import BookDetailScreen from '../screens/BookDetailScreen';
+import SearchScreen from '../screens/SearchScreen';
+import CategoryScreen from '../screens/CategoryScreen';
+import SettingsScreen from '../screens/SettingsScreen';
+
+// Types
+import { RootStackParamList, TabParamList } from './types';
+
+const Tab = createBottomTabNavigator<TabParamList>();
+const Stack = createStackNavigator<RootStackParamList>();
+
+const TabNavigator: React.FC = () => {
+  const theme = useTheme();
+
+  return (
+    <Tab.Navigator
+      screenOptions={({ route }) => ({
+        tabBarIcon: ({ focused, color, size }) => {
+          let iconName: string;
+
+          switch (route.name) {
+            case 'Home':
+              iconName = focused ? 'home' : 'home-outline';
+              break;
+            case 'Library':
+              iconName = focused ? 'library' : 'library-outline';
+              break;
+            case 'Player':
+              iconName = focused ? 'play-circle' : 'play-circle-outline';
+              break;
+            case 'Favorites':
+              iconName = focused ? 'heart' : 'heart-outline';
+              break;
+            case 'Profile':
+              iconName = focused ? 'account' : 'account-outline';
+              break;
+            default:
+              iconName = 'circle';
+          }
+
+          return <Icon name={iconName} size={size} color={color} />;
+        },
+        tabBarActiveTintColor: theme.colors.primary,
+        tabBarInactiveTintColor: theme.colors.onSurface,
+        tabBarStyle: {
+          backgroundColor: theme.colors.surface,
+          borderTopColor: theme.colors.outline,
+          paddingBottom: 5,
+          paddingTop: 5,
+          height: 60,
+        },
+        tabBarLabelStyle: {
+          fontSize: 12,
+          fontWeight: '500',
+        },
+        headerShown: false,
+      })}
+    >
+      <Tab.Screen 
+        name="Home" 
+        component={HomeScreen}
+        options={{ tabBarLabel: 'Home' }}
+      />
+      <Tab.Screen 
+        name="Library" 
+        component={LibraryScreen}
+        options={{ tabBarLabel: 'Library' }}
+      />
+      <Tab.Screen 
+        name="Player" 
+        component={PlayerScreen}
+        options={{ tabBarLabel: 'Player' }}
+      />
+      <Tab.Screen 
+        name="Favorites" 
+        component={FavoritesScreen}
+        options={{ tabBarLabel: 'Favorites' }}
+      />
+      <Tab.Screen 
+        name="Profile" 
+        component={ProfileScreen}
+        options={{ tabBarLabel: 'Profile' }}
+      />
+    </Tab.Navigator>
+  );
+};
+
+const RootNavigator: React.FC = () => {
+  const theme = useTheme();
+
+  return (
+    <Stack.Navigator
+      screenOptions={{
+        headerStyle: {
+          backgroundColor: theme.colors.primary,
+        },
+        headerTintColor: theme.colors.onPrimary,
+        headerTitleStyle: {
+          fontWeight: 'bold',
+        },
+        headerShadowVisible: false,
+      }}
+    >
+      <Stack.Screen
+        name="MainTabs"
+        component={TabNavigator}
+        options={{ headerShown: false }}
+      />
+      <Stack.Screen
+        name="BookDetail"
+        component={BookDetailScreen}
+        options={({ route }) => ({
+          title: route.params?.book?.title || 'Book Details',
+          headerBackTitle: 'Back',
+        })}
+      />
+      <Stack.Screen
+        name="Search"
+        component={SearchScreen}
+        options={{
+          title: 'Search Books',
+          headerBackTitle: 'Back',
+        }}
+      />
+      <Stack.Screen
+        name="Category"
+        component={CategoryScreen}
+        options={({ route }) => ({
+          title: route.params?.category?.name || 'Category',
+          headerBackTitle: 'Back',
+        })}
+      />
+      <Stack.Screen
+        name="Settings"
+        component={SettingsScreen}
+        options={{
+          title: 'Settings',
+          headerBackTitle: 'Back',
+        }}
+      />
+    </Stack.Navigator>
+  );
+};
+
+export default RootNavigator;

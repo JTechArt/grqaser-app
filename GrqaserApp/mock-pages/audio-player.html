@@ -1,0 +1,394 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Audio Player - Grqaser</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: white;
+        }
+        
+        .container {
+            max-width: 414px;
+            margin: 0 auto;
+            min-height: 100vh;
+            position: relative;
+            padding: 20px;
+        }
+        
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 40px;
+        }
+        
+        .back-btn, .menu-btn {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: rgba(255,255,255,0.2);
+            border: none;
+            color: white;
+            font-size: 18px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .book-cover {
+            width: 250px;
+            height: 250px;
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            border-radius: 20px;
+            margin: 0 auto 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            text-align: center;
+            padding: 20px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.3);
+        }
+        
+        .book-info {
+            text-align: center;
+            margin-bottom: 40px;
+        }
+        
+        .book-title {
+            font-size: 24px;
+            font-weight: bold;
+            margin-bottom: 8px;
+        }
+        
+        .book-author {
+            font-size: 16px;
+            opacity: 0.9;
+            margin-bottom: 15px;
+        }
+        
+        .book-chapter {
+            font-size: 14px;
+            opacity: 0.8;
+        }
+        
+        .progress-section {
+            margin-bottom: 40px;
+        }
+        
+        .progress-bar {
+            background: rgba(255,255,255,0.2);
+            height: 6px;
+            border-radius: 3px;
+            overflow: hidden;
+            margin-bottom: 15px;
+            position: relative;
+        }
+        
+        .progress-fill {
+            background: white;
+            height: 100%;
+            width: 35%;
+            border-radius: 3px;
+            position: relative;
+        }
+        
+        .progress-handle {
+            position: absolute;
+            right: -8px;
+            top: -3px;
+            width: 12px;
+            height: 12px;
+            background: white;
+            border-radius: 50%;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+        }
+        
+        .progress-text {
+            display: flex;
+            justify-content: space-between;
+            font-size: 14px;
+            opacity: 0.9;
+        }
+        
+        .controls {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 30px;
+            margin-bottom: 40px;
+        }
+        
+        .control-btn {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            border: none;
+            background: rgba(255,255,255,0.2);
+            color: white;
+            font-size: 24px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s;
+        }
+        
+        .control-btn:hover {
+            background: rgba(255,255,255,0.3);
+            transform: scale(1.1);
+        }
+        
+        .play-btn {
+            width: 80px;
+            height: 80px;
+            font-size: 32px;
+            background: white;
+            color: #667eea;
+        }
+        
+        .play-btn:hover {
+            background: #f8f9fa;
+        }
+        
+        .secondary-controls {
+            display: flex;
+            justify-content: center;
+            gap: 40px;
+            margin-bottom: 40px;
+        }
+        
+        .secondary-btn {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            border: none;
+            background: rgba(255,255,255,0.1);
+            color: white;
+            font-size: 20px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s;
+        }
+        
+        .secondary-btn:hover {
+            background: rgba(255,255,255,0.2);
+        }
+        
+        .secondary-btn.active {
+            background: white;
+            color: #667eea;
+        }
+        
+        .speed-controls {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            margin-bottom: 30px;
+        }
+        
+        .speed-btn {
+            padding: 8px 16px;
+            border: 1px solid rgba(255,255,255,0.3);
+            background: transparent;
+            color: white;
+            border-radius: 20px;
+            font-size: 14px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .speed-btn.active {
+            background: white;
+            color: #667eea;
+            border-color: white;
+        }
+        
+        .chapter-nav {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 20px;
+            background: rgba(255,255,255,0.1);
+            border-radius: 15px;
+            margin-bottom: 20px;
+        }
+        
+        .chapter-btn {
+            padding: 10px 20px;
+            border: none;
+            background: rgba(255,255,255,0.2);
+            color: white;
+            border-radius: 10px;
+            font-size: 14px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .chapter-btn:hover {
+            background: rgba(255,255,255,0.3);
+        }
+        
+        .chapter-info {
+            text-align: center;
+        }
+        
+        .chapter-title {
+            font-size: 16px;
+            font-weight: 500;
+            margin-bottom: 5px;
+        }
+        
+        .chapter-progress {
+            font-size: 12px;
+            opacity: 0.8;
+        }
+        
+        .visualization {
+            height: 60px;
+            background: rgba(255,255,255,0.1);
+            border-radius: 10px;
+            margin-bottom: 30px;
+            display: flex;
+            align-items: end;
+            justify-content: center;
+            gap: 3px;
+            padding: 10px;
+        }
+        
+        .bar {
+            width: 4px;
+            background: rgba(255,255,255,0.6);
+            border-radius: 2px;
+            animation: pulse 2s ease-in-out infinite;
+        }
+        
+        .bar:nth-child(odd) {
+            animation-delay: 0.5s;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { height: 20px; }
+            50% { height: 40px; }
+        }
+        
+        .sleep-timer {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: rgba(255,255,255,0.2);
+            border: none;
+            color: white;
+            font-size: 16px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <button class="back-btn">←</button>
+            <button class="sleep-timer">⏰</button>
+            <button class="menu-btn">⋯</button>
+        </div>
+        
+        <div class="book-cover">Կտակ</div>
+        
+        <div class="book-info">
+            <div class="book-title">Կտակ</div>
+            <div class="book-author">Վրթանես Փափազյան</div>
+            <div class="book-chapter">Chapter 1: The Beginning</div>
+        </div>
+        
+        <div class="visualization">
+            <div class="bar"></div>
+            <div class="bar"></div>
+            <div class="bar"></div>
+            <div class="bar"></div>
+            <div class="bar"></div>
+            <div class="bar"></div>
+            <div class="bar"></div>
+            <div class="bar"></div>
+            <div class="bar"></div>
+            <div class="bar"></div>
+            <div class="bar"></div>
+            <div class="bar"></div>
+            <div class="bar"></div>
+            <div class="bar"></div>
+            <div class="bar"></div>
+            <div class="bar"></div>
+            <div class="bar"></div>
+            <div class="bar"></div>
+            <div class="bar"></div>
+            <div class="bar"></div>
+        </div>
+        
+        <div class="progress-section">
+            <div class="progress-bar">
+                <div class="progress-fill">
+                    <div class="progress-handle"></div>
+                </div>
+            </div>
+            <div class="progress-text">
+                <span>18ր 15վ</span>
+                <span>35%</span>
+                <span>51ր 0վ</span>
+            </div>
+        </div>
+        
+        <div class="controls">
+            <button class="control-btn">⏮️</button>
+            <button class="control-btn">⏪</button>
+            <button class="control-btn play-btn">⏸️</button>
+            <button class="control-btn">⏩</button>
+            <button class="control-btn">⏭️</button>
+        </div>
+        
+        <div class="secondary-controls">
+            <button class="secondary-btn">🔁</button>
+            <button class="secondary-btn active">🔀</button>
+            <button class="secondary-btn">❤️</button>
+            <button class="secondary-btn">📝</button>
+        </div>
+        
+        <div class="speed-controls">
+            <button class="speed-btn">0.5x</button>
+            <button class="speed-btn">0.75x</button>
+            <button class="speed-btn active">1x</button>
+            <button class="speed-btn">1.25x</button>
+            <button class="speed-btn">1.5x</button>
+            <button class="speed-btn">1.75x</button>
+            <button class="speed-btn">2x</button>
+        </div>
+        
+        <div class="chapter-nav">
+            <button class="chapter-btn">⏮️ Previous</button>
+            <div class="chapter-info">
+                <div class="chapter-title">Chapter 1 of 4</div>
+                <div class="chapter-progress">12ր 30վ / 15ր 45վ</div>
+            </div>
+            <button class="chapter-btn">Next ⏭️</button>
+        </div>
+    </div>
+</body>
+</html>
