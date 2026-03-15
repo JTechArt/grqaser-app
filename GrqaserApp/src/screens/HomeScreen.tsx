@@ -87,6 +87,10 @@ const HomeScreen: React.FC = () => {
     navigation.navigate('Search', {initialQuery: searchQuery});
   };
 
+  const handleAdvancedSearchPress = () => {
+    navigation.navigate('AdvancedSearch' as never);
+  };
+
   const handleRetryDatabaseInit = () => {
     dispatch(setError(null));
     dispatch(initializeDatabases());
