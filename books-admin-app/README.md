@@ -1,124 +1,122 @@
 # Grqaser Books Admin App
 
-Merged application combining the **crawler** and **database-viewer**. One process provides the REST API, web UI, and crawler capability (as an in-process library). No authentication; local-only.
+Admin application for the Grqaser platform.
+
+This app is the single admin-side entrypoint in the repo. It provides the local web UI, REST API, crawler controls, database switching/versioning, and data editing tools used to manage the catalog.
+
+## Main Responsibilities
+
+- Serve the admin web UI
+- Expose the local REST API
+- Start and stop crawler runs
+- Store and apply crawler configuration
+- Read and edit catalog data
+- Manage active and backup SQLite databases
 
 ## Run
 
 ```bash
-# Install dependencies (includes crawler from repo)
+cd books-admin-app
 npm install
-
-# Start server (API + static UI)
 npm start
-# or with auto-reload
+```
+
+Development mode:
+
+```bash
 npm run dev
 ```
 
-Server listens on `http://localhost:3001` by default.
+Default URL: `http://localhost:3001`
+
+## Requirements
+
+- Node.js 22+
+- npm
 
 ## Configuration
 
-Externalized via environment variables (and defaults in `src/config/config.js`):
+Primary environment variables:
 
 | Variable | Description | Default |
-|----------|-------------|---------|
-| `PORT` | HTTP port | 3001 |
-| `HOST` | Bind host | localhost |
-| `DB_PATH` | Override active DB path (e.g. tests); otherwise active path comes from registry | `./data/grqaser.db` |
-| `DB_DATA_ROOT` | Directory scanned for `db.v*` and default `grqaser.db` | `./data` |
-| `CRAWLER_DB_PATH` | DB path used when running crawler; set to active path when crawler is started from app | same as active DB |
-| `LOG_LEVEL` | Logging level | info |
-| `NODE_ENV` | development / production | development |
+| --- | --- | --- |
+| `PORT` | HTTP port | `3001` |
+| `HOST` | Bind host | `localhost` |
+| `DB_PATH` | Explicit database path override | `../data/grqaser.db` via app config |
+| `DB_DATA_ROOT` | Root scanned for default/versioned databases | `../data` via app config |
+| `CRAWLER_DB_PATH` | DB path used by crawler execution | current active DB |
+| `LOG_LEVEL` | Log verbosity | `info` |
+| `NODE_ENV` | Runtime environment | `development` |
 
 Example:
 
 ```bash
-PORT=3002 DB_PATH=/path/to/grqaser.db npm start
+PORT=3002 DB_PATH=/absolute/path/to/grqaser.db npm start
 ```
 
-## API
+## API Overview
 
-Same as database-viewer:
+Main endpoints include:
 
-- `GET /api/v1/books` — list books (pagination, filters)
-- `GET /api/v1/books/search?q=...` — search
-- `GET /api/v1/books/:id` — book by ID
-- `PATCH /api/v1/books/:id` — update a book (editable fields; in-place UPDATE; sets `last_edited_at`)
-- `GET /api/v1/stats/overview` — overview stats
-- `GET /api/v1/stats/authors` — authors stats
-- `GET /api/v1/stats/categories` — categories stats
-- `GET /api/v1/crawler/status` — crawler status (includes `is_running`, `last_run_started_at`)
-- `POST /api/v1/crawler/start` — start crawler (uses active DB path and stored config)
-- `POST /api/v1/crawler/stop` — stop running crawler
-- `GET /api/v1/crawler/config` — get crawler config (mode, limits, delays; `dbPath` is current active path)
-- `PUT /api/v1/crawler/config` — save crawler config (applies to next run)
-- `GET /api/v1/crawler/urls` — URL queue
-- `GET /api/v1/crawler/logs` — crawl logs
-- `GET /api/v1/health` — health (and DB connectivity)
-- `GET /api/v1/databases` — list known DBs (active + backups)
-- `PUT /api/v1/databases/active` — set active DB (body: `{ "id": "db.v1" }` or `{ "path": "/abs/path" }`)
-- `DELETE /api/v1/databases/:id` — delete a backup DB (cannot delete active)
+- `GET /api/v1/books`
+- `GET /api/v1/books/search`
+- `GET /api/v1/books/:id`
+- `PATCH /api/v1/books/:id`
+- `GET /api/v1/stats/overview`
+- `GET /api/v1/stats/authors`
+- `GET /api/v1/stats/categories`
+- `GET /api/v1/crawler/status`
+- `POST /api/v1/crawler/start`
+- `POST /api/v1/crawler/stop`
+- `GET /api/v1/crawler/config`
+- `PUT /api/v1/crawler/config`
+- `GET /api/v1/crawler/urls`
+- `GET /api/v1/crawler/logs`
+- `GET /api/v1/databases`
+- `PUT /api/v1/databases/active`
+- `DELETE /api/v1/databases/:id`
+- `GET /api/v1/health`
 
-## Database versioning
+## Database Management
 
-One database is **active** at a time; all others are **backups**. The crawler writes to the active DB; the data view and API read from it.
+The app works with one active database at a time and can discover backup/versioned databases under the configured data root.
 
-- **Paths:** Use versioned paths such as `db.v1`, `db.v2` under the data root. Place each DB as `data/db.v1/grqaser.db`, or use a single default `data/grqaser.db` (id `default`).
-- **Add a DB:** Create a directory `data/db.v2/` and put `grqaser.db` inside (e.g. copy from another version or run crawler with that path). The app discovers it on next list.
-- **Set active:** In the UI (Databases tab) click **Set active** for a backup, or call `PUT /api/v1/databases/active` with `{ "id": "db.v2" }`. The server reconnects to the new DB; subsequent crawler runs and data view use it.
-- **Delete backup:** In the UI click **Delete backup** for a non-active DB, or `DELETE /api/v1/databases/db.v2`. The active DB cannot be deleted.
-- **Registry:** The active path is stored in `data/db-registry.json` and survives restarts.
+- Active DB is used for reads, edits, and crawler writes
+- Backup/versioned DBs can be activated or removed
+- Registry/config files are stored under the app data area
 
-## Crawler control and config (Story 6.3)
+Project docs still treat `../data/grqaser.db` as the canonical shared catalog database for local workflows.
 
-You can **start** and **stop** the crawler from the app (Crawler tab or API). The crawler runs as a **subprocess**; only one run at a time.
+## Crawler Control
 
-- **Start:** `POST /api/v1/crawler/start` or the **Start crawler** button. Uses the **active DB path** (from Database versioning) and the stored crawler config (mode, test limit, update limit, etc.).
-- **Stop:** `POST /api/v1/crawler/stop` or **Stop crawler**. Sends SIGTERM to the crawler process.
-- **Config:** View or edit via `GET /api/v1/crawler/config` and `PUT /api/v1/crawler/config`, or the form on the Crawler tab. Config is stored in `data/crawler-config.json`; `dbPath` is always the current active path at run time (not persisted in the file). Valid mode: `full`, `update`, `fix-download-all`, `full-database`, `test`.
-- **Status and logs:** Crawler status (running/stopped, last run, book counts) and logs remain available; refresh to see updates.
+Crawler operations are managed through this app:
 
-To run the crawler manually from the repo (e.g. for debugging), set `CRAWLER_DB_PATH` or `DB_PATH` to the active path so writes go to the same DB the viewer reads.
+- Start and stop runs from the UI or API
+- Persist crawler config between runs
+- Inspect queue, logs, and health data
+- Validate output through the same admin UI and API
 
-### Running a full crawl and validating output
+For operational instructions, prefer the runbook:
 
-1. **Set crawler mode to full:** In the Crawler tab, set **Mode** to `full` (or via `PUT /api/v1/crawler/config` with `{ "mode": "full" }`). This runs the full queue-based discovery (listing + detail pages) and writes to the active DB.
-2. **Start the crawler:** Click **Start crawler** (or `POST /api/v1/crawler/start`). The crawler runs as a subprocess; progress appears in the Crawler tab (URL queue, logs).
-3. **Validate output:** After the run completes (or while it runs):
-   - **Books tab:** Confirm new/updated books appear; use list, search, and filters.
-   - **Stats:** Use the Stats tab or `GET /api/v1/stats/overview` to check book count and author/category stats.
-   - **Crawler logs:** In the Crawler tab, open **Logs** to see per-book success/failure and any validation skips.
-   - **Health:** `GET /api/v1/health` confirms DB connectivity and that the app is using the active DB.
-
-For a small test run, set mode to `test` and a **Test limit** (e.g. 5) in crawler config, then start and validate the same way.
-
-## Data management (view and edit)
-
-The data view (list, detail, search, filters) reads from the **active database** (Story 6.2). You can **edit** any book from the detail modal.
-
-- **View:** Books tab shows the list; click a book to open the detail modal. All data comes from the active DB.
-- **Edit:** In the book detail modal, click **Edit book** to switch to the edit form. Change title, author, description, category, language, type, duration, rating, cover/audio/download URLs; click **Save** to persist. Changes are applied in place (UPDATE by id); the modal and list refresh with the updated data. No duplicate records are created.
-- **Manual edit indicator:** When a book has been manually edited, the detail view shows **Last edited (manual)** in the Timestamps section (`last_edited_at`). Local-only; no authentication.
-
-Validation: title required and non-empty; URLs must be http/https if present; duration ≥ 0; rating 0–5; language max length 10.
+- `../docs/runbooks/books-admin-app.md`
 
 ## Tests
 
-Requires **Node 22+** (see `engines` in package.json and `.nvmrc`). If sqlite3 native bindings fail, run `npm rebuild` or use Node 22 (e.g. `nvm use` when using nvm). CI should use Node 22 to run tests.
-
 ```bash
+cd books-admin-app
 npm test
 ```
 
-## UI/UX mockups (Epic 7)
+## Related Docs
 
-Design mockups live in the **main docs folder** and use the same design system as GrqaserApp (slate + teal, Plus Jakarta Sans):
+- `../docs/architecture/books-admin-app-architecture.md`
+- `../docs/architecture/source-tree.md`
+- `../docs/architecture/testing-and-deployment-strategy.md`
+- `./INTEGRATION.md`
+- `./MIGRATION-QUICK-START.md`
 
-- **Design hub:** [docs/design/index.html](../docs/design/index.html) — entry to all mockups (Books Admin App and GrqaserApp).
-- **Books Admin App mockups:** [docs/design/books-admin-app/](../docs/design/books-admin-app/) — Dashboard, Books, Crawler, Databases, Book detail & edit.
+## Notes
 
-Full UI/UX spec: [docs/books-admin-app-ui-ux-mockups.md](../docs/books-admin-app-ui-ux-mockups.md).
-
-## Integration
-
-See [INTEGRATION.md](./INTEGRATION.md) for how crawler and viewer are merged (single process, crawler as in-process library).
+- This README is intentionally focused on local development and app responsibilities.
+- Repo-wide guidance lives in `../README.md`.
+- If older docs mention standalone crawler or database-viewer apps, prefer current architecture docs: this app is now the single admin entrypoint.

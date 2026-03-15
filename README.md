@@ -1,230 +1,124 @@
-# Grqaser - Audiobook Mobile Application
+# Grqaser Monorepo
 
-A React Native mobile application for accessing audiobooks from [grqaser.org](https://grqaser.org), providing a native mobile experience for Armenian and international literature.
+This repository contains the current Grqaser platform:
 
-## 🎯 Project Overview
+- `GrqaserApp/` - the React Native mobile app for end users
+- `books-admin-app/` - the admin application that manages catalog data, crawler workflows, and the local API/web UI
 
-Grqaser (meaning "book lover" in Armenian) is a mobile application that brings the rich collection of audiobooks from grqaser.org to mobile devices. The app features:
+The root `README.md` is intentionally a repo guide only. App-specific setup, commands, and implementation details belong in each app's own README.
 
-- 📚 Browse 950+ audiobooks and 217+ e-books
-- 🎧 High-quality audio streaming
-- 🔍 Advanced search and filtering
-- ⭐ Rating and review system
-- 💾 Offline favorites and progress tracking
-- 🌙 Dark/Light theme support
-- 🔄 Background audio playback
+## What Lives Here
 
-## 🏗️ Architecture
+### Main applications
 
-The repo has **two runnable applications**: **books-admin-app** (single admin app: crawler + API + web UI, SQLite) and **GrqaserApp** (React Native mobile app). The mobile app consumes the books-admin-app API. Standalone crawler and database-viewer are archived; all admin behavior is in books-admin-app. See `docs/architecture/` and `docs/parity-books-admin-app.md`.
+- `GrqaserApp/`
+  Consumer mobile app. Uses a local SQLite catalog, supports playback, downloads, library management, and advanced search.
+- `books-admin-app/`
+  Admin app for crawler control, database management, editing catalog data, and serving the admin API/web UI.
 
-```
-┌─────────────────┐         ┌─────────────────────────────┐
-│   GrqaserApp    │         │   books-admin-app           │
-│   (React Native)│◄───────►│   (crawler + API + web UI)   │
-└─────────────────┘   API   └──────────────┬──────────────┘
-         │                                │
-         ▼                                ▼
-┌─────────────────┐              ┌─────────────────┐
-│   Local Storage │              │ SQLite + grqaser │
-│   (AsyncStorage)│              │ .org (crawl)     │
-└─────────────────┘              └─────────────────┘
-```
+### Shared project material
 
-## 🚀 Quick Start
+- `docs/`
+  Source of truth for architecture, PRD, stories, runbooks, QA notes, setup guides, and design mockups.
+- `data/`
+  Shared SQLite data area. `data/grqaser.db` is treated in project docs as the canonical catalog database.
+- `package.json`
+  Root convenience scripts for running tests and launching each app.
+- `jest.setup.js`
+  Shared Jest setup referenced by the root test configuration.
 
-### Prerequisites
+### Tooling and workflow files
 
-- Node.js (v16 or higher)
-- React Native CLI (for mobile app)
-- Android Studio / Xcode for device builds
-- Git
+- `AGENTS.md`
+  BMAD/Codex agent instructions for working in this repository.
+- `.bmad-core/`
+  BMAD method files used by the agent workflow.
+- `.github/`
+  Repository automation and CI configuration.
+- `.gitignore`, `.npmrc`, `.nvmrc`
+  Standard repo-level development configuration.
 
-### Installation
+### Local or optional folders
 
-1. **Clone the repository**
-   ```bash
-   git clone https://github.com/your-username/grqaser.git
-   cd grqaser
-   ```
+- `node_modules/`
+  Generated dependencies. Not part of the source and can be recreated with `npm install`.
+- `backups/`
+  Manual database backups. Useful operationally, but not required for the app code to build.
+- `.cursor/`, `.vscode/`
+  Editor-specific settings. Helpful locally, not required for runtime.
+- `setup.sh`
+  Legacy bootstrap script from the older single-app setup. Keep only if you still use it; it does not reflect the current two-app architecture.
 
-2. **Admin app (crawler + API + web UI)** — single entrypoint for data and API
-   ```bash
-   npm run admin:start
-   # or: cd books-admin-app && npm install && npm start
-   ```
-   Default: http://localhost:3001. Use the web UI to start/stop crawler, view books, manage DB. See `books-admin-app/README.md`.
+## Quick Start
 
-3. **Mobile app**
-   ```bash
-   cd GrqaserApp
-   npm install
-   npm start          # Metro bundler
-   npm run android    # or npm run ios
-   ```
-   GrqaserApp uses the books-admin-app API (default `http://localhost:3001/api/v1`). Set `API_BASE_URL` in `.env` if the admin app runs elsewhere.
-
-## 📁 Project structure
-
-```
-grqaser/
-├── books-admin-app/   # Single admin app — crawler, API, web UI (see books-admin-app/README.md)
-├── GrqaserApp/        # React Native mobile app (see GrqaserApp/README.md)
-├── archive/           # Legacy: crawler, database-viewer (archived; no standalone runbooks)
-│   ├── crawler/
-│   └── database-viewer/
-├── docs/              # Architecture, PRD, stories, design
-└── package.json       # Root scripts: npm run admin:start, admin:test, admin:dev
-```
-
-## 🔧 Development
-
-- **books-admin-app**: From repo root run `npm run admin:start`, `npm run admin:test`, `npm run admin:dev`; or from `books-admin-app/` run `npm start`, `npm test`, `npm run dev`.
-- **GrqaserApp**: From `GrqaserApp/` run `npm start`, `npm run android` / `npm run ios`, `npm test`, `npm run lint`.
-
-There are **no runbooks for running crawler or database-viewer as separate apps**; all admin behavior is in books-admin-app.
-
-### Code Style
-
-This project follows:
-- **TypeScript** for type safety
-- **ESLint** for code linting
-- **Prettier** for code formatting
-- **React Native** best practices
-- **Redux Toolkit** for state management
-
-## 📱 Features
-
-### Core Features
-- [x] Book browsing and search
-- [x] Audio player with background support
-- [x] Favorites and progress tracking
-- [x] Category filtering
-- [x] Rating system
-- [x] Offline support for favorites
-
-### Planned Features
- Currently in consideration for future updates
-- User authentication
-- Download for offline listening
-- Social sharing
-- Push notifications
-- Multi-language support (beyond current Armenian/English/Russian)
-- Accessibility improvements
-
-## 🗄️ Data Models
-
-### Book Model
-```typescript
-interface Book {
-  id: string;
-  title: string;
-  author: string;
-  duration: {
-    hours: number;
-    minutes: number;
-    formatted: string; // "0ժ 51ր"
-  };
-  rating: number; // 0-5
-  category: string[];
-  description: string;
-  coverImage: string;
-  audioUrl: string;
-  language: 'hy' | 'en' | 'ru';
-  isFavorite: boolean;
-  playProgress: number; // 0-100
-  lastPlayedAt?: Date;
-}
-```
-
-## 🔍 Data crawling (books-admin-app)
-
-Crawler behavior runs **from books-admin-app** (start/stop and config via the app). The crawler extracts data from grqaser.org with rate limiting, clear user-agent, and error handling. Data is written to SQLite; the same app serves the API and web UI.
-
-**Run the crawler:** Start books-admin-app (`npm run admin:start`), then use the web UI or `POST /api/v1/crawler/start`. See `books-admin-app/README.md` and `docs/architecture/books-admin-app-architecture.md`.
-
-## 🧪 Testing
+### Root scripts
 
 ```bash
-# Run all tests
+npm install
+
+# Mobile app
+npm start
+npm run android
+npm run ios
+
+# Admin app
+npm run admin:start
+npm run admin:dev
+
+# Tests
 npm test
-
-# Run tests in watch mode
-npm test -- --watch
-
-# Run specific test file
-npm test -- BookCard.test.tsx
+npm run admin:test
 ```
 
-## 📦 Building for Production
+Root scripts are convenience wrappers. For app-specific setup and troubleshooting, use the app readmes:
 
-### Android
-```bash
-cd android
-./gradlew assembleRelease
-```
+- [GrqaserApp README](./GrqaserApp/README.md)
+- [books-admin-app README](./books-admin-app/README.md)
 
-### iOS
-```bash
-cd ios
-xcodebuild -workspace Grqaser.xcworkspace -scheme Grqaser -configuration Release
-```
+## Recommended Reading Order
 
-## 🤝 Contributing
+If you are new to the repo, start here:
 
-1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'Add amazing feature'`)
-4. Push to the branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
+1. `docs/architecture/delivery-order-and-application-boundaries.md`
+2. `docs/architecture/source-tree.md`
+3. `docs/architecture/grqaserapp-data-integration-and-audio.md`
+4. `docs/architecture/books-admin-app-architecture.md`
+5. The README inside the app you want to work on
 
-## 📄 License
+## Documentation Map
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+- `docs/architecture/`
+  Technical architecture, boundaries, data flow, source tree, testing strategy.
+- `docs/prd/`
+  Product requirements by epic.
+- `docs/stories/`
+  Story-level implementation records.
+- `docs/runbooks/`
+  Operational guides for admin app and mobile distribution.
+- `docs/design/`
+  Shared design system and UI mockups for both applications.
+- `docs/setup/`
+  Environment setup notes for Android, iOS, and database setup.
 
-## 🙏 Acknowledgments
+## Root Folder Review
 
-- [grqaser.org](https://grqaser.org) for providing the audiobook content
-- React Native community for the excellent framework
-- All contributors and supporters
+If your goal is to keep the root clean, this is the practical split:
 
-## 📞 Support
+- Keep:
+  `GrqaserApp/`, `books-admin-app/`, `docs/`, `data/`, `package.json`, `package-lock.json`, `jest.setup.js`, `AGENTS.md`, `.github/`, `.gitignore`, `.npmrc`, `.nvmrc`
+- Keep if you use BMAD/Codex workflows:
+  `.bmad-core/`
+- Safe to regenerate locally:
+  `node_modules/`
+- Optional local/editor files:
+  `.cursor/`, `.vscode/`
+- Optional operational history:
+  `backups/`
+- Likely outdated and worth reviewing for removal:
+  `setup.sh`
 
-- **Email**: info@grqaser.org
-- **Website**: https://grqaser.org
-- **Issues**: [GitHub Issues](https://github.com/your-username/grqaser/issues)
+## Notes
 
-## 🔮 Roadmap
-
-### Completed Features
-- [x] Project setup and architecture
-- [x] Data crawling implementation
-- [x] Basic React Native app structure
-- Core UI components
-- Audio player integration
-
-### Currently Available Features
-- Search and filtering
-- User authentication
-- Favorites system
-- Offline support
-
-### Future Roadmap
-- Advanced features
-- Performance optimization
-- App store deployment
-- User feedback integration
-
----
-
-**Note**: This project is developed with respect for the original content creators and follows ethical web scraping practices. Please ensure compliance with grqaser.org's terms of service and copyright laws.
-### Future Roadmap
-The Grqaser app is fully functional and production-ready. Future enhancements may include:
-- Enhanced user authentication and personalization
-- Expanded offline capabilities
-- Social sharing and community features
-- Multi-language support expansion
-- Accessibility improvements
-- Performance optimizations and new content categories
-
----
+- Current architecture docs describe two active applications, not one.
+- The mobile app no longer relies on the old API-only flow for catalog browsing; the newer docs describe local SQLite-based catalog access.
+- Some older documents still reference pre-merge crawler/viewer paths. Prefer `docs/architecture/` and current runbooks when there is a conflict.
