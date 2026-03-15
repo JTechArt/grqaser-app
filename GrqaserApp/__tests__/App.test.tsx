@@ -170,6 +170,7 @@ it('defers network monitor startup by 2 seconds', async () => {
   }
 });
 
+// eslint-disable-next-line jest/no-disabled-tests -- intentionally skipped in CI (intermittently keeps Jest alive)
 it.skip('records startup performance marks and measures', async () => {
   // NOTE: this assertion-level perf test is intentionally skipped because in CI
   // it intermittently keeps Jest alive when combined with the network-monitor timer test.

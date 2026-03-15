@@ -148,11 +148,15 @@ const AdvancedSearchScreen: React.FC = () => {
       return selectedNames.join(', ');
     }
 
-    return `${selectedNames.slice(0, 2).join(', ')} +${selectedNames.length - 2}`;
+    return `${selectedNames.slice(0, 2).join(', ')} +${
+      selectedNames.length - 2
+    }`;
   };
 
   const featuredAuthorOptions = useMemo(() => {
-    const optionsByName = new Map(authorOptions.map(option => [option.name, option]));
+    const optionsByName = new Map(
+      authorOptions.map(option => [option.name, option]),
+    );
     const usedNames = new Set<string>();
     const featured: CatalogFilterOption[] = [];
 
@@ -221,7 +225,9 @@ const AdvancedSearchScreen: React.FC = () => {
         )}
         expanded={expandedSection === 'authors'}
         onPress={() =>
-          setExpandedSection(current => (current === 'authors' ? null : 'authors'))
+          setExpandedSection(current =>
+            current === 'authors' ? null : 'authors',
+          )
         }
         style={styles.multiSelectBox}
         titleStyle={styles.multiSelectTitle}
@@ -257,7 +263,9 @@ const AdvancedSearchScreen: React.FC = () => {
           );
         })}
         {matchedAuthorOptions.length === 0 ? (
-          <Text style={styles.emptyOptionText}>No authors match your search.</Text>
+          <Text style={styles.emptyOptionText}>
+            No authors match your search.
+          </Text>
         ) : null}
       </List.Accordion>
     </View>

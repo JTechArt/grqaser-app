@@ -101,11 +101,7 @@ async function loadLegacyCatalogSnapshot(): Promise<LegacyCatalogEntry[]> {
     const book = mapApiBookToBook(row);
     const authorName = String(row.author ?? '').trim();
     const categoryName = String(row.category ?? '').trim();
-    const normalizedText = [
-      row.title ?? '',
-      row.description ?? '',
-      authorName,
-    ]
+    const normalizedText = [row.title ?? '', row.description ?? '', authorName]
       .join(' ')
       .toLowerCase();
 
@@ -350,7 +346,10 @@ export const catalogRepository = {
       const searchVariants = buildArmenianSearchVariants(text);
 
       const filtered = snapshot.filter(entry => {
-        if (selectedAuthors.size > 0 && !selectedAuthors.has(entry.authorName)) {
+        if (
+          selectedAuthors.size > 0 &&
+          !selectedAuthors.has(entry.authorName)
+        ) {
           return false;
         }
         if (
@@ -367,16 +366,12 @@ export const catalogRepository = {
             }
             break;
           case '30-60':
-            if (
-              !(entry.durationMinutes >= 30 && entry.durationMinutes < 60)
-            ) {
+            if (!(entry.durationMinutes >= 30 && entry.durationMinutes < 60)) {
               return false;
             }
             break;
           case '60-120':
-            if (
-              !(entry.durationMinutes >= 60 && entry.durationMinutes < 120)
-            ) {
+            if (!(entry.durationMinutes >= 60 && entry.durationMinutes < 120)) {
               return false;
             }
             break;
@@ -407,7 +402,9 @@ export const catalogRepository = {
       });
 
       return {
-        books: filtered.slice(offset, offset + safeLimit).map(entry => entry.book),
+        books: filtered
+          .slice(offset, offset + safeLimit)
+          .map(entry => entry.book),
         total: filtered.length,
         page: safePage,
         limit: safeLimit,
@@ -430,7 +427,9 @@ export const catalogRepository = {
           .map(id => legacyAuthorNamesById.get(id))
           .filter((name): name is string => Boolean(name));
         if (authorNames.length > 0) {
-          where.push(`TRIM(books.author) IN (${authorNames.map(() => '?').join(',')})`);
+          where.push(
+            `TRIM(books.author) IN (${authorNames.map(() => '?').join(',')})`,
+          );
           params.push(...authorNames);
         }
       }
@@ -447,7 +446,9 @@ export const catalogRepository = {
           .filter((name): name is string => Boolean(name));
         if (categoryNames.length > 0) {
           where.push(
-            `TRIM(books.category) IN (${categoryNames.map(() => '?').join(',')})`,
+            `TRIM(books.category) IN (${categoryNames
+              .map(() => '?')
+              .join(',')})`,
           );
           params.push(...categoryNames);
         }
@@ -466,9 +467,7 @@ export const catalogRepository = {
             : '(books.title LIKE ? OR books.description LIKE ? OR TRIM(books.author) LIKE ?)',
         )
         .join(' OR ');
-      where.push(
-        `(${textClauses})`,
-      );
+      where.push(`(${textClauses})`);
       variants.forEach(variant => {
         const pattern = `%${variant}%`;
         params.push(pattern, pattern, pattern);

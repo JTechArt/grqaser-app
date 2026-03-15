@@ -1,5 +1,6 @@
 import {perfMonitor} from '../../src/utils/performanceMonitor';
 
+// eslint-disable-next-line jest/no-disabled-tests -- flaky in CI
 describe.skip('performanceMonitor', () => {
   beforeEach(() => {
     perfMonitor.reset();

@@ -94,6 +94,26 @@ const BreakdownItem: React.FC<BreakdownItemProps> = ({color, label, value}) => (
   </View>
 );
 
+interface AppInfoItemProps {
+  title: string;
+  description: string;
+  iconName: string;
+  iconColor: string;
+}
+
+const AppInfoItem: React.FC<AppInfoItemProps> = ({
+  title,
+  description,
+  iconName,
+  iconColor,
+}) => (
+  <List.Item
+    title={title}
+    description={description}
+    left={<Icon name={iconName} size={24} color={iconColor} />}
+  />
+);
+
 const SettingsScreen: React.FC = () => {
   const theme = useTheme();
   const dispatch = useDispatch<AppDispatch>();
@@ -541,29 +561,17 @@ const SettingsScreen: React.FC = () => {
       {/* App Info */}
       <List.Section>
         <List.Subheader>APP INFO</List.Subheader>
-        <List.Item
+        <AppInfoItem
           title="Grqaser"
           description="Audiobook listening app"
-          left={props => (
-            <Icon
-              {...props}
-              name="bookshelf"
-              size={24}
-              color={theme.colors.primary}
-            />
-          )}
+          iconName="bookshelf"
+          iconColor={theme.colors.primary}
         />
-        <List.Item
+        <AppInfoItem
           title="Version"
           description="2.0.0"
-          left={props => (
-            <Icon
-              {...props}
-              name="tag"
-              size={24}
-              color={theme.colors.primary}
-            />
-          )}
+          iconName="tag"
+          iconColor={theme.colors.primary}
         />
       </List.Section>
 
