@@ -12,6 +12,28 @@ import {Book, AdvancedSearchFilters, CatalogFilterOption} from '../types/book';
 import {ApiBook, mapApiBookToBook} from '../services/bookMapper';
 
 let connection: DatabaseConnection | null = null;
+let relationSchemaSupported: boolean | null = null;
+let cachedAuthorOptions: CatalogFilterOption[] | null = null;
+let cachedCategoryOptions: CatalogFilterOption[] | null = null;
+const legacyAuthorNamesById = new Map<number, string>();
+const legacyCategoryNamesById = new Map<number, string>();
+type LegacyCatalogEntry = {
+  book: Book;
+  authorName: string;
+  categoryName: string;
+  durationMinutes: number;
+  normalizedText: string;
+};
+let legacyCatalogSnapshot: LegacyCatalogEntry[] | null = null;
+
+function resetCatalogCaches() {
+  relationSchemaSupported = null;
+  cachedAuthorOptions = null;
+  cachedCategoryOptions = null;
+  legacyCatalogSnapshot = null;
+  legacyAuthorNamesById.clear();
+  legacyCategoryNamesById.clear();
+}
 
 /**
  * Initialize catalog DB from a specific file path (e.g. a downloaded DB).
@@ -21,6 +43,7 @@ export async function initCatalogDb(dbPath: string): Promise<void> {
     await connection.close();
   }
   connection = await openDatabase(dbPath);
+  resetCatalogCaches();
 }
 
 /**
@@ -31,12 +54,14 @@ export async function initBundledCatalogDb(): Promise<void> {
     await connection.close();
   }
   connection = await openBundledDatabase(DEFAULT_CATALOG_DB);
+  resetCatalogCaches();
 }
 
 export async function closeCatalogDb(): Promise<void> {
   if (connection) {
     await connection.close();
     connection = null;
+    resetCatalogCaches();
   }
 }
 
@@ -60,6 +85,64 @@ function rowsToArray(results: {
 }
 
 const DEFAULT_PAGE_SIZE = 20;
+
+async function loadLegacyCatalogSnapshot(): Promise<LegacyCatalogEntry[]> {
+  if (legacyCatalogSnapshot) {
+    return legacyCatalogSnapshot;
+  }
+
+  const {db} = assertConnected();
+  const [results] = await db.executeSql(
+    'SELECT * FROM books ORDER BY title ASC',
+  );
+
+  legacyCatalogSnapshot = rowsToArray(results).map(row => {
+    const book = mapApiBookToBook(row);
+    const authorName = String(row.author ?? '').trim();
+    const categoryName = String(row.category ?? '').trim();
+    const normalizedText = [
+      row.title ?? '',
+      row.description ?? '',
+      authorName,
+    ]
+      .join(' ')
+      .toLowerCase();
+
+    return {
+      book: {
+        ...book,
+        author: authorName || book.author,
+        category: categoryName || book.category,
+      },
+      authorName,
+      categoryName,
+      durationMinutes: Number(row.duration ?? 0),
+      normalizedText,
+    };
+  });
+
+  return legacyCatalogSnapshot;
+}
+
+async function supportsRelationSchema(): Promise<boolean> {
+  if (relationSchemaSupported != null) {
+    return relationSchemaSupported;
+  }
+
+  const {db} = assertConnected();
+  const [results] = await db.executeSql(
+    "SELECT name FROM sqlite_master WHERE type = 'table' AND name IN ('authors', 'book_categories') ORDER BY name ASC",
+  );
+
+  const names = new Set<string>();
+  for (let i = 0; i < results.rows.length; i++) {
+    names.add(String(results.rows.item(i).name));
+  }
+
+  relationSchemaSupported =
+    names.has('authors') && names.has('book_categories');
+  return relationSchemaSupported;
+}
 
 function buildDurationRangeCondition(
   durationRange: AdvancedSearchFilters['durationRange'],
@@ -145,37 +228,94 @@ export const catalogRepository = {
   },
 
   async getAuthors(): Promise<CatalogFilterOption[]> {
-    const {db} = assertConnected();
-    const [results] = await db.executeSql(
-      'SELECT authors.id, authors.name, COUNT(books.id) AS book_count ' +
-        'FROM authors LEFT JOIN books ON books.author_id = authors.id ' +
-        'GROUP BY authors.id, authors.name ORDER BY authors.name ASC',
-    );
-    return rowsToArray(results).map(row => ({
-      id: Number(row.id),
-      name: String(row.name ?? ''),
-      bookCount: Number(row.book_count ?? 0),
-    }));
+    if (cachedAuthorOptions) {
+      return cachedAuthorOptions;
+    }
+
+    const hasRelationSchema = await supportsRelationSchema();
+    let options: CatalogFilterOption[];
+
+    if (hasRelationSchema) {
+      const {db} = assertConnected();
+      const [results] = await db.executeSql(
+        'SELECT authors.id, authors.name, COUNT(books.id) AS book_count ' +
+          'FROM authors LEFT JOIN books ON books.author_id = authors.id ' +
+          'GROUP BY authors.id, authors.name ORDER BY authors.name ASC',
+      );
+      options = rowsToArray(results).map(row => ({
+        id: Number(row.id),
+        name: String(row.name ?? ''),
+        bookCount: Number(row.book_count ?? 0),
+      }));
+    } else {
+      const snapshot = await loadLegacyCatalogSnapshot();
+      const counts = new Map<string, number>();
+      snapshot.forEach(entry => {
+        if (entry.authorName) {
+          counts.set(entry.authorName, (counts.get(entry.authorName) ?? 0) + 1);
+        }
+      });
+      options = Array.from(counts.entries())
+        .sort((a, b) => a[0].localeCompare(b[0]))
+        .map(([name, bookCount], index) => {
+          const id = index + 1;
+          legacyAuthorNamesById.set(id, name);
+          return {id, name, bookCount};
+        });
+    }
+
+    cachedAuthorOptions = options;
+    return options;
   },
 
   async getCategories(): Promise<CatalogFilterOption[]> {
-    const {db} = assertConnected();
-    const [results] = await db.executeSql(
-      'SELECT book_categories.id, book_categories.name, COUNT(books.id) AS book_count ' +
-        'FROM book_categories LEFT JOIN books ON books.category_id = book_categories.id ' +
-        'GROUP BY book_categories.id, book_categories.name ORDER BY book_categories.name ASC',
-    );
-    return rowsToArray(results).map(row => ({
-      id: Number(row.id),
-      name: String(row.name ?? ''),
-      bookCount: Number(row.book_count ?? 0),
-    }));
+    if (cachedCategoryOptions) {
+      return cachedCategoryOptions;
+    }
+
+    const hasRelationSchema = await supportsRelationSchema();
+    let options: CatalogFilterOption[];
+
+    if (hasRelationSchema) {
+      const {db} = assertConnected();
+      const [results] = await db.executeSql(
+        'SELECT book_categories.id, book_categories.name, COUNT(books.id) AS book_count ' +
+          'FROM book_categories LEFT JOIN books ON books.category_id = book_categories.id ' +
+          'GROUP BY book_categories.id, book_categories.name ORDER BY book_categories.name ASC',
+      );
+      options = rowsToArray(results).map(row => ({
+        id: Number(row.id),
+        name: String(row.name ?? ''),
+        bookCount: Number(row.book_count ?? 0),
+      }));
+    } else {
+      const snapshot = await loadLegacyCatalogSnapshot();
+      const counts = new Map<string, number>();
+      snapshot.forEach(entry => {
+        if (entry.categoryName) {
+          counts.set(
+            entry.categoryName,
+            (counts.get(entry.categoryName) ?? 0) + 1,
+          );
+        }
+      });
+      options = Array.from(counts.entries())
+        .sort((a, b) => a[0].localeCompare(b[0]))
+        .map(([name, bookCount], index) => {
+          const id = index + 1;
+          legacyCategoryNamesById.set(id, name);
+          return {id, name, bookCount};
+        });
+    }
+
+    cachedCategoryOptions = options;
+    return options;
   },
 
   async advancedSearch(
     filters: AdvancedSearchFilters & {page?: number; limit?: number},
   ): Promise<{books: Book[]; total: number; page: number; limit: number}> {
-    const {db} = assertConnected();
+    const hasRelationSchema = await supportsRelationSchema();
     const {
       authorIds = [],
       categoryIds = [],
@@ -188,18 +328,121 @@ export const catalogRepository = {
     const safeLimit = Math.max(1, limit);
     const offset = (safePage - 1) * safeLimit;
 
+    if (!hasRelationSchema) {
+      const snapshot = await loadLegacyCatalogSnapshot();
+      const selectedAuthors = new Set(
+        authorIds
+          .map(id => legacyAuthorNamesById.get(id))
+          .filter((name): name is string => Boolean(name)),
+      );
+      const selectedCategories = new Set(
+        categoryIds
+          .map(id => legacyCategoryNamesById.get(id))
+          .filter((name): name is string => Boolean(name)),
+      );
+      const normalizedQuery = text.trim().toLowerCase();
+
+      const filtered = snapshot.filter(entry => {
+        if (selectedAuthors.size > 0 && !selectedAuthors.has(entry.authorName)) {
+          return false;
+        }
+        if (
+          selectedCategories.size > 0 &&
+          !selectedCategories.has(entry.categoryName)
+        ) {
+          return false;
+        }
+
+        switch (durationRange) {
+          case '<30':
+            if (!(entry.durationMinutes < 30)) {
+              return false;
+            }
+            break;
+          case '30-60':
+            if (
+              !(entry.durationMinutes >= 30 && entry.durationMinutes < 60)
+            ) {
+              return false;
+            }
+            break;
+          case '60-120':
+            if (
+              !(entry.durationMinutes >= 60 && entry.durationMinutes < 120)
+            ) {
+              return false;
+            }
+            break;
+          case '120-300':
+            if (
+              !(entry.durationMinutes >= 120 && entry.durationMinutes < 300)
+            ) {
+              return false;
+            }
+            break;
+          case '300+':
+            if (!(entry.durationMinutes >= 300)) {
+              return false;
+            }
+            break;
+        }
+
+        if (
+          normalizedQuery &&
+          !entry.normalizedText.includes(normalizedQuery)
+        ) {
+          return false;
+        }
+
+        return true;
+      });
+
+      return {
+        books: filtered.slice(offset, offset + safeLimit).map(entry => entry.book),
+        total: filtered.length,
+        page: safePage,
+        limit: safeLimit,
+      };
+    }
+
+    const {db} = assertConnected();
+
     const where: string[] = [];
     const params: (string | number)[] = [];
 
     if (authorIds.length > 0) {
-      where.push(`books.author_id IN (${authorIds.map(() => '?').join(',')})`);
-      params.push(...authorIds);
+      if (hasRelationSchema) {
+        where.push(
+          `books.author_id IN (${authorIds.map(() => '?').join(',')})`,
+        );
+        params.push(...authorIds);
+      } else {
+        const authorNames = authorIds
+          .map(id => legacyAuthorNamesById.get(id))
+          .filter((name): name is string => Boolean(name));
+        if (authorNames.length > 0) {
+          where.push(`TRIM(books.author) IN (${authorNames.map(() => '?').join(',')})`);
+          params.push(...authorNames);
+        }
+      }
     }
     if (categoryIds.length > 0) {
-      where.push(
-        `books.category_id IN (${categoryIds.map(() => '?').join(',')})`,
-      );
-      params.push(...categoryIds);
+      if (hasRelationSchema) {
+        where.push(
+          `books.category_id IN (${categoryIds.map(() => '?').join(',')})`,
+        );
+        params.push(...categoryIds);
+      } else {
+        const categoryNames = categoryIds
+          .map(id => legacyCategoryNamesById.get(id))
+          .filter((name): name is string => Boolean(name));
+        if (categoryNames.length > 0) {
+          where.push(
+            `TRIM(books.category) IN (${categoryNames.map(() => '?').join(',')})`,
+          );
+          params.push(...categoryNames);
+        }
+      }
     }
     const durationCondition = buildDurationRangeCondition(durationRange);
     if (durationCondition) {
@@ -207,15 +450,18 @@ export const catalogRepository = {
     }
     if (text.trim()) {
       where.push(
-        '(books.title LIKE ? OR books.description LIKE ? OR COALESCE(authors.name, books.author) LIKE ?)',
+        hasRelationSchema
+          ? '(books.title LIKE ? OR books.description LIKE ? OR COALESCE(authors.name, books.author) LIKE ?)'
+          : '(books.title LIKE ? OR books.description LIKE ? OR TRIM(books.author) LIKE ?)',
       );
       const pattern = `%${text.trim()}%`;
       params.push(pattern, pattern, pattern);
     }
 
     const whereClause = where.length > 0 ? ` WHERE ${where.join(' AND ')}` : '';
-    const fromClause =
-      ' FROM books LEFT JOIN authors ON authors.id = books.author_id LEFT JOIN book_categories ON book_categories.id = books.category_id';
+    const fromClause = hasRelationSchema
+      ? ' FROM books LEFT JOIN authors ON authors.id = books.author_id LEFT JOIN book_categories ON book_categories.id = books.category_id'
+      : ' FROM books';
 
     const [countResults] = await db.executeSql(
       `SELECT COUNT(*) as total${fromClause}${whereClause}`,
@@ -224,9 +470,11 @@ export const catalogRepository = {
     const total = Number(countResults.rows.item(0)?.total ?? 0);
 
     const [searchResults] = await db.executeSql(
-      'SELECT books.*, ' +
-        'COALESCE(authors.name, books.author) AS resolved_author, ' +
-        'COALESCE(book_categories.name, books.category) AS resolved_category' +
+      (hasRelationSchema
+        ? 'SELECT books.*, ' +
+          'COALESCE(authors.name, books.author) AS resolved_author, ' +
+          'COALESCE(book_categories.name, books.category) AS resolved_category'
+        : 'SELECT books.*, books.author AS resolved_author, books.category AS resolved_category') +
         `${fromClause}${whereClause} ORDER BY books.title ASC LIMIT ? OFFSET ?`,
       [...params, safeLimit, offset],
     );
