@@ -1,4 +1,4 @@
-import React, {useEffect, useState} from 'react';
+import React, {useEffect, useMemo, useState} from 'react';
 import {View, Text, StyleSheet, FlatList, ScrollView} from 'react-native';
 import {useDispatch, useSelector} from 'react-redux';
 import {StackNavigationProp} from '@react-navigation/stack';
@@ -16,6 +16,7 @@ import {RootStackParamList} from '../navigation/types';
 import {
   advancedSearchBooks,
   fetchAdvancedFilterOptions,
+  fetchBooksByIds,
   setAdvancedFilters,
   clearAdvancedSearchError,
   ADVANCED_SEARCH_LIMIT,
@@ -51,6 +52,7 @@ const AdvancedSearchScreen: React.FC = () => {
   const dispatch = useDispatch<AppDispatch>();
   const navigation = useNavigation<AdvancedSearchNavigationProp>();
   const {cardWidth, numColumns} = useBookGridLayout();
+  const [authorQuery, setAuthorQuery] = useState('');
   const [expandedSection, setExpandedSection] = useState<
     'authors' | 'categories' | null
   >(null);
@@ -64,6 +66,8 @@ const AdvancedSearchScreen: React.FC = () => {
     categoryOptions,
     filterOptionsLoading,
     filterOptionsError,
+    favorites,
+    booksById,
   } = useSelector((state: RootState) => state.books);
 
   useEffect(() => {
@@ -100,6 +104,17 @@ const AdvancedSearchScreen: React.FC = () => {
     advancedFilters.durationRange,
   ]);
 
+  useEffect(() => {
+    if (favorites.length === 0) {
+      return;
+    }
+
+    const missingFavoriteIds = favorites.filter(id => booksById[id] == null);
+    if (missingFavoriteIds.length > 0) {
+      dispatch(fetchBooksByIds(missingFavoriteIds));
+    }
+  }, [dispatch, favorites, booksById]);
+
   const onApplyFilters = () => {
     dispatch(advancedSearchBooks({page: 1, limit: ADVANCED_SEARCH_LIMIT}));
   };
@@ -134,6 +149,113 @@ const AdvancedSearchScreen: React.FC = () => {
 
     return `${selectedNames.slice(0, 2).join(', ')} +${selectedNames.length - 2}`;
   };
+
+  const featuredAuthorOptions = useMemo(() => {
+    const optionsByName = new Map(authorOptions.map(option => [option.name, option]));
+    const usedNames = new Set<string>();
+    const featured: CatalogFilterOption[] = [];
+
+    favorites.forEach(bookId => {
+      const favoriteBook = booksById[bookId];
+      const authorName = favoriteBook?.author?.trim();
+      if (!authorName || usedNames.has(authorName)) {
+        return;
+      }
+      const option = optionsByName.get(authorName);
+      if (option) {
+        featured.push(option);
+        usedNames.add(authorName);
+      }
+    });
+
+    if (featured.length < 10) {
+      authorOptions
+        .slice()
+        .sort((a, b) =>
+          b.bookCount !== a.bookCount
+            ? b.bookCount - a.bookCount
+            : a.name.localeCompare(b.name),
+        )
+        .forEach(option => {
+          if (featured.length >= 10 || usedNames.has(option.name)) {
+            return;
+          }
+          featured.push(option);
+          usedNames.add(option.name);
+        });
+    }
+
+    return featured.slice(0, 10);
+  }, [authorOptions, favorites, booksById]);
+
+  const matchedAuthorOptions = useMemo(() => {
+    const query = authorQuery.trim().toLowerCase();
+    if (query.length < 2) {
+      return featuredAuthorOptions;
+    }
+
+    return authorOptions
+      .filter(option => option.name.toLowerCase().includes(query))
+      .sort((a, b) =>
+        b.bookCount !== a.bookCount
+          ? b.bookCount - a.bookCount
+          : a.name.localeCompare(b.name),
+      )
+      .slice(0, 20);
+  }, [authorOptions, authorQuery, featuredAuthorOptions]);
+
+  const renderAuthorSelect = () => (
+    <View style={styles.filterBlock}>
+      <Text style={styles.filterLabel}>Authors</Text>
+      <List.Accordion
+        title={`${advancedFilters.authorIds.length} selected`}
+        description={getSelectedSummary(
+          advancedFilters.authorIds,
+          authorOptions,
+        )}
+        expanded={expandedSection === 'authors'}
+        onPress={() =>
+          setExpandedSection(current => (current === 'authors' ? null : 'authors'))
+        }
+        style={styles.multiSelectBox}
+        titleStyle={styles.multiSelectTitle}
+        descriptionStyle={styles.multiSelectDescription}>
+        <View style={styles.authorSearchArea}>
+          <Searchbar
+            placeholder="Type 2+ letters to search authors"
+            value={authorQuery}
+            onChangeText={setAuthorQuery}
+            style={styles.authorSearchBar}
+          />
+          <Text style={styles.helperText}>
+            {authorQuery.trim().length >= 2
+              ? 'Showing matching authors'
+              : 'Showing up to 10 authors from favorites, then top authors'}
+          </Text>
+        </View>
+        {matchedAuthorOptions.map(option => {
+          const isSelected = advancedFilters.authorIds.includes(option.id);
+          return (
+            <Checkbox.Item
+              key={option.id}
+              label={`${option.name} (${option.bookCount})`}
+              status={isSelected ? 'checked' : 'unchecked'}
+              onPress={() =>
+                updateFilters({
+                  authorIds: toggleValue(advancedFilters.authorIds, option.id),
+                })
+              }
+              style={styles.multiSelectOption}
+              labelStyle={styles.multiSelectOptionLabel}
+            />
+          );
+        })}
+        {matchedAuthorOptions.length === 0 ? (
+          <Text style={styles.emptyOptionText}>No authors match your search.</Text>
+        ) : null}
+      </List.Accordion>
+    </View>
+  );
 
   const renderMultiSelect = (
     title: string,
@@ -196,16 +318,7 @@ const AdvancedSearchScreen: React.FC = () => {
               style={styles.searchBar}
             />
 
-            {renderMultiSelect(
-              'Authors',
-              'authors',
-              advancedFilters.authorIds,
-              authorOptions,
-              id =>
-                updateFilters({
-                  authorIds: toggleValue(advancedFilters.authorIds, id),
-                }),
-            )}
+            {renderAuthorSelect()}
 
             {renderMultiSelect(
               'Categories',
@@ -313,6 +426,19 @@ const styles = StyleSheet.create({
     color: theme.colors.text,
     marginBottom: 6,
   },
+  authorSearchArea: {
+    paddingHorizontal: 12,
+    paddingTop: 4,
+    paddingBottom: 8,
+  },
+  authorSearchBar: {
+    backgroundColor: '#eef2f7',
+  },
+  helperText: {
+    marginTop: 6,
+    fontSize: 12,
+    color: theme.colors.secondary,
+  },
   multiSelectBox: {
     backgroundColor: '#f8fafc',
     borderWidth: 1,
@@ -334,6 +460,11 @@ const styles = StyleSheet.create({
   multiSelectOptionLabel: {
     fontSize: 14,
     color: theme.colors.text,
+  },
+  emptyOptionText: {
+    paddingHorizontal: 16,
+    paddingBottom: 12,
+    color: theme.colors.secondary,
   },
   chipsWrap: {
     flexDirection: 'row',
