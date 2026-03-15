@@ -23,6 +23,7 @@ Example:
 
 ```bash
 cd books-admin-app
+nvm use
 PORT=3001 npm start
 # Or override DB:
 PORT=3002 DB_PATH=/path/to/grqaser.db npm start
@@ -30,8 +31,11 @@ PORT=3002 DB_PATH=/path/to/grqaser.db npm start
 
 ## 2. Start and stop the app
 
+**Use nvm first** so Node 22+ is active (see `.nvmrc`):
+
 ```bash
 cd books-admin-app
+nvm use
 npm install
 npm start
 # Or with auto-reload:
@@ -72,4 +76,4 @@ Full API and config details: [books-admin-app README](../../books-admin-app/READ
 
 ## 7. Tests
 
-From repo root: `npm run admin:test`, or from `books-admin-app/`: `npm test`. Uses in-process or temporary test DBs; no dependency on Epic 6 or production data.
+From repo root: `nvm use && npm run admin:test`, or from `books-admin-app/`: `nvm use && npm test`. Uses in-process or temporary test DBs; no dependency on Epic 6 or production data.

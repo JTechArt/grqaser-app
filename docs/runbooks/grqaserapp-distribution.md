@@ -34,6 +34,23 @@ Debug builds use default debug configuration unless overridden.
 - **Signing:** Open `GrqaserApp/ios/GrqaserApp.xcworkspace` in Xcode → select app target → **Signing & Capabilities**. Use a Development or Distribution (App Store / Ad Hoc) team and provisioning profile.
 - **Env:** Use `react-native-config` or `.env` (if configured) for API base URLs or feature flags. For archive/TestFlight, use a release scheme and ensure the archive uses the correct signing identity and provisioning profile.
 
+#### Install on a personal iPhone (development build)
+
+1. Connect the iPhone to the Mac with USB and unlock it.
+2. On the phone, tap **Trust This Computer** if prompted.
+3. Open `GrqaserApp/ios/GrqaserApp.xcworkspace` in Xcode.
+4. Select the `GrqaserApp` target → **Signing & Capabilities**.
+5. Choose your Apple team and keep **Automatically manage signing** enabled.
+6. Confirm the bundle identifier is unique for your Apple account. The repo default is `com.grqaser.app`; if Xcode reports it is unavailable, change it to something like `com.<your-name>.grqaser`.
+7. In the device selector near the Run button, pick your connected iPhone.
+8. Press **Run**. If Xcode shows a developer mode or trust prompt on the phone, accept it and rerun.
+9. If iOS blocks first launch, on the phone go to **Settings → Privacy & Security** and trust/enable the developer app or Developer Mode if prompted.
+
+Notes:
+
+- A free Apple ID can install a personal development build on your own device, but you still need to sign in to Xcode.
+- The project no longer hard-codes a previous developer team, so Xcode should prompt cleanly for your own signing setup.
+
 ### Android
 
 - **Signing (release):** Create or use a release keystore. In `android/app/build.gradle` set `signingConfigs.release` (storeFile, storePassword, keyAlias, keyPassword). Do **not** commit passwords; use env vars or a local `keystore.properties` (gitignored). Debug builds use `android/app/debug.keystore` by default.
